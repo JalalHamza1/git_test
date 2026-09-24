@@ -621,17 +621,17 @@
       <header class="topbar" id="topbar">
         <button class="icon-btn" id="btnDrawer" type="button" title="Main menu (m)" aria-label="Toggle main menu"></button>
         <h1 id="viewTitle">Tasks</h1>
-        <label class="search" id="searchBox">
+        <div class="search" id="searchBox" role="search">
           <input id="search" type="search" placeholder="Search tasks" aria-label="Search tasks" autocomplete="off">
           <kbd id="searchKbd">/</kbd>
           <button class="icon-btn" id="btnClearSearch" type="button" title="Clear search" aria-label="Clear search" hidden></button>
-        </label>
+        </div>
         <span class="status" id="status" aria-live="polite"></span>
         <button class="icon-btn" id="btnRefresh" type="button" title="Refresh" aria-label="Refresh"></button>
         <button class="icon-btn" id="btnSync" type="button" title="Sync to Google Calendar" aria-label="Sync to Google Calendar"></button>
         <button class="icon-btn" id="btnSettings" type="button" title="Settings" aria-label="Settings"></button>
       </header>
-      <div class="board" id="board" role="list" aria-live="off"></div>
+      <div class="board" id="board"></div>
     </main>
 
     <aside class="panel" id="panel" aria-label="Task details" aria-hidden="true"></aside>
@@ -744,14 +744,11 @@
     palette: 'M12 3a9 9 0 0 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z',
     hide: 'M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46A11.804 11.804 0 0 0 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78 3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z',
     edit: 'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z',
-    openNew: 'M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z',
     mail: 'M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z',
-    sort: 'M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z',
     indent: 'M3 21h18v-2H3v2zM3 8v8l4-4-4-4zm8 9h10v-2H11v2zM3 3v2h18V3H3zm8 6h10V7H11v2zm0 4h10v-2H11v2z',
     outdent: 'M11 17h10v-2H11v2zm-8-5 4 4V8l-4 4zm0 9h18v-2H3v2zM3 3v2h18V3H3zm8 6h10V7H11v2zm0 4h10v-2H11v2z',
     fire: 'M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z',
     alert: 'M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z',
-    inbox: 'M19 3H5a2 2 0 0 0-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5a2 2 0 0 0-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H5V5h14v10z',
     doneAll: 'M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41 6 19l1.41-1.41L1.83 12 .41 13.41z',
     blocked: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9A7.902 7.902 0 0 1 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1A7.902 7.902 0 0 1 20 12c0 4.42-3.58 8-8 8z',
     half: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18V4c4.41 0 8 3.59 8 8s-3.59 8-8 8z',
@@ -771,6 +768,7 @@
   function iconBtn(name, label, onclick, cls) {
     return h('button', { class: 'icon-btn' + (cls ? ' ' + cls : ''), type: 'button', title: label, 'aria-label': label, onclick }, icon(name));
   }
+  const keyed = (node, key) => { node.dataset.key = key; return node; };
 
   const COLORS = ['BLUE', 'GREEN', 'RED', 'ORANGE', 'YELLOW', 'MAUVE', 'CYAN', 'PALE_BLUE', 'PALE_GREEN', 'PALE_RED', 'GRAY'];
   const COLOR_HEX = { BLUE: '#5b8def', GREEN: '#3fb950', RED: '#f0625d', ORANGE: '#f0883e', YELLOW: '#e3b341', MAUVE: '#b889f5',
@@ -806,6 +804,7 @@
     if (diff > 1 && diff < 7) return parseISO(iso).toLocaleDateString(undefined, { weekday: 'long' });
     return fmtDay(iso);
   }
+  const relDayLower = iso => { const r = relDay(iso); return /^(Today|Tomorrow|Yesterday)$/.test(r) ? r.toLowerCase() : r; };
   const fmtTime = hm => { const [H, M] = hm.split(':').map(Number); return new Date(2000, 0, 1, H, M).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); };
   const weekdayOf = iso => parseISO(iso).toLocaleDateString(undefined, { weekday: 'long' });
   const ordinal = n => n + (['th', 'st', 'nd', 'rd'][(n % 100 - 20) % 10] || ['th', 'st', 'nd', 'rd'][n % 100] || 'th');
@@ -860,8 +859,14 @@
 
   const PREF_KEY = 'taskmgr.prefs.v1';
   const prefs = (() => {
-    const base = { hidden: [], sort: {}, open: {}, drawer: true, view: 'board' };
-    try { return Object.assign(base, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch (e) { return base; }
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(PREF_KEY) || '{}') || {}; } catch (e) {}
+    const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+    return {
+      hidden: Array.isArray(saved.hidden) ? saved.hidden.filter(x => typeof x === 'string') : [],
+      sort: obj(saved.sort), open: obj(saved.open), drawer: saved.drawer !== false,
+      view: typeof saved.view === 'string' ? saved.view : 'board',
+    };
   })();
   const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) {} };
   const VIEWS = ['board', 'starred', 'today', 'upcoming', 'insights', 'trash'];
@@ -893,6 +898,7 @@
     title: (a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }),
   };
   const SORT_LABELS = { my: 'My order', date: 'Date', priority: 'Priority', title: 'Title' };
+  const sortOf = list => (SORTS[prefs.sort[list]] ? prefs.sort[list] : 'my');
   const byDueTime = (a, b) => (a.due || '9999').localeCompare(b.due || '9999') || (a.time || '').localeCompare(b.time || '') || RANK[a.priority] - RANK[b.priority] || a.order - b.order;
   const byCompletedDesc = (a, b) => (b.completed || '').localeCompare(a.completed || '');
 
@@ -903,11 +909,22 @@
     google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
   });
 
+  // A lock timeout means the server never ran the call (a long calendar sync held the lock), so retrying is safe.
+  async function callWithRetry(fn, args) {
+    for (let attempt = 1; ; attempt++) {
+      try { return await call(fn, ...args); }
+      catch (err) {
+        if (attempt >= 3 || !/lock timeout/i.test(String((err && err.message) || err))) throw err;
+        await new Promise(r => setTimeout(r, 2000 * attempt));
+      }
+    }
+  }
+
   const Q = { chain: Promise.resolve(), pending: 0, results: [], failed: false };
   function send(fn, ...args) {
     Q.pending++;
     setStatus();
-    const run = Q.chain.then(() => call(fn, ...args));
+    const run = Q.chain.then(() => callWithRetry(fn, args));
     Q.chain = run.then(res => { Q.results.push(res); }, err => {
       Q.failed = true;
       snack(`Couldn't save: ${(err && err.message) || err}`);
@@ -947,7 +964,10 @@
       statusTimer = setTimeout(() => { s.style.opacity = 0; }, 1600);
     }
   }
-  window.addEventListener('beforeunload', e => { if (Q.pending) { e.preventDefault(); e.returnValue = ''; } });
+  window.addEventListener('beforeunload', e => {
+    flushSaves();
+    if (Q.pending) { e.preventDefault(); e.returnValue = ''; }
+  });
 
   async function boot(silent) {
     if (!silent && !S.ready) render();
@@ -972,8 +992,8 @@
    * Mutations — optimistic locally, then queued to the server
    * ==================================================================== */
   const PAYLOAD = ['id', 'title', 'desc', 'due', 'time', 'status', 'priority', 'list', 'starred', 'parent', 'order', 'repeat'];
-  function siblingOrders(list, parent, skipId) {
-    return S.tasks.filter(t => !t.archived && t.list === list && (parent ? t.parent === parent : isTop(t)) && t.id !== skipId).map(t => t.order);
+  function siblingOrders(list, parent) {
+    return S.tasks.filter(t => !t.archived && t.list === list && (parent ? t.parent === parent : isTop(t))).map(t => t.order);
   }
 
   function createTask(f) {
@@ -990,7 +1010,7 @@
     reindex();
     S.fresh.add(t.id);
     schedule();
-    send('saveTask', pick(t, PAYLOAD));
+    send('saveTask', Object.assign(pick(t, PAYLOAD), { create: true }));
     return t;
   }
   const pick = (o, keys) => keys.reduce((a, k) => (k in o ? (a[k] = o[k], a) : a), {});
@@ -1036,7 +1056,7 @@
       schedule();
       send('completeTask', id, next ? next.id : null);
       const nextId = next && next.id;
-      snack(next ? `Completed · next one ${relDay(next.due).toLowerCase()}` : 'Task completed', 'Undo', () => uncomplete(id, nextId));
+      snack(next ? `Completed · next one ${relDayLower(next.due)}` : 'Task completed', 'Undo', () => uncomplete(id, nextId));
     };
     if (rowEl && !matchMedia('(prefers-reduced-motion: reduce)').matches) { rowEl.classList.add('completing'); setTimeout(finish, 280); }
     else finish();
@@ -1054,12 +1074,19 @@
     kidsOf(t.id).forEach(k => { if (k.archType === was && (was !== 'Completed' || k.completed === stamp)) unarch(k); });
   }
 
+  // Mirrors purge_ in Code.gs: deleted subtasks go with their parent, live ones are detached.
+  function dropLocal(ids) {
+    S.tasks = S.tasks.filter(t => !ids.has(t.id) && !(ids.has(t.parent) && t.archType === 'Deleted'));
+    S.tasks.forEach(t => { if (ids.has(t.parent)) t.parent = ''; });
+    reindex();
+  }
+
   function uncomplete(id, spawnedId) {
     const t = byId.get(id);
     if (!t) return;
     if (t.archType === 'Completed') { restoreLocal(t); send('restoreTask', id); }
     if (spawnedId && byId.has(spawnedId)) {
-      S.tasks = S.tasks.filter(x => x.id !== spawnedId && x.parent !== spawnedId);
+      dropLocal(new Set([spawnedId]));
       send('purgeTask', spawnedId);
     }
     reindex();
@@ -1092,8 +1119,7 @@
     if (!t) return;
     if (!(await confirmDlg('Delete forever?', `"${t.title}" will be permanently removed. This can't be undone.`, 'Delete forever'))) return;
     animateOut([id], () => {
-      S.tasks = S.tasks.filter(x => x.id !== id && x.parent !== id);
-      reindex();
+      dropLocal(new Set([id]));
       schedule();
     });
     send('purgeTask', id);
@@ -1102,9 +1128,7 @@
     const gone = S.tasks.filter(t => t.archType === 'Deleted');
     if (!gone.length) return;
     if (!(await confirmDlg('Empty trash?', `${gone.length} task${gone.length > 1 ? 's' : ''} will be permanently deleted. This can't be undone.`, 'Empty trash'))) return;
-    const ids = new Set(gone.map(t => t.id));
-    S.tasks = S.tasks.filter(t => !ids.has(t.id) && !ids.has(t.parent));
-    reindex();
+    dropLocal(new Set(gone.map(t => t.id)));
     schedule();
     send('emptyTrash');
     snack('Trash emptied');
@@ -1308,7 +1332,7 @@
         })
         || take(`(?:on\\s+|next\\s+|this\\s+|due\\s+)${dayAnyRe}`, ([d]) => { r.due = nextWeekday(dayIndex(d), false); })
         || take(dayRe, ([d]) => { r.due = nextWeekday(dayIndex(d), false); })
-        || take('(\\d{4})-(\\d{2})-(\\d{2})', ([y, m, d]) => { r.due = `${y}-${m}-${d}`; })
+        || take('(\\d{4})-(\\d{2})-(\\d{2})', ([y, m, d]) => { const iso = `${y}-${m}-${d}`; if (isoOf(parseISO(iso)) !== iso) return false; r.due = iso; })
         || take(`(?:on\\s+)?${monthRe}\\s+(\\d{1,2})(?:st|nd|rd|th)?`, ([mo, d]) => setMonthDay(r, monthIndex(mo), Number(d)))
         || take(`(?:on\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+${monthRe}`, ([d, mo]) => setMonthDay(r, monthIndex(mo), Number(d)));
     }
@@ -1328,19 +1352,28 @@
   /* ======================================================================
    * Rendering
    * ==================================================================== */
-  let rafPending = false, renderBlocked = false;
+  let rafPending = false, renderBlocked = false, composing = false;
   function schedule() {
     if (rafPending) return;
     rafPending = true;
     requestAnimationFrame(() => { rafPending = false; render(); });
   }
   function render() {
-    if (drag.active) { renderBlocked = true; return; }
-    renderDrawer();
+    if (drag.active || composing) { renderBlocked = true; return; }
+    keepFocus($('drawer'), renderDrawer);
     renderTop();
     renderView();
     syncPanel();
     S.fresh.clear();
+  }
+
+  // Rebuilding a region would drop keyboard focus; put it back on the same keyed control.
+  function keepFocus(root, build) {
+    const a = document.activeElement, key = a && root.contains(a) ? a.dataset.key : null;
+    build();
+    if (!key) return;
+    const n = root.querySelector(`[data-key="${CSS.escape(key)}"]`);
+    if (n) n.focus({ preventScroll: true });
   }
 
   const isNarrow = () => matchMedia('(max-width: 900px)').matches;
@@ -1357,7 +1390,7 @@
     act.forEach(t => counts.set(t.list, (counts.get(t.list) || 0) + 1));
 
     const nav = (key, badge, hot) => h('button', {
-      class: 'nav-item', type: 'button', 'aria-current': S.view === key ? 'page' : null,
+      class: 'nav-item', type: 'button', 'data-key': 'nav:' + key, 'aria-current': S.view === key ? 'page' : null,
       onclick: () => { setView(key); if (isNarrow()) closeDrawer(); },
     }, icon(VIEW_META[key][1]), h('span', { class: 'lbl', text: VIEW_META[key][0] }), badge ? h('span', { class: 'badge' + (hot ? ' hot' : ''), text: badge }) : null);
 
@@ -1369,20 +1402,20 @@
       const hidden = prefs.hidden.includes(l.name);
       return h('div', { class: 'dl-row' + (hidden ? ' off' : '') },
         h('button', {
-          class: 'dl-check', type: 'button', role: 'checkbox', 'aria-checked': String(!hidden),
+          class: 'dl-check', type: 'button', role: 'checkbox', 'aria-checked': String(!hidden), 'data-key': 'dl-check:' + l.name,
           'aria-label': `Show ${l.name} on the board`, title: hidden ? 'Show on board' : 'Hide from board',
           style: `--c:${COLOR_HEX[l.color] || COLOR_HEX.GRAY}`, onclick: () => toggleHidden(l.name),
         }, icon('check')),
-        h('button', { class: 'dl-name', type: 'button', title: l.name, onclick: () => showList(l.name) }, h('span', { text: l.name })),
+        h('button', { class: 'dl-name', type: 'button', title: l.name, 'data-key': 'dl-name:' + l.name, onclick: () => showList(l.name) }, h('span', { text: l.name })),
         h('span', { class: 'dl-count', text: counts.get(l.name) || '' }),
-        iconBtn('more', `Options for ${l.name}`, e => listMenu(l, e.currentTarget), 'dl-more'));
+        keyed(iconBtn('more', `Options for ${l.name}`, e => listMenu(l, e.currentTarget), 'dl-more'), 'dl-more:' + l.name));
     }));
 
     const trashCount = S.tasks.filter(t => t.archType === 'Deleted').length;
     $('drawerFoot').replaceChildren(
       nav('trash', trashCount || ''),
-      h('button', { class: 'nav-item', type: 'button', onclick: settingsDlg }, icon('settings'), h('span', { class: 'lbl', text: 'Settings' })),
-      h('button', { class: 'nav-item', type: 'button', onclick: shortcutsDlg }, icon('keyboard'), h('span', { class: 'lbl', text: 'Keyboard shortcuts' }), h('kbd', { text: '?' })));
+      h('button', { class: 'nav-item', type: 'button', 'data-key': 'nav:settings', onclick: settingsDlg }, icon('settings'), h('span', { class: 'lbl', text: 'Settings' })),
+      h('button', { class: 'nav-item', type: 'button', 'data-key': 'nav:keys', onclick: shortcutsDlg }, icon('keyboard'), h('span', { class: 'lbl', text: 'Keyboard shortcuts' }), h('kbd', { text: '?' })));
   }
 
   function renderTop() {
@@ -1464,7 +1497,7 @@
     if (o.meter) card.append(o.meter);
     if (o.add) card.append(o.add);
     const scroll = h('div', { class: 'card-scroll', 'data-key': o.key });
-    const body = h('div', { class: 'card-body', role: 'list' });
+    const body = h('div', { class: 'card-body' });
     scroll.append(body);
     card.append(scroll);
     return { card, body, scroll };
@@ -1490,7 +1523,7 @@
   }
 
   function listCard(l) {
-    const sort = prefs.sort[l.name] || 'my', mine = sort === 'my';
+    const sort = sortOf(l.name), mine = sort === 'my';
     const act = S.tasks.filter(t => !t.archived && t.list === l.name);
     const done = S.tasks.filter(t => t.archType === 'Completed' && t.list === l.name).sort(byCompletedDesc);
     const { card, body, scroll } = cardEl({
@@ -1510,7 +1543,7 @@
   function groupEl(t, draggable) {
     const g = h('div', { class: 'group', 'data-id': t.id });
     g.append(taskRow(t, { drag: draggable }));
-    const sub = h('div', { class: 'subtasks', 'data-parent': t.id, role: 'list' });
+    const sub = h('div', { class: 'subtasks', 'data-parent': t.id });
     activeKids(t.id).filter(k => k.list === t.list).sort(SORTS.my).forEach(k => sub.append(taskRow(k, { sub: true, drag: draggable })));
     g.append(sub);
     return g;
@@ -1523,7 +1556,7 @@
       class: 'done-toggle', type: 'button', 'aria-expanded': String(open),
       onclick: () => { prefs.open[key] = !open; savePrefs(); schedule(); },
     }, icon('chevron'), h('span', { text: `Completed (${tasks.length})` })));
-    if (open) sec.append(h('div', { role: 'list' }, tasks.map(t => taskRow(t, Object.assign({}, o, { done: true })))));
+    if (open) sec.append(h('div', {}, tasks.map(t => taskRow(t, Object.assign({}, o, { done: true })))));
     return sec;
   }
 
@@ -1542,7 +1575,7 @@
     const done = t.archType === 'Completed';
     const row = h('div', {
       class: 'task' + (o.sub ? ' sub' : '') + (done ? ' done' : '') + (S.fresh.has(t.id) ? ' enter' : ''),
-      'data-id': t.id, 'data-key': 'task:' + t.id + (o.keySuffix || ''), tabindex: 0, role: 'listitem',
+      'data-id': t.id, 'data-key': 'task:' + t.id + (o.keySuffix || ''), tabindex: 0,
       'aria-label': t.title + (done ? ', completed' : ''),
     });
     row.append(o.drag && !done ? h('span', { class: 'grip', title: 'Drag to move' }, icon('drag')) : h('span', { class: 'grip-space' }));
@@ -1555,11 +1588,12 @@
     }
     const body = h('div', { class: 'task-body' });
     const title = h('div', { class: 'task-title' });
-    highlight(title, t.title, S.view === 'search' ? S.query : '');
+    const q = S.view === 'search' ? S.query.trim() : '';
+    highlight(title, t.title, q);
     body.append(title);
     if (t.desc && !done) {
       const notes = h('div', { class: 'task-notes' });
-      highlight(notes, t.desc.split('\n')[0], S.view === 'search' ? S.query : '');
+      highlight(notes, t.desc.split('\n')[0], q);
       body.append(notes);
     }
     const chips = chipsFor(t, o, done);
@@ -1587,7 +1621,7 @@
   function chipsFor(t, o, done) {
     const c = h('div', { class: 'chips' }), today = todayISO();
     if (o.showList) c.append(h('span', { class: 'chip', style: `--c:${listHex(t.list)}` }, h('span', { class: 'cdot' }), t.list));
-    if (done && t.completed) c.append(h('span', { class: 'chip' }, icon('check'), 'Done ' + relDay(localDayOf(t.completed)).toLowerCase().replace(/^(mon|tue|wed|thu|fri|sat|sun)/, m => m[0].toUpperCase() + m.slice(1))));
+    if (done && t.completed) c.append(h('span', { class: 'chip' }, icon('check'), 'Done ' + relDayLower(localDayOf(t.completed))));
     if (!done && t.due) {
       const cls = t.due < today ? ' overdue' : t.due === today ? ' today' : '';
       const label = (o.hideDay ? '' : relDay(t.due)) + (t.time ? (o.hideDay ? '' : ', ') + fmtTime(t.time) : '');
@@ -1872,13 +1906,13 @@
     renderPanel();
     focusPanelTitle(false);
   }
-  function openNew(extra) {
+  function openNew() {
     flushSaves();
     const defaults = { list: S.view === 'board' ? (S.lists.find(l => !prefs.hidden.includes(l.name)) || {}).name || S.defaultList : S.defaultList };
     if (S.view === 'today') defaults.due = todayISO();
     if (S.view === 'starred') defaults.starred = true;
     if (!S.panel) panelReturnFocus = document.activeElement;
-    S.panel = { mode: 'new', draft: Object.assign({ id: '', title: '', desc: '', due: '', time: '', status: 'Not started', priority: 'Medium', list: S.defaultList, starred: false, parent: '', repeat: '' }, defaults, extra) };
+    S.panel = { mode: 'new', draft: Object.assign({ id: '', title: '', desc: '', due: '', time: '', status: 'Not started', priority: 'Medium', list: S.defaultList, starred: false, parent: '', repeat: '' }, defaults) };
     renderPanel();
     focusPanelTitle(true);
   }
@@ -1947,18 +1981,17 @@
       h('select', { class: 'list-select', 'data-f': 'list', 'aria-label': 'List', title: 'Move to list', onchange: e => set('list', e.target.value) },
         (S.lists.some(l => l.name === t.list) ? S.lists : S.lists.concat({ name: t.list })).map(l => h('option', { value: l.name, text: l.name, selected: l.name === t.list }))),
       h('span', { class: 'grow' }),
-      !isNew && !done ? h('button', {
+      !done ? h('button', {
         class: 'star' + (t.starred ? ' on' : ''), type: 'button', style: 'opacity:1;margin:0', 'data-f': 'star',
         'aria-pressed': String(t.starred), 'aria-label': t.starred ? 'Remove star' : 'Star task', title: t.starred ? 'Remove star' : 'Star',
         onclick: () => set('starred', !t.starred),
       }, icon(t.starred ? 'star' : 'starOutline')) : null,
-      isNew ? h('button', { class: 'star' + (t.starred ? ' on' : ''), type: 'button', style: 'opacity:1;margin:0', 'data-f': 'star', 'aria-pressed': String(t.starred), 'aria-label': 'Star task', onclick: () => set('starred', !t.starred) }, icon(t.starred ? 'star' : 'starOutline')) : null,
       !isNew ? iconBtn('trash', 'Delete task', () => trash(t.id)) : null,
       iconBtn('close', 'Close (Esc)', closePanel));
 
     const scroll = h('div', { class: 'pnl-scroll' });
     if (parent) scroll.append(h('button', { class: 'pnl-back', type: 'button', onclick: () => openPanel(parent.id), title: 'Open parent task' }, icon('back'), h('span', { text: parent.title })));
-    if (done) scroll.append(h('div', { class: 'pnl-done' }, icon('doneAll'), `Completed ${relDay(localDayOf(t.completed)).toLowerCase()}`));
+    if (done) scroll.append(h('div', { class: 'pnl-done' }, icon('doneAll'), `Completed ${relDayLower(localDayOf(t.completed))}`));
 
     const title = h('textarea', { class: 'pnl-title', 'data-f': 'title', rows: 1, placeholder: isNew ? 'What needs doing?' : 'Title', 'aria-label': 'Title', value: t.title, maxlength: 500 });
     title.addEventListener('input', () => {
@@ -2109,7 +2142,7 @@
   }
 
   function listMenu(l, anchor) {
-    const sort = prefs.sort[l.name] || 'my';
+    const sort = sortOf(l.name);
     const isDefault = l.name === S.defaultList;
     const doneN = S.tasks.filter(t => t.list === l.name && t.archType === 'Completed').length;
     openMenu([
@@ -2314,7 +2347,6 @@
     drag.ph.style.height = r.height + 'px';
     drag.src.before(drag.ph);
     drag.src.classList.add('drag-src');
-    drag.homeCard = row.closest('.card');
     drag.target = null;
     document.body.classList.add('dragging');
     autoScroll();
@@ -2397,7 +2429,7 @@
     let action = null;
     if (commit && target && ph.isConnected) {
       if (target.kind === 'day') {
-        if (task.due !== target.date) action = () => { patch(id, { due: target.date }); snack(`Moved to ${relDay(target.date).toLowerCase()}`); };
+        if (task.due !== target.date) action = () => { patch(id, { due: target.date }); snack(`Moved to ${relDayLower(target.date)}`); };
       } else {
         const container = ph.parentElement;
         const parent = container.classList.contains('subtasks') ? container.dataset.parent : '';
@@ -2489,8 +2521,7 @@
     const views = { 1: 'board', 2: 'starred', 3: 'today', 4: 'upcoming', 5: 'insights', 6: 'trash' };
     if (views[k]) { e.preventDefault(); setView(views[k]); return; }
     if (act[k]) {
-      if ((k === ' ' || k === 'Enter') && !t) return;
-      if (k === ' ' && e.target.tagName === 'BUTTON') return;
+      if ((k === ' ' || k === 'Enter') && (!t || /^(BUTTON|A|SUMMARY)$/.test(e.target.tagName))) return;
       e.preventDefault();
       act[k]();
     }
@@ -2564,8 +2595,12 @@
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => { if (S.view === 'insights') drawCharts(); if (!isNarrow()) closeDrawer(); }, 150);
     });
+    window.addEventListener('pagehide', flushSaves);
+    $('board').addEventListener('compositionstart', () => { composing = true; });
+    $('board').addEventListener('compositionend', () => { composing = false; if (renderBlocked) { renderBlocked = false; renderNow(); } });
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState !== 'visible' || !S.ready || Q.pending || drag.active) return;
+      if (document.visibilityState === 'hidden') { flushSaves(); return; }
+      if (!S.ready || Q.pending || drag.active) return;
       const a = document.activeElement;
       if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return;
       if (Date.now() - S.loadedAt > 120000) boot(true);

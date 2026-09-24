@@ -21,6 +21,9 @@ const CONFIG = {
   DEFAULT_LIST: 'General',
   SHOW_LIST_IN_TITLE: true,
   DIGEST_HOUR: 7,
+  // Emails allowed to use the app. Leave empty for a sheet only you (or trusted editors) can open.
+  // Fill it in before deploying as a web app that anyone can reach.
+  ALLOWED_USERS: [],
   LIST_COLORS: {
     Onboarding: 'BLUE',
     Training: 'GREEN',
@@ -49,6 +52,10 @@ const SCHEMA_VERSION = '2';
 const LISTS_KEY = 'lists_v2';
 const LEGACY_LISTS_KEY = 'customLists';
 const SETTINGS_KEY = 'settings';
+const HASH_TAG = 'taskHash';
+const LEGACY_COLS = 10;
+const MAX_WRITE_RUNS = 6;
+const NOT_FOUND = 'Task not found. It may have been deleted — refresh to see the latest.';
 
 const _cache = {};
 
@@ -80,6 +87,14 @@ function migrate_(sh, fresh) {
   const missing = HEADERS.length - sh.getMaxColumns();
   if (missing > 0) sh.insertColumnsAfter(sh.getMaxColumns(), missing);
   if (sh.getMaxRows() < 2) sh.insertRowsAfter(1, 100);
+  if (!fresh) {
+    const head = sh.getRange(1, 1, 1, HEADERS.length).getValues()[0];
+    const clash = head.findIndex((v, i) => i >= LEGACY_COLS && v !== '' && v !== HEADERS[i]);
+    if (clash >= 0) {
+      throw new Error(`Column ${String.fromCharCode(65 + clash)} of the "${CONFIG.SHEET_NAME}" sheet already holds "${head[clash]}". ` +
+        'Move your own columns past column Q, then reopen Task Manager.');
+    }
+  }
   sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS])
     .setFontWeight('bold').setBackground('#0d1117').setFontColor('#58a6ff');
   sh.setFrozenRows(1);
@@ -121,7 +136,7 @@ function find_(id) {
 
 function must_(id) {
   const i = find_(id);
-  if (i < 0) throw new Error('Task not found. It may have been deleted — refresh to see the latest.');
+  if (i < 0) throw new Error(NOT_FOUND);
   return i;
 }
 
@@ -129,16 +144,25 @@ function touch_(i) {
   (_cache.touched || (_cache.touched = new Set())).add(i);
 }
 
+// Writes only the touched rows so edits made directly in the sheet elsewhere survive.
+// Many scattered rows (a big reorder) fall back to one span write, which is much faster.
 function flush_() {
   const t = _cache.touched;
   if (!t || !t.size) return;
-  const g = grid_(), sorted = [...t].sort((a, b) => a - b);
-  const lo = sorted[0], hi = sorted[sorted.length - 1], sh = sheet_();
+  const g = grid_(), sorted = [...t].sort((a, b) => a - b), sh = sheet_();
+  const hi = sorted[sorted.length - 1];
   if (hi >= _cache.readLen) {
     const needRows = hi + 2 - sh.getMaxRows();
     if (needRows > 0) sh.insertRowsAfter(sh.getMaxRows(), needRows);
   }
-  sh.getRange(lo + 2, 1, hi - lo + 1, HEADERS.length).setValues(g.slice(lo, hi + 1));
+  const runs = [];
+  sorted.forEach(i => {
+    const last = runs[runs.length - 1];
+    if (last && i === last[1] + 1) last[1] = i; else runs.push([i, i]);
+  });
+  (runs.length <= MAX_WRITE_RUNS ? runs : [[sorted[0], hi]]).forEach(([lo, end]) => {
+    sh.getRange(lo + 2, 1, end - lo + 1, HEADERS.length).setValues(g.slice(lo, end + 1));
+  });
   t.clear();
 }
 
@@ -171,6 +195,13 @@ function removeRows_(idxs) {
   delete _cache.index;
 }
 
+function guard_() {
+  const allow = CONFIG.ALLOWED_USERS;
+  if (!allow || !allow.length) return;
+  const me = String(Session.getActiveUser().getEmail() || '').toLowerCase();
+  if (!me || !allow.some(a => String(a).trim().toLowerCase() === me)) throw new Error('You don\'t have access to this task list.');
+}
+
 function withLock_(fn) {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
@@ -192,10 +223,17 @@ function isoDate_(v) {
     if (isNaN(parsed)) return '';
     v = parsed;
   }
+  if (isNaN(v)) return '';
   if (_cache.sameTz === undefined) _cache.sameTz = Session.getScriptTimeZone() === tz_();
   if (!_cache.sameTz) return Utilities.formatDate(v, tz_(), 'yyyy-MM-dd');
   const m = v.getMonth() + 1, d = v.getDate();
   return v.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (d < 10 ? '0' : '') + d;
+}
+
+function validIso_(s) {
+  if (!ISO_RE.test(s)) return false;
+  const [y, m, d] = s.split('-').map(Number), dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
 }
 
 function hhmm_(v) {
@@ -312,10 +350,11 @@ function showDialog() { SpreadsheetApp.getUi().showModalDialog(page_().setWidth(
 function doGet() { return page_().setTitle('Tasks'); }
 
 function menuSync() { ss_().toast(syncToCalendar().message, 'Task Manager'); }
-function menuDigest() { ss_().toast(sendDigest(), 'Task Manager'); }
+function menuDigest() { ss_().toast(sendDigest(null), 'Task Manager'); }
 
 /*** ===== READ API ===== ***/
 function getAll() {
+  guard_();
   if (grid_().some(r => r[C.ID] === '' && r[C.TITLE] !== '')) {
     withLock_(() => {
       grid_().forEach((r, i) => {
@@ -373,6 +412,7 @@ function cleanListName_(name) {
 }
 
 function createList(name, color) {
+  guard_();
   name = cleanListName_(name);
   return withLock_(() => {
     const all = lists_();
@@ -384,6 +424,7 @@ function createList(name, color) {
 }
 
 function renameList(oldName, newName) {
+  guard_();
   oldName = cleanListName_(oldName);
   newName = cleanListName_(newName);
   if (oldName === CONFIG.DEFAULT_LIST) throw new Error('The default list can\'t be renamed (change CONFIG.DEFAULT_LIST instead).');
@@ -406,6 +447,7 @@ function renameList(oldName, newName) {
 }
 
 function setListColor(name, color) {
+  guard_();
   name = cleanListName_(name);
   if (!COLORS.includes(color)) throw new Error('Unknown color.');
   return withLock_(() => {
@@ -418,6 +460,7 @@ function setListColor(name, color) {
 }
 
 function deleteList(name) {
+  guard_();
   name = cleanListName_(name);
   if (name === CONFIG.DEFAULT_LIST) throw new Error('Cannot delete the default list.');
   return withLock_(() => {
@@ -445,16 +488,19 @@ function calKey_(r) {
   return [r[C.TITLE], r[C.DESC], isoDate_(r[C.DUE]), hhmm_(r[C.TIME]), r[C.STATUS], r[C.PRIORITY], r[C.LIST], arch_(r)].join('\u0001');
 }
 
-// Creates the task when the id is unknown, otherwise applies only the fields present.
+// Updates only the fields present. Creates a task only when `create` is set, so a late
+// edit to a task deleted elsewhere fails instead of bringing it back.
 function saveTask(input) {
+  guard_();
   const p = input || {};
   const id = String(p.id || '').trim();
-  if (id && !ID_RE.test(id)) throw new Error('Invalid task id.');
   return withLock_(() => {
     const g = grid_();
     let i = id ? find_(id) : -1;
     const isNew = i < 0;
     if (isNew) {
+      if (!p.create) throw new Error(NOT_FOUND);
+      if (id && !ID_RE.test(id)) throw new Error('Invalid task id.');
       if (!cleanTitle_(p.title)) throw new Error('Task name is required.');
       const r = blankRow_();
       r[C.ID] = id || newId_();
@@ -494,7 +540,7 @@ function applyPatch_(r, i, p, changed) {
   if ('desc' in p) r[C.DESC] = String(p.desc == null ? '' : p.desc).trim().slice(0, 5000);
   if ('due' in p) {
     const due = String(p.due || '').trim();
-    if (due && !ISO_RE.test(due)) throw new Error('Bad date.');
+    if (due && !validIso_(due)) throw new Error('That date isn\'t valid.');
     r[C.DUE] = due ? new Date(due + 'T12:00:00') : '';
   }
   if ('time' in p) r[C.TIME] = hhmm_(p.time);
@@ -526,6 +572,7 @@ function applyPatch_(r, i, p, changed) {
 }
 
 function completeTask(id, nextId) {
+  guard_();
   if (nextId && !ID_RE.test(String(nextId))) throw new Error('Invalid task id.');
   return withLock_(() => {
     const g = grid_(), i = must_(id), r = g[i];
@@ -587,6 +634,7 @@ function unarchive_(row) {
 }
 
 function restoreTask(id) {
+  guard_();
   return withLock_(() => {
     const g = grid_(), i = must_(id), r = g[i], was = arch_(r);
     if (!was) return out_([i]);
@@ -616,6 +664,7 @@ function restoreTask(id) {
 }
 
 function deleteTask(id) {
+  guard_();
   return withLock_(() => {
     const g = grid_(), i = must_(id), changed = [i];
     [i].concat(childrenOf_(id)).forEach(k => {
@@ -630,9 +679,15 @@ function deleteTask(id) {
   });
 }
 
+// Deleted subtasks go with their parent; any live subtask is detached instead of destroyed.
 function purge_(idxs) {
   const g = grid_(), all = new Set(idxs), purgedIds = new Set(idxs.map(i => str_(g[i][C.ID])));
-  g.forEach((r, k) => { if (isTask_(r) && purgedIds.has(str_(r[C.PARENT]))) all.add(k); });
+  const detached = [];
+  g.forEach((r, k) => {
+    if (all.has(k) || !isTask_(r) || !purgedIds.has(str_(r[C.PARENT]))) return;
+    if (arch_(r) === 'Deleted') all.add(k);
+    else { r[C.PARENT] = ''; touch_(k); detached.push(str_(r[C.ID])); }
+  });
   const removed = [...all].map(i => str_(g[i][C.ID]));
   const withEvents = [...all].filter(i => g[i][C.EVENT]);
   if (withEvents.length) {
@@ -640,14 +695,16 @@ function purge_(idxs) {
     withEvents.forEach(i => deleteEvent_(cal, g[i][C.EVENT]));
   }
   removeRows_([...all]);
-  return { removed: removed };
+  return out_(detached.map(find_).filter(i => i >= 0), { removed: removed });
 }
 
 function purgeTask(id) {
+  guard_();
   return withLock_(() => purge_([must_(id)]));
 }
 
 function emptyTrash() {
+  guard_();
   return withLock_(() => {
     const idxs = [];
     grid_().forEach((r, i) => { if (isTask_(r) && arch_(r) === 'Deleted') idxs.push(i); });
@@ -656,6 +713,7 @@ function emptyTrash() {
 }
 
 function clearCompleted(list) {
+  guard_();
   list = cleanListName_(list);
   return withLock_(() => {
     const changed = [];
@@ -673,6 +731,7 @@ function clearCompleted(list) {
 
 // Sets the full sibling order for one list (or one parent's subtasks).
 function reorderTasks(list, parent, ids) {
+  guard_();
   list = cleanListName_(list || CONFIG.DEFAULT_LIST);
   parent = String(parent || '').trim();
   if (!Array.isArray(ids)) throw new Error('ids must be an array.');
@@ -681,6 +740,7 @@ function reorderTasks(list, parent, ids) {
     if (parent) {
       const pr = g[must_(parent)];
       if (str_(pr[C.PARENT])) throw new Error('Subtasks can only go one level deep.');
+      if (arch_(pr)) throw new Error('That parent task is completed or deleted.');
       list = listOf_(pr);
     }
     ids.forEach((id, n) => {
@@ -751,8 +811,13 @@ function syncRow_(r, stamp) {
     start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m);
     end = new Date(start.getTime() + CONFIG.EVENT_MINUTES * 60000);
   }
+  const color = colorFor_(t.list);
+  // A hash of everything written to the event lets a full sync skip events that are already current.
+  const hash = Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5,
+    [label, body, start ? start.getTime() : isoDate_(day), color].join('\u0001'), Utilities.Charset.UTF_8));
   let ev = null, kind = 'updated';
   if (eventId) { try { ev = cal.getEventById(eventId); } catch (e) { ev = null; } }
+  if (ev && ev.getTag(HASH_TAG) === hash) return 'unchanged';
   if (ev) {
     if (ev.getTitle() !== label) ev.setTitle(label);
     if (ev.getDescription() !== body) ev.setDescription(body);
@@ -763,7 +828,8 @@ function syncRow_(r, stamp) {
     ev.addPopupReminder(start ? CONFIG.TIMED_REMINDER_MINUTES : CONFIG.ALLDAY_REMINDER_MINUTES);
     kind = 'created';
   }
-  try { ev.setColor(colorFor_(t.list)); } catch (e) {}
+  try { ev.setColor(color); } catch (e) {}
+  ev.setTag(HASH_TAG, hash);
   r[C.EVENT] = ev.getId();
   r[C.SYNCED] = stamp || new Date();
   return kind;
@@ -778,11 +844,12 @@ function calendarAfter_(idxs, forceRemove) {
     const known = r[C.EVENT] || r[C.SYNCED];
     if (forceRemove ? !r[C.EVENT] : !(known || auto)) return;
     if (!wantsEvent_(r) && !r[C.EVENT]) return;
-    try { syncRow_(r); touch_(i); } catch (e) { console.warn('Calendar sync failed for ' + r[C.ID] + ': ' + e); }
+    try { if (syncRow_(r) !== 'unchanged') touch_(i); } catch (e) { console.warn('Calendar sync failed for ' + r[C.ID] + ': ' + e); }
   });
 }
 
 function syncToCalendar() {
+  guard_();
   return withLock_(() => {
     const g = grid_(), stamp = new Date();
     let created = 0, updated = 0, removed = 0, failed = 0;
@@ -793,6 +860,7 @@ function syncToCalendar() {
       if (!wantsEvent_(r) && !r[C.EVENT]) return;
       try {
         const kind = syncRow_(r, stamp);
+        if (kind === 'unchanged') return;
         if (kind === 'created') created++;
         else if (kind === 'updated') updated++;
         else if (kind === 'removed') removed++;
@@ -833,6 +901,7 @@ function settings_() {
 }
 
 function saveSettings(patch) {
+  guard_();
   patch = patch || {};
   const cur = parse_(userProps_().getProperty(SETTINGS_KEY)) || {};
   if ('autoSync' in patch) cur.autoSync = !!patch.autoSync;
@@ -859,7 +928,11 @@ function esc_(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-function sendDigest() {
+// Runs from the daily trigger (with an event object) or on demand from the app/menu.
+function sendDigest(e) {
+  const fromTrigger = !!(e && e.triggerUid) && ScriptApp.getProjectTriggers().some(t => t.getUniqueId() === e.triggerUid);
+  if (!fromTrigger) guard_();
+  if (fromTrigger && !userSettings_().digest) return 'Digest is turned off.';
   const email = Session.getEffectiveUser().getEmail();
   if (!email) return 'No email address available for this account.';
   const today = isoDate_(new Date());
