@@ -1278,6 +1278,8 @@
   const dayIndex = w => { w = w.toLowerCase(); return DAYS_FULL.findIndex((f, i) => f === w || DAYS_SHORT[i].split('|').includes(w)); };
   const monthIndex = w => { w = w.toLowerCase().replace('.', ''); return MONTHS.findIndex(m => m.split('|').includes(w)); };
   const nextWeekday = (idx, allowToday) => { const t = todayISO(); let diff = (idx - parseISO(t).getDay() + 7) % 7; if (!diff && !allowToday) diff = 7; return addDays(t, diff); };
+  // "next friday" means Friday of next week (Monday-start), not the coming Friday.
+  const weekdayNextWeek = idx => addDays(nextWeekday(1, false), (idx + 6) % 7);
   const norm = s => s.toLowerCase().replace(/[\s_-]+/g, '');
   function findList(token) {
     const n = norm(token), exact = S.lists.find(l => norm(l.name) === n);
@@ -1290,13 +1292,14 @@
     let s = ' ' + raw + ' ';
     const r = {};
     const take = (pattern, fn) => {
-      const m = s.match(new RegExp('\\s' + pattern + '(?=\\s)', 'i'));
+      const m = s.match(new RegExp('\\s' + pattern + '(?=[\\s,.;:!?])', 'i'));
       if (!m || fn(m.slice(1)) === false) return false;
       s = s.slice(0, m.index) + ' ' + s.slice(m.index + m[0].length);
       return true;
     };
     const monthRe = `(${MONTHS.join('|')})\\.?`;
-    const dayRe = `(${DAYS_FULL.join('|')})`;
+    // "sun", "sat" and "wed" are ordinary words, so they only count after on/next/this/due.
+    const dayRe = `(${DAYS_FULL.join('|')}|mon|tues|tue|thurs|thur|thu|fri)`;
     const dayAnyRe = `(${DAYS_FULL.join('|')}|${DAYS_SHORT.join('|')})`;
 
     take('(?:!(?:high|h|1)|!!)', () => { r.priority = 'High'; })
@@ -1330,14 +1333,15 @@
           const k = { a: 1, an: 1, one: 1, two: 2, three: 3 }[n.toLowerCase()] || Number(n);
           r.due = unit.startsWith('month') ? addMonths(today, k) : addDays(today, unit.startsWith('week') ? k * 7 : k);
         })
-        || take(`(?:on\\s+|next\\s+|this\\s+|due\\s+)${dayAnyRe}`, ([d]) => { r.due = nextWeekday(dayIndex(d), false); })
+        || take(`next\\s+${dayAnyRe}`, ([d]) => { r.due = weekdayNextWeek(dayIndex(d)); })
+        || take(`(?:on\\s+|this\\s+|due\\s+)${dayAnyRe}`, ([d]) => { r.due = nextWeekday(dayIndex(d), false); })
         || take(dayRe, ([d]) => { r.due = nextWeekday(dayIndex(d), false); })
         || take('(\\d{4})-(\\d{2})-(\\d{2})', ([y, m, d]) => { const iso = `${y}-${m}-${d}`; if (isoOf(parseISO(iso)) !== iso) return false; r.due = iso; })
         || take(`(?:on\\s+)?${monthRe}\\s+(\\d{1,2})(?:st|nd|rd|th)?`, ([mo, d]) => setMonthDay(r, monthIndex(mo), Number(d)))
         || take(`(?:on\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+${monthRe}`, ([d, mo]) => setMonthDay(r, monthIndex(mo), Number(d)));
     }
     if (r.time && !r.due) r.due = todayISO();
-    r.title = s.replace(/\s+/g, ' ').trim() || raw.trim();
+    r.title = s.replace(/\s+([,.;:!?])/g, '$1').replace(/\s+/g, ' ').replace(/[,;:]+(?=[.!?]*$)/, '').replace(/^[\s,.;:]+|[\s,;:]+$/g, '') || raw.trim();
     return r;
   }
   function setMonthDay(r, mi, day) {
