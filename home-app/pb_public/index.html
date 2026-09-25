@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <base target="_top">
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Tasks</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#0b0f14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tasks">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <style>
     /* ===== Tokens ======================================================== */
     :root {
@@ -46,7 +50,7 @@
     html, body { height: 100%; }
     body {
       margin: 0;
-      font: 14px/1.45 Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+      font: 14px/1.45 -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
       color: var(--text);
       background: var(--bg);
       overflow: hidden;
@@ -72,6 +76,7 @@
       display: grid;
       grid-template-columns: var(--drawer-w) minmax(0, 1fr);
       height: 100vh;
+      height: 100dvh;
       transition: grid-template-columns .25s var(--ease);
     }
     .app.drawer-closed { grid-template-columns: 0 minmax(0, 1fr); }
@@ -555,6 +560,33 @@
     .lrow .lnum { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; }
     .lrow .meter { grid-column: 1 / -1; height: 6px; }
 
+    /* ===== iPhone screen edges (notch, home indicator) ==================== */
+    .topbar { padding-top: max(10px, env(safe-area-inset-top)); padding-right: max(16px, env(safe-area-inset-right)); }
+    .drawer-inner { padding-top: max(14px, env(safe-area-inset-top)); padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+    .board { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+    .fab { bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px)); right: max(16px, env(safe-area-inset-right)); }
+    .snack { bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px)); }
+    .panel { bottom: max(12px, env(safe-area-inset-bottom)); }
+    input, textarea, select { font-size: max(16px, 1em); }
+    .qa-input, .search input, .sub-add input { font-size: 16px; }
+
+    /* ===== Sign-in ======================================================= */
+    .auth { position: fixed; inset: 0; z-index: 95; display: grid; place-items: center; padding: 24px 16px; background: var(--bg); overflow-y: auto; }
+    .auth-card { width: min(380px, 100%); background: var(--card); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 28px 24px 22px; }
+    .auth-card .brand { padding: 0 0 6px; }
+    .auth-card h2 { margin: 12px 0 4px; font-size: 20px; }
+    .auth-card p { margin: 0 0 16px; color: var(--text-2); font-size: 13.5px; }
+    .auth-card form { display: flex; flex-direction: column; gap: 10px; }
+    .auth-card label { font-size: 12px; font-weight: 600; color: var(--text-2); display: flex; flex-direction: column; gap: 6px; }
+    .auth-card .input { height: 44px; font-size: 16px; }
+    .auth-card .btn { height: 44px; margin-top: 6px; font-size: 15px; }
+    .auth-err { color: var(--red); font-size: 13px; min-height: 18px; }
+    .sync-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 6px; vertical-align: 1px; }
+    .sync-dot.offline, .sync-dot.error { background: var(--amber); }
+    .sync-dot.syncing { background: var(--accent); }
+    .feed { display: flex; gap: 8px; margin-top: 8px; }
+    .feed .input { flex: 1; font-size: 12.5px; }
+
     /* ===== Responsive ==================================================== */
     @media (min-width: 1180px) {
       .app.panel-open .board { padding-right: calc(var(--panel-w) + 36px); }
@@ -589,11 +621,12 @@
       .topbar.searching .search input, .topbar.searching .search .icon-btn { display: block; }
       .topbar.searching .search .icon-btn { display: grid; }
       .status { display: none; }
+      .topbar { padding-top: max(8px, env(safe-area-inset-top)); }
       .board, .board.single { flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 4px 10px 96px; gap: 12px; overflow-x: hidden; }
       .card, .card.wide { width: auto; max-height: none; }
       .card-scroll { overflow: visible; }
       .new-list-card { width: auto; height: 64px; }
-      .panel { top: 0; right: 0; bottom: 0; left: 0; width: auto; max-width: none; border-radius: 0; border: 0; }
+      .panel { top: 0; right: 0; bottom: 0; left: 0; width: auto; max-width: none; border-radius: 0; border: 0; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
       .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .task.sub { margin-left: 26px; }
       .qa-preview { padding-left: 10px; }
@@ -627,8 +660,7 @@
           <button class="icon-btn" id="btnClearSearch" type="button" title="Clear search" aria-label="Clear search" hidden></button>
         </div>
         <span class="status" id="status" aria-live="polite"></span>
-        <button class="icon-btn" id="btnRefresh" type="button" title="Refresh" aria-label="Refresh"></button>
-        <button class="icon-btn" id="btnSync" type="button" title="Sync to Google Calendar" aria-label="Sync to Google Calendar"></button>
+        <button class="icon-btn" id="btnSync" type="button" title="Sync now" aria-label="Sync now"></button>
         <button class="icon-btn" id="btnSettings" type="button" title="Settings" aria-label="Settings"></button>
       </header>
       <div class="board" id="board"></div>
@@ -641,52 +673,11 @@
   <div class="snack" id="snack" role="status"><span id="snackText"></span><button id="snackAction" type="button" hidden></button></div>
   <div id="layer"></div>
 
+  <div class="auth" id="auth" hidden></div>
+  <script src="pocketbase.umd.js"></script>
+  <script src="data.js"></script>
   <script>
   'use strict';
-
-  /* ======================================================================
-   * Preview mode — lets index.html open straight in a browser with demo data.
-   * Inside Apps Script, `google.script.run` exists and this block is skipped.
-   * ==================================================================== */
-  if (typeof google === 'undefined') {
-    const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
-    const ago = n => new Date(Date.now() - n * 864e5).toISOString();
-    let k = 0;
-    const t = (title, list, extra) => Object.assign({ id: 'demo' + (++k), title, desc: '', due: '', time: '', status: 'Not started', priority: 'Medium',
-      list, starred: false, parent: '', order: k, repeat: '', created: ago(9), completed: '', archived: false, archType: '', synced: false }, extra);
-    const demo = [
-      t('Finish onboarding checklist', 'Onboarding', { due: d(0), priority: 'High', starred: true, desc: 'HR forms, laptop setup and security training.' }),
-      t('Laptop setup', 'Onboarding', { parent: 'demo1' }),
-      t('Security training video', 'Onboarding', { parent: 'demo1', archived: true, archType: 'Completed', status: 'Done', completed: ago(0) }),
-      t('Meet the team lead', 'Onboarding', { due: d(1), time: '10:30' }),
-      t('Submit expense report', 'Admin', { due: d(-2), priority: 'High' }),
-      t('Renew parking permit', 'Admin', { due: d(5), status: 'Blocked' }),
-      t('Weekly planning', 'Meetings', { due: d(0), time: '09:00', repeat: 'weekly' }),
-      t('1:1 with manager', 'Meetings', { due: d(2), time: '14:00', repeat: 'weekly', starred: true }),
-      t('Read the style guide', 'Training', { status: 'In progress', desc: 'Sections 1–4 first.' }),
-      t('Module 3 quiz', 'Training', { due: d(3), priority: 'Low' }),
-      t('Order new badge', 'General', {}),
-      t('Old request', 'General', { archived: true, archType: 'Deleted' }),
-    ];
-    [0, 0, 1, 1, 1, 2, 3, 3, 4, 6, 6, 6, 8, 9, 11, 12].forEach((a, i) => demo.push(t('Done task ' + (i + 1), ['Admin', 'Training', 'General'][i % 3],
-      { archived: true, archType: 'Completed', status: 'Done', completed: ago(a) })));
-    const lists = [['Admin', 'ORANGE'], ['General', 'GRAY'], ['Meetings', 'MAUVE'], ['Onboarding', 'BLUE'], ['Training', 'GREEN']].map(([name, color]) => ({ name, color }));
-    const api = {
-      getAll: () => ({ tasks: demo, lists, settings: { autoSync: false, digest: false, digestHour: 7, sheetUrl: '' }, defaultList: 'General' }),
-      syncToCalendar: () => ({ message: 'Preview mode — nothing synced' }),
-      sendDigest: () => 'Preview mode — no email sent',
-    };
-    const runner = (ok, fail) => new Proxy({}, {
-      get: (_, name) => {
-        if (name === 'withSuccessHandler') return fn => runner(fn, fail);
-        if (name === 'withFailureHandler') return fn => runner(ok, fn);
-        return (...args) => setTimeout(() => {
-          try { const r = api[name] ? api[name](...args) : {}; ok && ok(JSON.parse(JSON.stringify(r))); } catch (e) { fail && fail(e); }
-        }, 120);
-      },
-    });
-    window.google = { script: { run: runner() } };
-  }
 
   /* ======================================================================
    * Helpers
@@ -838,11 +829,7 @@
     }[rule];
   }
 
-  const newId = () => {
-    const b = new Uint8Array(5);
-    crypto.getRandomValues(b);
-    return 't' + [...b].map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 9);
-  };
+  const newId = TM.newId;
 
   /* ======================================================================
    * State
@@ -903,28 +890,16 @@
   const byCompletedDesc = (a, b) => (b.completed || '').localeCompare(a.completed || '');
 
   /* ======================================================================
-   * Server bridge: one ordered write queue, results merged when it drains
+   * Data bridge: operations run against the copy on this device (data.js),
+   * which syncs with the NAS in the background. Results merge when the queue drains.
    * ==================================================================== */
-  const call = (fn, ...args) => new Promise((resolve, reject) => {
-    google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
-  });
-
-  // A lock timeout means the server never ran the call (a long calendar sync held the lock), so retrying is safe.
-  async function callWithRetry(fn, args) {
-    for (let attempt = 1; ; attempt++) {
-      try { return await call(fn, ...args); }
-      catch (err) {
-        if (attempt >= 3 || !/lock timeout/i.test(String((err && err.message) || err))) throw err;
-        await new Promise(r => setTimeout(r, 2000 * attempt));
-      }
-    }
-  }
+  const call = (fn, ...args) => TM.call(fn, args);
 
   const Q = { chain: Promise.resolve(), pending: 0, results: [], failed: false };
   function send(fn, ...args) {
     Q.pending++;
     setStatus();
-    const run = Q.chain.then(() => callWithRetry(fn, args));
+    const run = Q.chain.then(() => call(fn, ...args));
     Q.chain = run.then(res => { Q.results.push(res); }, err => {
       Q.failed = true;
       snack(`Couldn't save: ${(err && err.message) || err}`);
@@ -935,10 +910,17 @@
     setStatus();
     const results = Q.results;
     Q.results = [];
-    if (Q.failed) { Q.failed = false; boot(true); return; }
+    if (Q.failed || remoteChanged) { Q.failed = remoteChanged = false; boot(true); return; }
     results.forEach(merge);
     reindex();
     schedule();
+  }
+  // Another device changed something: reload from the local copy once nothing is mid-edit.
+  let remoteChanged = false;
+  function onRemoteChange() {
+    if (!S.ready) return;
+    if (Q.pending || drag.active || composing) { remoteChanged = true; return; }
+    boot(true);
   }
   function merge(r) {
     if (!r || typeof r !== 'object') return;
@@ -953,21 +935,19 @@
     if (r.lists) S.lists = r.lists;
     if (r.settings) S.settings = r.settings;
   }
-  let statusTimer;
-  function setStatus() {
-    const s = $('status');
-    clearTimeout(statusTimer);
-    if (Q.pending) { s.textContent = 'Saving…'; s.classList.add('saving'); s.style.opacity = 1; return; }
-    s.classList.remove('saving');
-    if (s.textContent) {
-      s.textContent = 'Saved';
-      statusTimer = setTimeout(() => { s.style.opacity = 0; }, 1600);
-    }
+  // Saves are instant on this device; the status shows how syncing with the NAS is going.
+  let syncInfo = { state: 'idle', pending: 0 };
+  function setStatus(info) {
+    if (info) syncInfo = info;
+    const s = $('status'), btn = $('btnSync');
+    const label = { syncing: 'Syncing…', offline: 'Offline', error: 'Sync problem', 'signed-out': 'Signed out' }[syncInfo.state]
+      || (syncInfo.pending ? 'Waiting to sync' : 'Synced');
+    s.replaceChildren(h('span', { class: 'sync-dot ' + syncInfo.state }), label);
+    s.title = TM.syncStatus();
+    s.style.opacity = 1;
+    btn.classList.toggle('spin', syncInfo.state === 'syncing');
   }
-  window.addEventListener('beforeunload', e => {
-    flushSaves();
-    if (Q.pending) { e.preventDefault(); e.returnValue = ''; }
-  });
+  window.addEventListener('beforeunload', flushSaves);
 
   async function boot(silent) {
     if (!silent && !S.ready) render();
@@ -1255,18 +1235,9 @@
   }
 
   /* ----- calendar / settings ----- */
-  async function sync() {
-    const btn = $('btnSync');
-    btn.classList.add('spin');
-    snack('Syncing to Google Calendar…');
-    const res = await send('syncToCalendar');
-    btn.classList.remove('spin');
-    if (res && res.message) snack(res.message);
-  }
-  async function saveSettings(p) {
-    Object.assign(S.settings, p);
-    const res = await send('saveSettings', p);
-    if (res && res.settings) S.settings = res.settings;
+  async function syncNow() {
+    await TM.syncNow();
+    snack(TM.syncStatus());
   }
 
   /* ======================================================================
@@ -2047,7 +2018,7 @@
       foot.append(h('span', { class: 'meta', text: 'Ctrl+Enter to add' }), h('button', { class: 'btn', type: 'button', text: 'Cancel', onclick: closePanel }), addBtn);
       updateAddBtn();
     } else {
-      const meta = [t.created ? 'Created ' + fmtDay(localDayOf(t.created), { weekday: undefined }) : '', t.synced ? 'On Google Calendar' : ''].filter(Boolean).join(' · ');
+      const meta = [t.created ? 'Created ' + fmtDay(localDayOf(t.created), { weekday: undefined }) : '', ''].filter(Boolean).join(' · ');
       foot.append(h('span', { class: 'meta', text: meta, title: meta }),
         done ? h('button', { class: 'btn tonal', type: 'button', onclick: () => uncomplete(t.id) }, icon('restore'), 'Mark not complete')
           : h('button', { class: 'btn tonal', type: 'button', onclick: () => { closePanel(); complete(t.id, $('board').querySelector(`.task[data-id="${CSS.escape(t.id)}"]`)); } }, icon('check'), 'Mark complete'));
@@ -2248,25 +2219,33 @@
   }
 
   function settingsDlg() {
-    const s = S.settings;
-    const hours = h('select', { class: 'select', 'aria-label': 'Digest time', disabled: !s.digest, onchange: e => saveSettings({ digestHour: Number(e.target.value) }) },
-      Array.from({ length: 24 }, (_, i) => h('option', { value: String(i), selected: i === s.digestHour, text: fmtTime(pad(i) + ':00') })));
-    const toggleRow = (label, desc, checked, onChange, extra) => h('label', { class: 'set-row' },
-      h('div', { class: 'grow' }, h('div', { class: 'set-label', text: label }), h('div', { class: 'set-desc', text: desc })),
-      extra || null, h('input', { class: 'switch', type: 'checkbox', checked, 'aria-label': label, onchange: e => onChange(e.target.checked) }));
+    const feed = h('input', { class: 'input', readonly: true, value: 'Loading…', 'aria-label': 'Calendar feed link' });
+    const copyBtn = h('button', { class: 'btn', type: 'button', text: 'Copy', onclick: async () => {
+      try { await navigator.clipboard.writeText(feed.value); snack('Link copied'); } catch (e) { feed.select(); snack('Link selected. Copy it from the box.'); }
+    } });
+    const load = p => p.then(url => { feed.value = url; }, () => { feed.value = 'Connect to your NAS to see the link'; });
+    load(TM.calendar.link());
+    const lastSync = syncInfo.lastSync ? new Date(syncInfo.lastSync).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : 'not yet';
+    const row = (label, desc, ctl) => h('div', { class: 'set-row' },
+      h('div', { class: 'grow' }, h('div', { class: 'set-label', text: label }), desc ? h('div', { class: 'set-desc', text: desc }) : null), ctl || null);
     const content = h('div', {},
-      h('div', { class: 'set-title', text: 'Google Calendar' }),
+      h('div', { class: 'set-title', text: 'Sync' }),
       h('div', { class: 'set-group' },
-        toggleRow('Auto-sync new due dates', 'Create calendar events as soon as a task gets a date. Tasks already on the calendar always stay up to date.', !!s.autoSync, v => saveSettings({ autoSync: v })),
-        h('div', { class: 'set-row' }, h('div', { class: 'grow' }, h('div', { class: 'set-label', text: 'Sync everything now' }), h('div', { class: 'set-desc', text: 'Creates, updates and removes events for all tasks.' })),
-          h('button', { class: 'btn', type: 'button', onclick: sync }, icon('sync'), 'Sync'))),
-      h('div', { class: 'set-title', text: 'Daily digest' }),
+        row(TM.syncStatus(), 'Last synced: ' + lastSync, h('button', { class: 'btn', type: 'button', onclick: syncNow }, icon('sync'), 'Sync now'))),
+      h('div', { class: 'set-title', text: 'Calendar on your iPhone' }),
       h('div', { class: 'set-group' },
-        toggleRow('Morning email', 'Overdue, due-today and starred tasks, sent to you once a day.', !!s.digest, v => { hours.disabled = !v; saveSettings({ digest: v }); }),
-        h('div', { class: 'set-row' }, h('div', { class: 'grow' }, h('div', { class: 'set-label', text: 'Send at' })), hours),
-        h('div', { class: 'set-row' }, h('div', { class: 'grow' }, h('div', { class: 'set-label', text: 'Send one now' }), h('div', { class: 'set-desc', text: 'Preview what the email looks like.' })),
-          h('button', { class: 'btn', type: 'button', onclick: async () => { const m = await send('sendDigest'); if (m) snack(m); } }, icon('mail'), 'Send'))),
-      s.sheetUrl ? h('p', {}, h('a', { href: s.sheetUrl, target: '_blank', rel: 'noopener', style: 'color:var(--accent)', text: 'Open the task spreadsheet ↗' })) : null);
+        h('div', { class: 'set-row', style: 'display:block' },
+          h('div', { class: 'set-desc', text: 'On your iPhone: Settings → Apps → Calendar → Calendar Accounts → Add Account → Other → Add Subscribed Calendar. Paste this link and turn off “Remove Alerts” to get reminders.' }),
+          h('div', { class: 'feed' }, feed, copyBtn)),
+        row('Reset link', 'Use this if the link was shared by mistake. Re-add the calendar afterwards.',
+          h('button', { class: 'btn', type: 'button', text: 'Reset', onclick: async () => {
+            if (await confirmDlg('Reset calendar link?', 'The current link stops working right away.', 'Reset')) { load(TM.calendar.reset()); snack('New link created'); }
+          } }))),
+      h('div', { class: 'set-title', text: 'Account' }),
+      h('div', { class: 'set-group' },
+        row('Signed in as ' + TM.auth.email(), 'Your tasks stay on this device until you sign out.',
+          h('button', { class: 'btn danger', type: 'button', text: 'Sign out', onclick: signOut }))),
+      h('p', { class: 'set-desc', text: 'Add to Home Screen from Safari’s Share menu to use this like an app.' }));
     openDialog('Settings', content, [{ label: 'Done', primary: true, value: true }]);
   }
 
@@ -2573,16 +2552,8 @@
     $('search').addEventListener('blur', () => { if (!$('search').value) $('topbar').classList.remove('searching'); });
     $('btnClearSearch').append(icon('close'));
     $('btnClearSearch').addEventListener('click', e => { e.preventDefault(); clearSearch(); $('search').focus(); });
-    $('btnRefresh').append(icon('refresh'));
-    $('btnRefresh').addEventListener('click', async () => {
-      const b = $('btnRefresh');
-      b.classList.add('spin');
-      await Q.chain;
-      await boot(true);
-      b.classList.remove('spin');
-    });
-    $('btnSync').append(icon('event'));
-    $('btnSync').addEventListener('click', sync);
+    $('btnSync').append(icon('sync'));
+    $('btnSync').addEventListener('click', syncNow);
     $('btnSettings').append(icon('settings'));
     $('btnSettings').addEventListener('click', settingsDlg);
     $('fab').append(icon('add'), h('span', { text: 'Create' }));
@@ -2602,20 +2573,78 @@
     window.addEventListener('pagehide', flushSaves);
     $('board').addEventListener('compositionstart', () => { composing = true; });
     $('board').addEventListener('compositionend', () => { composing = false; if (renderBlocked) { renderBlocked = false; renderNow(); } });
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') { flushSaves(); return; }
-      if (!S.ready || Q.pending || drag.active) return;
-      const a = document.activeElement;
-      if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return;
-      if (Date.now() - S.loadedAt > 120000) boot(true);
-    });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSaves(); });
     let midnight = todayISO();
     setInterval(() => { if (todayISO() !== midnight) { midnight = todayISO(); schedule(); } }, 60000);
   }
 
+  /* ======================================================================
+   * Sign-in and startup
+   * ==================================================================== */
+  function showAuth(firstRun, message) {
+    const box = $('auth');
+    const email = h('input', { class: 'input', type: 'email', autocomplete: 'username', required: true, id: 'authEmail' });
+    const pass = h('input', { class: 'input', type: 'password', autocomplete: firstRun ? 'new-password' : 'current-password', required: true, minlength: 8, id: 'authPass' });
+    const err = h('div', { class: 'auth-err', role: 'alert', text: message || '' });
+    const submit = h('button', { class: 'btn primary', type: 'submit', text: firstRun ? 'Create account' : 'Sign in' });
+    const form = h('form', {
+      onsubmit: async e => {
+        e.preventDefault();
+        err.textContent = '';
+        submit.disabled = true;
+        try {
+          if (firstRun) await TM.auth.createAccount(email.value.trim(), pass.value);
+          else await TM.auth.signIn(email.value.trim(), pass.value);
+          box.hidden = true;
+          start();
+        } catch (ex) {
+          const status = ex && ex.status;
+          err.textContent = status === 400 && !firstRun ? 'That email and password don’t match.'
+            : status === 0 ? 'Can’t reach your NAS. Check that Tailscale is connected.'
+            : (ex && ex.response && ex.response.message) || (ex && ex.message) || 'Something went wrong.';
+        } finally { submit.disabled = false; }
+      },
+    },
+      h('label', {}, 'Email', email),
+      h('label', {}, firstRun ? 'Password (at least 8 characters)' : 'Password', pass),
+      err, submit);
+    const brand = h('div', { class: 'brand' }, icon('logo'), h('span', { text: 'Tasks' }));
+    box.replaceChildren(h('div', { class: 'auth-card' }, brand,
+      h('h2', { text: firstRun ? 'Create your account' : 'Sign in' }),
+      h('p', { text: firstRun ? 'This is the only account on your NAS. Your tasks sync between your iPhone and computer.' : 'Use the account you created on your NAS.' }),
+      form));
+    box.hidden = false;
+    setTimeout(() => email.focus(), 50);
+  }
+
+  async function askToSignIn(message) {
+    let firstRun = false;
+    try { firstRun = await TM.auth.needsSetup(); } catch (e) { message = message || 'Can’t reach your NAS. Check that Tailscale is connected.'; }
+    showAuth(firstRun, message);
+  }
+
+  async function signOut() {
+    closePanel();
+    await TM.auth.signOut();
+    S.tasks = [];
+    S.lists = [];
+    S.ready = false;
+    reindex();
+    $('layer').replaceChildren();
+    askToSignIn();
+  }
+
+  function start() {
+    boot();
+  }
+
   initShell();
   render();
-  boot();
+  TM.onSync(setStatus);
+  TM.onChange(onRemoteChange);
+  TM.onSignedOut(() => askToSignIn('Please sign in again.'));
+  if (TM.auth.resume()) start(); else askToSignIn();
+  if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   </script>
 </body>
 </html>

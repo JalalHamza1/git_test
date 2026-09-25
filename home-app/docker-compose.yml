@@ -1,0 +1,10 @@
+services:
+  tasks:
+    build: .
+    container_name: tasks
+    restart: unless-stopped
+    # Only reachable from the NAS itself; Tailscale publishes it to your devices over HTTPS.
+    ports:
+      - "127.0.0.1:8090:8090"
+    volumes:
+      - ./pb_data:/pb/pb_data
