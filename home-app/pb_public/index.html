@@ -2601,13 +2601,16 @@
           const status = ex && ex.status;
           err.textContent = status === 400 && !firstRun ? 'That email and password don’t match.'
             : status === 0 ? 'Can’t reach your NAS. Check that Tailscale is connected.'
-            : (ex && ex.response && ex.response.message) || (ex && ex.message) || 'Something went wrong.';
+            : explain(ex);
         } finally { submit.disabled = false; }
       },
     },
       h('label', {}, 'Email', email),
       h('label', {}, firstRun ? 'Password (at least 8 characters)' : 'Password', pass),
-      err, submit);
+      err, submit,
+      h('button', { class: 'text-btn', type: 'button', style: 'align-self:center',
+        text: firstRun ? 'Already have an account? Sign in' : 'First time here? Create an account',
+        onclick: () => showAuth(!firstRun) }));
     const brand = h('div', { class: 'brand' }, icon('logo'), h('span', { text: 'Tasks' }));
     box.replaceChildren(h('div', { class: 'auth-card' }, brand,
       h('h2', { text: firstRun ? 'Create your account' : 'Sign in' }),
@@ -2615,6 +2618,14 @@
       form));
     box.hidden = false;
     setTimeout(() => email.focus(), 50);
+  }
+
+  // PocketBase puts the real reason per field (e.g. "email already in use") under response.data.
+  function explain(ex) {
+    const fields = (ex && ex.response && ex.response.data) || {};
+    const first = Object.keys(fields)[0];
+    if (first && fields[first] && fields[first].message) return `${first[0].toUpperCase() + first.slice(1)}: ${fields[first].message}`;
+    return (ex && ex.response && ex.response.message) || (ex && ex.message) || 'Something went wrong.';
   }
 
   async function askToSignIn(message) {
