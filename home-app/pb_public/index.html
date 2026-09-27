@@ -586,6 +586,7 @@
     .sync-dot.syncing { background: var(--accent); }
     .feed { display: flex; gap: 8px; margin-top: 8px; }
     .feed .input { flex: 1; font-size: 12.5px; }
+    .set-desc.g-error { color: var(--red); }
 
     /* ===== Responsive ==================================================== */
     @media (min-width: 1180px) {
@@ -2212,7 +2213,7 @@
         sw.querySelectorAll('.sw').forEach(b => { const on = b === e.currentTarget; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
       },
     }, icon('check'))));
-    const content = h('div', { class: 'dlg-body' }, input, h('div', { class: 'dlg-label', text: 'Color (also used in Google Calendar)' }), sw);
+    const content = h('div', { class: 'dlg-body' }, input, h('div', { class: 'dlg-label', text: 'Color' }), sw);
     const v = await openDialog(title, content, [{ label: 'Cancel', value: null }, { label: ok, primary: true, value: 'ok' }]);
     if (v !== 'ok') return null;
     return { name: input ? input.value.replace(/\s+/g, ' ').trim().slice(0, 60) : name, color: picked };
@@ -2241,12 +2242,66 @@
           h('button', { class: 'btn', type: 'button', text: 'Reset', onclick: async () => {
             if (await confirmDlg('Reset calendar link?', 'The current link stops working right away.', 'Reset')) { load(TM.calendar.reset()); snack('New link created'); }
           } }))),
+      h('div', { class: 'set-title', text: 'Google Calendar' }),
+      googleSettings(row),
       h('div', { class: 'set-title', text: 'Account' }),
       h('div', { class: 'set-group' },
         row('Signed in as ' + TM.auth.email(), 'Your tasks stay on this device until you sign out.',
           h('button', { class: 'btn danger', type: 'button', text: 'Sign out', onclick: signOut }))),
       h('p', { class: 'set-desc', text: 'Add to Home Screen from Safari’s Share menu to use this like an app.' }));
     openDialog('Settings', content, [{ label: 'Done', primary: true, value: true }]);
+  }
+
+  // Connects the NAS to Google Calendar (the NAS then writes dated tasks there itself).
+  function googleSettings(row) {
+    const box = h('div', { class: 'set-group' }, h('div', { class: 'set-row' }, h('div', { class: 'set-desc', text: 'Loading…' })));
+    const busy = (btn, p) => { btn.disabled = true; return p.finally(() => { btn.disabled = false; }); };
+    const copyRow = (label, value) => {
+      const field = h('input', { class: 'input', readonly: true, value, 'aria-label': label });
+      return h('div', { class: 'set-row', style: 'display:block' }, h('div', { class: 'set-label', text: label }),
+        h('div', { class: 'feed' }, field, h('button', { class: 'btn', type: 'button', text: 'Copy', onclick: async () => {
+          try { await navigator.clipboard.writeText(field.value); snack('Copied'); } catch (e) { field.select(); snack('Selected. Copy it from the box.'); }
+        } })));
+    };
+    const render = st => {
+      box.replaceChildren();
+      if (st.error) box.append(h('div', { class: 'set-row' }, h('div', { class: 'set-desc g-error', text: st.error })));
+      if (st.connected) {
+        const syncBtn = h('button', { class: 'btn', type: 'button', onclick: () => busy(syncBtn, TM.google.sync().then(
+          r => { snack(r.ok ? 'Google Calendar is up to date' : 'Some tasks didn’t sync: ' + r.error); refresh(); },
+          e => snack(explain(e)))) }, icon('sync'), 'Sync now');
+        box.append(row('Connected', 'Tasks with a date appear in the “Tasks” calendar within seconds. Timed tasks remind you 15 minutes before.', syncBtn),
+          row('Disconnect', 'Stops updating Google. The Tasks calendar stays in Google until you delete it there.',
+            h('button', { class: 'btn danger', type: 'button', text: 'Disconnect', onclick: async () => {
+              if (!await confirmDlg('Disconnect Google Calendar?', 'Tasks stop showing up in Google Calendar.', 'Disconnect')) return;
+              TM.google.disconnect().then(() => { snack('Disconnected'); refresh(); }, e => snack(explain(e)));
+            } })));
+        return;
+      }
+      const id = h('input', { class: 'input', value: st.clientId || '', placeholder: '….apps.googleusercontent.com', 'aria-label': 'Client ID', autocomplete: 'off', spellcheck: 'false', style: 'width:100%;margin-top:6px' });
+      const secret = h('input', { class: 'input', type: 'password', placeholder: st.hasSecret ? 'Saved (paste again to change)' : 'Client secret', 'aria-label': 'Client secret', autocomplete: 'off', style: 'width:100%;margin-top:6px' });
+      const go = h('button', { class: 'btn primary', type: 'button', text: 'Connect Google Calendar', onclick: () => busy(go, TM.google.start(id.value.trim(), secret.value.trim()).then(
+        url => { location.href = url; }, e => snack(explain(e)))) });
+      box.append(
+        h('div', { class: 'set-row', style: 'display:block' }, h('div', { class: 'set-desc', text: 'Put your tasks straight into Google Calendar with reminders. Needs a free Google Cloud project (see the setup guide). Copy this address into it as the redirect URI:' })),
+        copyRow('Redirect URI', TM.google.redirectUri()),
+        h('div', { class: 'set-row', style: 'display:block' }, h('div', { class: 'set-label', text: 'Client ID' }), id),
+        h('div', { class: 'set-row', style: 'display:block' }, h('div', { class: 'set-label', text: 'Client secret' }), secret),
+        h('div', { class: 'set-row' }, h('div', { class: 'grow' }), go));
+    };
+    const refresh = () => TM.google.status().then(render,
+      () => { box.replaceChildren(h('div', { class: 'set-row' }, h('div', { class: 'set-desc', text: 'Connect to your NAS to set this up.' }))); });
+    refresh();
+    return box;
+  }
+
+  // Google sends the browser back to /?google=connected or /?google=error&msg=…
+  function googleReturn() {
+    const q = new URLSearchParams(location.search), result = q.get('google');
+    if (!result) return;
+    history.replaceState(null, '', location.pathname);
+    if (result === 'connected') snack('Google Calendar connected');
+    else snack('Google Calendar: ' + (q.get('msg') || 'couldn’t connect'));
   }
 
   function shortcutsDlg() {
@@ -2651,6 +2706,7 @@
 
   initShell();
   render();
+  googleReturn();
   TM.onSync(setStatus);
   TM.onChange(onRemoteChange);
   TM.onSignedOut(() => askToSignIn('Please sign in again.'));

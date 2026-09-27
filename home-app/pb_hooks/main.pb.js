@@ -54,3 +54,48 @@ routerAdd("GET", "/cal/{file}", (e) => {
   e.response.header().set("Cache-Control", "no-store");
   return e.blob(200, "text/calendar; charset=utf-8", toBytes(ics));
 });
+
+// ---- Google Calendar ----
+// Every saved task is pushed to Google right away. A failure never blocks saving the
+// task: the check every 10 minutes below catches up.
+
+onRecordAfterCreateSuccess((e) => {
+  e.next();
+  try { require(`${__hooks}/lib/google.js`).syncTask(e.app, e.record); } catch (err) { console.warn("Google Calendar: " + err); }
+}, "tasks");
+
+onRecordAfterUpdateSuccess((e) => {
+  e.next();
+  try { require(`${__hooks}/lib/google.js`).syncTask(e.app, e.record); } catch (err) { console.warn("Google Calendar: " + err); }
+}, "tasks");
+
+onRecordAfterDeleteSuccess((e) => {
+  e.next();
+  try { require(`${__hooks}/lib/google.js`).removeTask(e.app, e.record); } catch (err) { console.warn("Google Calendar: " + err); }
+}, "tasks");
+
+cronAdd("googleCalendar", "*/10 * * * *", () => {
+  try { require(`${__hooks}/lib/google.js`).reconcileAll($app); } catch (err) { console.warn("Google Calendar: " + err); }
+});
+
+routerAdd("GET", "/api/tm/google", (e) => {
+  return e.json(200, require(`${__hooks}/lib/google.js`).status(e.auth));
+}, $apis.requireAuth("users"));
+
+routerAdd("POST", "/api/tm/google/start", (e) => {
+  return e.json(200, { url: require(`${__hooks}/lib/google.js`).start(e.app, e.auth, e.requestInfo().body) });
+}, $apis.requireAuth("users"));
+
+// Google sends the browser here after you allow access (no app sign-in on this request).
+routerAdd("GET", "/api/tm/google/callback", (e) => {
+  return e.redirect(302, require(`${__hooks}/lib/google.js`).callback(e.app, e.requestInfo().query));
+});
+
+routerAdd("POST", "/api/tm/google/sync", (e) => {
+  return e.json(200, require(`${__hooks}/lib/google.js`).reconcileUser(e.app, e.auth));
+}, $apis.requireAuth("users"));
+
+routerAdd("POST", "/api/tm/google/disconnect", (e) => {
+  require(`${__hooks}/lib/google.js`).disconnect(e.app, e.auth);
+  return e.json(200, { ok: true });
+}, $apis.requireAuth("users"));

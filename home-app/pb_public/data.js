@@ -604,5 +604,16 @@
       link: () => pb.send('/api/tm/calendar', {}).then(r => location.origin + r.path),
       reset: () => pb.send('/api/tm/calendar/reset', { method: 'POST' }).then(r => location.origin + r.path),
     },
+    google: {
+      redirectUri: () => location.origin + '/api/tm/google/callback',
+      status: () => pb.send('/api/tm/google', {}),
+      // Resolves with Google's sign-in page address; the caller sends the browser there.
+      start: (clientId, clientSecret) => pb.send('/api/tm/google/start', {
+        method: 'POST',
+        body: { clientId, clientSecret, origin: location.origin, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' },
+      }).then(r => r.url),
+      sync: () => pb.send('/api/tm/google/sync', { method: 'POST' }),
+      disconnect: () => pb.send('/api/tm/google/disconnect', { method: 'POST' }),
+    },
   };
 })();

@@ -80,6 +80,31 @@ Tasks with a date appear in Calendar. Timed tasks alert 15 minutes before; all-d
 iPhone refreshes subscribed calendars every 15 minutes or so. The link is private. If you
 ever share it by mistake, use **Reset** in Settings and add the calendar again.
 
+## 7. Put tasks in Google Calendar (optional)
+
+The NAS writes every dated task into a **Tasks** calendar in your Google Calendar within
+seconds, and updates or removes it when the task changes, is completed or is deleted.
+Google Calendar then sends the reminders. It needs a free Google Cloud project, which acts as
+your own "ID card" for talking to Google.
+
+1. Go to https://console.cloud.google.com, create a project called `Tasks home` and select it.
+2. Search **Google Calendar API** and click **Enable**.
+3. Open **Google Auth Platform** (older name: *OAuth consent screen*) → **Get started**.
+   App name `Tasks home`, your email, audience **External**, then **Create**.
+4. **Audience → Publish app → Confirm** so the status is **In production**. In "Testing",
+   Google disconnects you every 7 days.
+5. In the Tasks app open **Settings → Google Calendar** and copy the **Redirect URI**
+   (`https://your-nas.….ts.net/api/tm/google/callback`).
+6. In Google Cloud: **Clients → Create client → Web application**, add that address under
+   **Authorized redirect URIs**, click **Create**, and copy the **Client ID** and **Client secret**.
+7. Paste both into the app's Settings and click **Connect Google Calendar**. On "Google hasn't
+   verified this app" click **Advanced → Go to Tasks home**, then **Continue**.
+8. Reminders: timed tasks remind you 15 minutes before. For all-day tasks, in Google Calendar
+   open **Settings → Tasks → All-day event notifications** and add one (e.g. 9am on the day).
+
+Edit tasks in the app; changes made to these events in Google are overwritten. If the NAS
+can't reach Google for a while it catches up within 10 minutes, or right away with **Sync now**.
+
 ---
 
 ## Backups
@@ -117,10 +142,16 @@ Some budget models can't run containers. PocketBase is a single program, so it c
    User: `root`, Event: **Boot-up**. Script:
 
    ```
-   cd /volume1/docker/tasks && chmod +x pocketbase && ./pocketbase serve --http=127.0.0.1:8090
+   cd /volume1/docker/tasks && chmod +x pocketbase && ./pocketbase serve --http=127.0.0.1:8090 --dir=/volume1/docker/tasks/pb_data --publicDir=/volume1/docker/tasks/pb_public --hooksDir=/volume1/docker/tasks/pb_hooks --migrationsDir=/volume1/docker/tasks/pb_migrations >> pocketbase.log 2>&1
    ```
 
 4. Select the task and click **Run** (it also starts after every restart). Then continue with step 3 (Tailscale).
+
+## Updating (Task Scheduler setup)
+
+Upload `pb_hooks`, `pb_migrations` and `pb_public` again (overwrite; never touch `pb_data`),
+then restart PocketBase: restart the NAS, or run `sudo pkill pocketbase` over SSH and click
+**Run** on the task in Task Scheduler.
 
 ## Troubleshooting
 
@@ -131,3 +162,7 @@ Some budget models can't run containers. PocketBase is a single program, so it c
 - **Container won't build**: the NAS needs internet access to download PocketBase from GitHub the first time.
 - **Status says "Sync problem"**: open Settings in the app and tap **Sync now**. If it persists,
   check the container log in Container Manager.
+- **Google says "redirect_uri_mismatch"**: the redirect URI in Google Cloud must match the one
+  in the app's Settings exactly. Open the app via its `ts.net` address when connecting.
+- **Google Calendar stops updating**: Settings shows the reason in red. Click **Connect Google
+  Calendar** again. Lines starting with "Google Calendar" in the PocketBase log show details.

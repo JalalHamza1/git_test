@@ -1,7 +1,7 @@
 // Opens the app instantly and offline: the app files are served from this cache and
 // refreshed in the background (a new version applies the next time the app opens).
 // Task data never goes through here; it lives in data.js and PocketBase.
-const CACHE = 'tasks-v1';
+const CACHE = 'tasks-v2';
 const SHELL = ['./', 'index.html', 'data.js', 'pocketbase.umd.js', 'manifest.webmanifest', 'icon-192.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
