@@ -1,11 +1,12 @@
 // Opens the app instantly and offline: the app files are served from this cache and
 // refreshed in the background (a new version applies the next time the app opens).
 // Task data never goes through here; it lives in data.js and PocketBase.
-const CACHE = 'tasks-v2';
+const CACHE = 'tasks-v3';
 const SHELL = ['./', 'index.html', 'data.js', 'pocketbase.umd.js', 'manifest.webmanifest', 'icon-192.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // 'reload' skips the browser's own cache, so a new version never mixes with old files.
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -20,7 +21,7 @@ self.addEventListener('fetch', e => {
   if (/^\/(api|cal|_)\//.test(url.pathname)) return;
   e.respondWith(caches.open(CACHE).then(async cache => {
     const hit = await cache.match(e.request, { ignoreSearch: true });
-    const fresh = fetch(e.request)
+    const fresh = fetch(e.request.url, { cache: 'no-cache', credentials: 'same-origin' })
       .then(res => { if (res.ok) cache.put(e.request, res.clone()); return res; })
       .catch(() => hit || Response.error());
     if (hit) { e.waitUntil(fresh.catch(() => {})); return hit; }

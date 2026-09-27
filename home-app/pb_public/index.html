@@ -2254,6 +2254,8 @@
 
   // Connects the NAS to Google Calendar (the NAS then writes dated tasks there itself).
   function googleSettings(row) {
+    if (!TM.google) return h('div', { class: 'set-group' }, row('Finish updating', 'Part of the new version hasn’t loaded yet.',
+      h('button', { class: 'btn', type: 'button', text: 'Reload', onclick: () => location.reload() })));
     const box = h('div', { class: 'set-group' }, h('div', { class: 'set-row' }, h('div', { class: 'set-desc', text: 'Loading…' })));
     const busy = (btn, p) => { btn.disabled = true; return p.finally(() => { btn.disabled = false; }); };
     const copyRow = (label, value) => {

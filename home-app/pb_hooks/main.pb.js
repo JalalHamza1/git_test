@@ -10,6 +10,13 @@ onRecordCreateRequest((e) => {
   e.next();
 }, "users");
 
+// App files: browsers must check for a newer version instead of guessing, so an update
+// never runs a new page with an old script.
+routerUse((e) => {
+  if (!/^\/(api|_)\//.test(e.request.url.path)) e.response.header().set("Cache-Control", "no-cache");
+  return e.next();
+});
+
 routerAdd("GET", "/api/tm/status", (e) => {
   return e.json(200, { hasUser: e.app.countRecords("users") > 0 });
 });
