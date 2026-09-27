@@ -64,7 +64,7 @@
     ::selection { background: rgba(110, 168, 254, .35); }
     ::-webkit-scrollbar { width: 10px; height: 10px; }
     ::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 10px; border: 3px solid transparent; background-clip: padding-box; }
-    ::-webkit-scrollbar-thumb:hover { background-color: #3d4a59; }
+    @media (hover: hover) { ::-webkit-scrollbar-thumb:hover { background-color: #3d4a59; } }
     ::-webkit-scrollbar-track { background: transparent; }
     kbd {
       font: 500 11px/1 Inter, system-ui, sans-serif; color: var(--text-2);
@@ -98,7 +98,7 @@
       transition: background .15s var(--ease), transform .15s var(--ease);
     }
     .create svg { color: var(--accent); width: 22px; height: 22px; }
-    .create:hover { background: var(--card-hi); }
+    @media (hover: hover) { .create:hover { background: var(--card-hi); } }
     .create:active { transform: scale(.98); }
 
     .nav-item, .dl-row {
@@ -107,7 +107,7 @@
       color: var(--text-2); text-align: left; font-weight: 500;
       transition: background .12s var(--ease), color .12s var(--ease);
     }
-    .nav-item:hover, .dl-row:hover { background: var(--card-hi); color: var(--text); }
+    @media (hover: hover) { .nav-item:hover, .dl-row:hover { background: var(--card-hi); color: var(--text); } }
     .nav-item[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
     .nav-item span.lbl { flex: 1; }
     .nav-item .badge { font-size: 12px; font-weight: 600; color: var(--text-3); }
@@ -132,7 +132,8 @@
     .dl-name span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .dl-count { font-size: 12px; color: var(--text-3); min-width: 16px; text-align: right; }
     .dl-row .dl-more { width: 28px; height: 28px; opacity: 0; }
-    .dl-row:hover .dl-more, .dl-row:focus-within .dl-more { opacity: 1; }
+    .dl-row:focus-within .dl-more { opacity: 1; }
+    @media (hover: hover) { .dl-row:hover .dl-more { opacity: 1; } }
     .drawer-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
 
     .drawer-scrim { display: none; }
@@ -163,7 +164,7 @@
       border: 0; border-radius: 50%; background: none; color: var(--text-2);
       transition: background .12s var(--ease), color .12s var(--ease);
     }
-    .icon-btn:hover { background: var(--card-hi); color: var(--text); }
+    @media (hover: hover) { .icon-btn:hover { background: var(--card-hi); color: var(--text); } }
     .icon-btn:active { background: var(--line-2); }
     .icon-btn.spin svg { animation: spin .9s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -211,9 +212,9 @@
       border: 0; background: none; border-radius: 16px; padding: 7px 12px; font-weight: 600; font-size: 13px; color: var(--accent);
       transition: background .12s var(--ease);
     }
-    .text-btn:hover { background: var(--accent-soft); }
+    @media (hover: hover) { .text-btn:hover { background: var(--accent-soft); } }
     .text-btn.danger { color: var(--red); }
-    .text-btn.danger:hover { background: var(--red-soft); }
+    @media (hover: hover) { .text-btn.danger:hover { background: var(--red-soft); } }
     .text-btn[disabled] { color: var(--text-3); background: none; cursor: default; }
 
     .new-list-card {
@@ -221,7 +222,7 @@
       border: 1.5px dashed var(--line-2); border-radius: var(--radius); background: none; color: var(--text-3); font-weight: 600;
       transition: border-color .15s var(--ease), color .15s var(--ease), background .15s var(--ease);
     }
-    .new-list-card:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+    @media (hover: hover) { .new-list-card:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); } }
     .new-list-card span { display: flex; align-items: center; gap: 8px; }
 
     /* ===== Quick add ===================================================== */
@@ -230,7 +231,7 @@
       display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 10px; border-radius: 12px;
       color: var(--accent); cursor: text; transition: background .12s var(--ease);
     }
-    .qa-row:hover { background: var(--card-hi); }
+    @media (hover: hover) { .qa-row:hover { background: var(--card-hi); } }
     .qa-row:focus-within { background: var(--bg-2); box-shadow: inset 0 0 0 1px var(--line-2); }
     .qa-row svg { width: 22px; height: 22px; }
     .qa-input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--text); height: 100%; }
@@ -249,7 +250,7 @@
       outline: 0; cursor: pointer; user-select: none;
       transition: background .12s var(--ease);
     }
-    .task:hover { background: var(--card-hi); }
+    @media (hover: hover) { .task:hover { background: var(--card-hi); } }
     .task:focus-visible { background: var(--card-hi); box-shadow: inset 0 0 0 2px var(--accent); }
     .task.sub { margin-left: 34px; }
     .task.enter { animation: rowIn .28s var(--ease); }
@@ -260,7 +261,8 @@
     .grip, .grip-space { width: 16px; height: 22px; flex: none; display: grid; place-items: center; color: var(--text-3); margin-top: 1px; }
     .grip { opacity: 0; cursor: grab; touch-action: none; transition: opacity .12s; }
     .grip svg { width: 16px; height: 16px; }
-    .task:hover .grip, .task:focus-visible .grip { opacity: 1; }
+    .task:focus-visible .grip { opacity: 1; }
+    @media (hover: hover) { .task:hover .grip { opacity: 1; } }
     @media (hover: none) { .grip { opacity: .7; } }
 
     .check {
@@ -270,8 +272,8 @@
       transition: border-color .15s var(--ease), background .15s var(--ease);
     }
     .check svg { width: 16px; height: 16px; opacity: 0; transform: scale(.4); transition: opacity .15s var(--ease), transform .2s var(--ease); color: var(--accent); }
-    .check:hover { border-color: var(--accent); }
-    .check:hover svg { opacity: 1; transform: scale(1); }
+    @media (hover: hover) { .check:hover { border-color: var(--accent); } }
+    @media (hover: hover) { .check:hover svg { opacity: 1; transform: scale(1); } }
     .task.done .check, .task.completing .check { background: var(--accent); border-color: var(--accent); }
     .task.done .check svg, .task.completing .check svg { opacity: 1; transform: scale(1); color: var(--accent-ink); }
     .task.completing .task-title { color: var(--text-3); text-decoration: line-through; }
@@ -306,8 +308,9 @@
       transition: opacity .12s, color .12s, background .12s;
     }
     .star svg { width: 19px; height: 19px; }
-    .task:hover .star, .task:focus-visible .star, .star.on { opacity: 1; }
-    .star:hover { background: var(--line); color: var(--text); }
+    .task:focus-visible .star, .star.on { opacity: 1; }
+    @media (hover: hover) { .task:hover .star { opacity: 1; } }
+    @media (hover: hover) { .star:hover { background: var(--line); color: var(--text); } }
     .star.on { color: var(--star); }
     @media (hover: none) { .star { opacity: .6; } }
     .row-actions { display: flex; gap: 2px; margin: -5px -2px -5px 0; }
@@ -319,7 +322,7 @@
       display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: none;
       padding: 8px 16px; color: var(--text-2); font-weight: 600; font-size: 13px; text-align: left;
     }
-    .done-toggle:hover { color: var(--text); }
+    @media (hover: hover) { .done-toggle:hover { color: var(--text); } }
     .done-toggle svg { width: 18px; height: 18px; transition: transform .2s var(--ease); transform: rotate(-90deg); }
     .done-sec.open .done-toggle svg { transform: none; }
 
@@ -361,20 +364,20 @@
       background: none; color: var(--text); font-weight: 600; font-size: 13px;
       transition: background .12s var(--ease), border-color .12s var(--ease);
     }
-    .btn:hover { background: var(--card-hi); }
+    @media (hover: hover) { .btn:hover { background: var(--card-hi); } }
     .btn svg { width: 18px; height: 18px; }
     .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-    .btn.primary:hover { background: #8ab8ff; }
+    @media (hover: hover) { .btn.primary:hover { background: #8ab8ff; } }
     .btn.primary[disabled] { background: var(--line-2); border-color: var(--line-2); color: var(--text-3); cursor: default; }
     .btn.danger { color: var(--red); border-color: rgba(255, 123, 114, .4); }
-    .btn.danger:hover { background: var(--red-soft); }
+    @media (hover: hover) { .btn.danger:hover { background: var(--red-soft); } }
     .btn.tonal { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
-    .btn.tonal:hover { background: rgba(110, 168, 254, .22); }
+    @media (hover: hover) { .btn.tonal:hover { background: rgba(110, 168, 254, .22); } }
 
     .seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 18px; overflow: hidden; flex-wrap: nowrap; }
     .seg button { border: 0; background: none; padding: 6px 12px; font-size: 12.5px; font-weight: 500; color: var(--text-2); white-space: nowrap; }
     .seg button + button { border-left: 1px solid var(--line-2); }
-    .seg button:hover { background: var(--card-hi); color: var(--text); }
+    @media (hover: hover) { .seg button:hover { background: var(--card-hi); color: var(--text); } }
     .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
     .seg button[data-v="High"][aria-pressed="true"] { background: var(--red-soft); color: var(--red); }
     .seg button[data-v="Low"][aria-pressed="true"] { background: var(--green-soft); color: var(--green); }
@@ -400,19 +403,20 @@
     .pnl-head .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; margin-right: 2px; }
     .pnl-head .grow { flex: 1; }
     .pnl-head .list-select { border: 0; background: none; font-weight: 600; color: var(--text); padding: 6px 4px; border-radius: 8px; max-width: 200px; outline: 0; }
-    .pnl-head .list-select:hover, .pnl-head .list-select:focus { background: var(--card-hi); }
+    .pnl-head .list-select:focus { background: var(--card-hi); }
+    @media (hover: hover) { .pnl-head .list-select:hover { background: var(--card-hi); } }
     .pnl-head .list-select option { background: var(--raised); }
     .pnl-head .pnl-kind { font-weight: 600; }
     .pnl-scroll { flex: 1; overflow-y: auto; padding: 8px 20px 16px; }
     .pnl-back { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; color: var(--text-2); font-size: 12.5px; padding: 6px 8px; margin: 2px 0 0 -8px; border-radius: 8px; max-width: 100%; }
-    .pnl-back:hover { background: var(--card-hi); color: var(--text); }
+    @media (hover: hover) { .pnl-back:hover { background: var(--card-hi); color: var(--text); } }
     .pnl-back svg { width: 16px; height: 16px; }
     .pnl-back span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .pnl-title, .pnl-notes { display: block; width: 100%; resize: none; border: 0; outline: 0; background: none; color: var(--text); padding: 8px 0; }
     .pnl-title { font-size: 21px; font-weight: 600; line-height: 1.3; letter-spacing: -.2px; overflow: hidden; }
     .pnl-title::placeholder, .pnl-notes::placeholder { color: var(--text-3); }
     .pnl-notes { font-size: 14px; line-height: 1.55; color: var(--text-2); min-height: 64px; border-radius: 10px; padding: 8px 10px; margin: 0 -10px; overflow: hidden; }
-    .pnl-notes:hover { background: var(--card); }
+    @media (hover: hover) { .pnl-notes:hover { background: var(--card); } }
     .pnl-notes:focus { background: var(--bg-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-2); }
     .pnl-done { display: flex; align-items: center; gap: 8px; margin: 4px 0 6px; padding: 8px 12px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 500; }
     .pnl-done svg { width: 18px; height: 18px; }
@@ -423,13 +427,13 @@
     .frow .flabel { width: 100%; font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text-3); margin: 2px 0 -2px; }
     .quick { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
     .quick button { border: 1px solid var(--line-2); background: none; color: var(--text-2); border-radius: 14px; padding: 3px 10px; font-size: 12px; font-weight: 500; }
-    .quick button:hover { background: var(--card-hi); color: var(--text); }
+    @media (hover: hover) { .quick button:hover { background: var(--card-hi); color: var(--text); } }
     .quick button.on { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
 
     .pnl-subs { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
     .pnl-sec-title { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text-3); margin-bottom: 6px; }
     .sub-row { display: flex; align-items: center; gap: 10px; padding: 5px 4px; border-radius: 10px; }
-    .sub-row:hover { background: var(--card); }
+    @media (hover: hover) { .sub-row:hover { background: var(--card); } }
     .sub-row .check { width: 20px; height: 20px; }
     .sub-row .check svg { width: 14px; height: 14px; }
     .sub-row.done .check { background: var(--accent); border-color: var(--accent); }
@@ -459,7 +463,8 @@
     .menu-i svg { width: 18px; height: 18px; color: var(--text-2); }
     .menu-i .mi-space { width: 18px; flex: none; }
     .menu-i span.l { flex: 1; }
-    .menu-i:hover, .menu-i:focus-visible { background: var(--card-hi); outline: 0; }
+    .menu-i:focus-visible { background: var(--card-hi); outline: 0; }
+    @media (hover: hover) { .menu-i:hover { background: var(--card-hi); outline: 0; } }
     .menu-i.on { color: var(--accent); }
     .menu-i.on svg { color: var(--accent); }
     .menu-i.danger { color: var(--red); }
@@ -506,14 +511,14 @@
 
     .snack {
       position: fixed; left: 50%; bottom: 20px; z-index: 85; transform: translate(-50%, 120px);
-      display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px);
+      display: flex; align-items: center; gap: 12px; width: max-content; max-width: calc(100vw - 32px);
       background: #e6edf3; color: #0b0f14; border-radius: 12px; padding: 10px 10px 10px 16px;
       box-shadow: var(--shadow-lg); font-size: 13.5px; font-weight: 500; opacity: 0; pointer-events: none;
       transition: transform .25s var(--ease), opacity .25s var(--ease);
     }
     .snack.show { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
     .snack button { border: 0; background: none; color: #1f5fd1; font-weight: 700; padding: 6px 10px; border-radius: 8px; }
-    .snack button:hover { background: rgba(31, 95, 209, .1); }
+    @media (hover: hover) { .snack button:hover { background: rgba(31, 95, 209, .1); } }
 
     .fab {
       position: fixed; right: 16px; bottom: 16px; z-index: 30; display: none; align-items: center; gap: 8px;
@@ -536,7 +541,8 @@
     .chart { position: relative; padding: 4px 16px 0; }
     .chart svg { width: 100%; height: auto; display: block; overflow: visible; }
     .chart .bar-hit { fill: transparent; cursor: default; outline: none; }
-    .chart .bar-hit:hover + .bar, .chart .bar-hit:focus + .bar { fill: #7aa3f2; }
+    .chart .bar-hit:focus + .bar { fill: #7aa3f2; }
+    @media (hover: hover) { .chart .bar-hit:hover + .bar { fill: #7aa3f2; } }
     .chart .bar { fill: var(--chart); pointer-events: none; }
     .chart .grid { stroke: var(--line); stroke-width: 1; shape-rendering: crispEdges; }
     .chart .axis { font-size: 11px; fill: var(--text-3); font-variant-numeric: tabular-nums; }
@@ -588,6 +594,102 @@
     .feed .input { flex: 1; font-size: 12.5px; }
     .set-desc.g-error { color: var(--red); }
 
+
+    /* ===== Date and time fields ========================================== */
+    .whens { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; }
+    .pick {
+      position: relative; display: flex; align-items: center; gap: 8px; min-width: 0;
+      height: 44px; padding: 0 4px 0 12px; border: 1px solid var(--line-2); border-radius: 12px;
+      background: var(--bg-2); color: var(--text-3); cursor: pointer;
+    }
+    .pick svg { width: 18px; height: 18px; }
+    .pick.set { color: var(--text); }
+    .pick.set > svg { color: var(--accent); }
+    .pick-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+    .pick:focus-within { border-color: var(--accent); }
+    .pick-input {
+      position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0;
+      opacity: .011; color: transparent; background: transparent; font-size: 16px; cursor: pointer;
+      -webkit-appearance: none; appearance: none;
+    }
+    .pick-input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: auto; height: auto; opacity: 0; cursor: pointer; }
+    .pick .pick-clear { position: relative; z-index: 1; width: 36px; height: 36px; }
+    .pick .pick-clear svg { width: 16px; height: 16px; }
+    .pnl-add { display: none; margin-left: 4px; height: 36px; padding: 0 16px; }
+
+    /* ===== Swipe and hold on task rows ==================================== */
+    .task.swiping { z-index: 1; transform: translateX(var(--sx, 0)); background: var(--card); }
+    .task.swipe-back, .task.swipe-out { transition: transform .18s var(--ease); }
+    .task.swiping::before {
+      content: ''; position: absolute; top: 0; bottom: 0; border-radius: 12px;
+      background: var(--green-soft) no-repeat 16px center / 22px;
+    }
+    .task.swipe-right::before { left: calc(-1 * var(--sx, 0px)); width: var(--sx, 0px);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e6edf3'%3E%3Cpath d='M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E"); }
+    .task.done.swipe-right::before {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e6edf3'%3E%3Cpath d='M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z'/%3E%3C/svg%3E"); }
+    .task.swipe-left::before { left: 100%; width: calc(-1 * var(--sx, 0px)); background-color: var(--red-soft); background-position: calc(100% - 16px) center;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e6edf3'%3E%3Cpath d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/%3E%3C/svg%3E"); }
+    .task.armed.swipe-right::before { background-color: var(--green); }
+    .task.armed.swipe-left::before { background-color: var(--red); }
+    .task.held { background: var(--card-hi); }
+
+    /* ===== Bottom sheets (menus on phones) ================================ */
+    .menu-scrim.dim { background: rgba(1, 4, 9, .55); animation: fade .15s var(--ease); }
+    .menu.sheet {
+      left: 8px; right: 8px; top: auto; bottom: max(8px, env(safe-area-inset-bottom)); margin: 0 auto;
+      min-width: 0; max-width: 520px; max-height: calc(100dvh - 88px); border-radius: 20px; padding: 6px 8px 8px;
+      animation: sheetIn .22s var(--ease); outline: 0;
+    }
+    @keyframes sheetIn { from { opacity: 0; transform: translateY(32px); } }
+    .menu.sheet .menu-i { min-height: 50px; font-size: 15.5px; gap: 14px; }
+    .menu.sheet .menu-i svg { width: 20px; height: 20px; }
+    .menu.sheet kbd { display: none; }
+    .menu-title { padding: 12px 12px 10px; margin-bottom: 4px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ===== Touch screens: finger-sized targets, no zoom on typing ========= */
+    html { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
+    .pnl-scroll, .menu, .dlg { overscroll-behavior: contain; }
+    @media (pointer: coarse) {
+      input, select, textarea:not(.pnl-title) { font-size: 16px !important; }
+      .icon-btn, .topbar .icon-btn { width: 44px; height: 44px; }
+      .card-head .icon-btn, .drawer-sec .icon-btn, .dl-row .dl-more, .search .icon-btn { width: 40px; height: 40px; }
+      .search { height: 44px; }
+      .nav-item, .dl-row { min-height: 46px; }
+      .dl-name { padding: 12px 0; }
+      .dl-check { position: relative; }
+      .check::after, .dl-check::after { content: ''; position: absolute; top: -12px; right: -12px; bottom: -12px; left: -12px; }
+      .task { padding: 12px 6px 12px 2px; -webkit-touch-callout: none; }
+      .grip, .grip-space { width: 20px; }
+      .star { width: 44px; height: 44px; margin: -11px -6px -11px 0; }
+      .row-actions .icon-btn { width: 40px; height: 40px; }
+      .qa-row { height: 48px; }
+      .btn { height: 44px; padding: 0 18px; font-size: 14px; }
+      .input, .select { height: 44px; }
+      .seg button { min-height: 44px; padding: 8px 14px; font-size: 14px; }
+      .quick { gap: 8px; }
+      .quick button { min-height: 40px; padding: 6px 14px; font-size: 14px; border-radius: 18px; }
+      .pnl-head .list-select { min-height: 44px; }
+      .pnl-back { min-height: 40px; }
+      .sub-row { min-height: 44px; }
+      .sub-title { padding: 10px 0; }
+      .sub-add input { height: 44px; }
+      .menu-i { min-height: 44px; }
+      .done-toggle { min-height: 44px; }
+      .text-btn { min-height: 40px; }
+      .snack button { min-height: 40px; }
+      .sw { width: 40px; height: 40px; }
+      .swatches { grid-template-columns: repeat(auto-fill, 40px); gap: 10px; }
+    }
+    @media (hover: none) {
+      .dl-row .dl-more { opacity: .75; }
+      .grip { opacity: .5; }
+      .kbd-hint, [data-key="nav:keys"] { display: none; }
+      .task:active, .nav-item:active, .dl-row:active, .menu-i:active, .seg button:active, .quick button:active,
+      .btn:active, .qa-row:active, .sub-row:active, .done-toggle:active, .new-list-card:active { background: var(--card-hi); }
+      .btn.primary:active { background: #8ab8ff; }
+    }
+
     /* ===== Responsive ==================================================== */
     @media (min-width: 1180px) {
       .app.panel-open .board { padding-right: calc(var(--panel-w) + 36px); }
@@ -604,12 +706,13 @@
       .app.drawer-open .drawer-scrim { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(1, 4, 9, .55); animation: fade .2s; }
       .fab { display: inline-flex; }
       .board { padding-bottom: 96px; }
+      .snack { bottom: max(84px, calc(env(safe-area-inset-bottom) + 76px)); }
     }
     @media (max-width: 640px) {
       :root { --radius: 14px; }
       .topbar { padding: 8px 6px 6px 2px; gap: 0; }
       .topbar h1 { flex: 0 1 auto; font-size: 18px; margin: 0 4px; }
-      .topbar .icon-btn { width: 34px; height: 34px; }
+      .topbar .icon-btn { width: 42px; height: 44px; }
       .frow { grid-template-columns: 1fr; }
       .frow > svg { display: none; }
       .seg button { padding: 6px 9px; font-size: 12px; }
@@ -631,6 +734,17 @@
       .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .task.sub { margin-left: 26px; }
       .qa-preview { padding-left: 10px; }
+      /* New task: Add sits in the header, since the keyboard covers the footer. */
+      .panel.is-new .pnl-foot { display: none; }
+      .panel.is-new .pnl-add { display: inline-flex; }
+      .panel.is-new .pnl-head { padding-right: 12px; }
+      /* Dialogs sit high so the keyboard doesn't cover them. */
+      .dlg-scrim { place-items: start center; padding-top: max(48px, calc(env(safe-area-inset-top) + 24px)); }
+      .dlg { max-height: calc(100dvh - 96px); padding: 20px 18px 14px; }
+      .dlg-actions .btn { flex: 1; }
+    }
+    @media (pointer: coarse) and (max-width: 640px) {
+      .task { touch-action: pan-y; }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -1159,6 +1273,7 @@
 
   /* ----- lists ----- */
   async function newList() {
+    if (isNarrow()) closeDrawer();
     const res = await listDlg({ title: 'Create new list', ok: 'Create', color: COLORS[S.lists.length % COLORS.length] });
     if (!res || !res.name) return;
     if (S.lists.some(l => l.name.toLowerCase() === res.name.toLowerCase())) return snack('That list already exists');
@@ -1335,7 +1450,7 @@
     requestAnimationFrame(() => { rafPending = false; render(); });
   }
   function render() {
-    if (drag.active || composing) { renderBlocked = true; return; }
+    if (drag.active || composing || touch.active) { renderBlocked = true; return; }
     keepFocus($('drawer'), renderDrawer);
     renderTop();
     renderView();
@@ -1390,7 +1505,7 @@
     const trashCount = S.tasks.filter(t => t.archType === 'Deleted').length;
     $('drawerFoot').replaceChildren(
       nav('trash', trashCount || ''),
-      h('button', { class: 'nav-item', type: 'button', 'data-key': 'nav:settings', onclick: settingsDlg }, icon('settings'), h('span', { class: 'lbl', text: 'Settings' })),
+      h('button', { class: 'nav-item', type: 'button', 'data-key': 'nav:settings', onclick: () => { if (isNarrow()) closeDrawer(); settingsDlg(); } }, icon('settings'), h('span', { class: 'lbl', text: 'Settings' })),
       h('button', { class: 'nav-item', type: 'button', 'data-key': 'nav:keys', onclick: shortcutsDlg }, icon('keyboard'), h('span', { class: 'lbl', text: 'Keyboard shortcuts' }), h('kbd', { text: '?' })));
   }
 
@@ -1589,7 +1704,7 @@
     }
     if (!o.trash) {
       row.addEventListener('click', () => openPanel(t.id));
-      row.addEventListener('contextmenu', e => { e.preventDefault(); taskMenu(t, { x: e.clientX, y: e.clientY }); });
+      row.addEventListener('contextmenu', e => { e.preventDefault(); if (Date.now() - touch.heldAt > 1500) taskMenu(t, { x: e.clientX, y: e.clientY }); });
     }
     return row;
   }
@@ -1934,6 +2049,7 @@
     const scrollTop = oldScroll ? oldScroll.scrollTop : 0;
     pnl.replaceChildren(...panelContent(t, isNew));
     pnl.classList.add('open');
+    pnl.classList.toggle('is-new', isNew);
     pnl.removeAttribute('aria-hidden');
     app.classList.add('panel-open');
     const sc = pnl.querySelector('.pnl-scroll');
@@ -1963,13 +2079,14 @@
         onclick: () => set('starred', !t.starred),
       }, icon(t.starred ? 'star' : 'starOutline')) : null,
       !isNew ? iconBtn('trash', 'Delete task', () => trash(t.id)) : null,
-      iconBtn('close', 'Close (Esc)', closePanel));
+      iconBtn('close', 'Close (Esc)', closePanel),
+      isNew ? h('button', { class: 'btn primary pnl-add', type: 'button', text: 'Add', onclick: () => submitNew() }) : null);
 
     const scroll = h('div', { class: 'pnl-scroll' });
     if (parent) scroll.append(h('button', { class: 'pnl-back', type: 'button', onclick: () => openPanel(parent.id), title: 'Open parent task' }, icon('back'), h('span', { text: parent.title })));
     if (done) scroll.append(h('div', { class: 'pnl-done' }, icon('doneAll'), `Completed ${relDayLower(localDayOf(t.completed))}`));
 
-    const title = h('textarea', { class: 'pnl-title', 'data-f': 'title', rows: 1, placeholder: isNew ? 'What needs doing?' : 'Title', 'aria-label': 'Title', value: t.title, maxlength: 500 });
+    const title = h('textarea', { class: 'pnl-title', 'data-f': 'title', rows: 1, placeholder: isNew ? 'What needs doing?' : 'Title', 'aria-label': 'Title', value: t.title, maxlength: 500, enterkeyhint: isNew ? 'done' : 'next' });
     title.addEventListener('input', () => {
       autogrow(title);
       const v = title.value.replace(/\n/g, ' ');
@@ -1983,18 +2100,32 @@
       else if (!isNew) flushSaves();
     });
 
-    const desc = h('textarea', { class: 'pnl-notes', 'data-f': 'desc', rows: 3, placeholder: 'Add details', 'aria-label': 'Details', value: t.desc, maxlength: 5000 });
+    const desc = h('textarea', { class: 'pnl-notes', 'data-f': 'desc', rows: 2, placeholder: 'Add details', 'aria-label': 'Details', value: t.desc, maxlength: 5000 });
     desc.addEventListener('input', () => { autogrow(desc); if (isNew) t.desc = desc.value; else saveSoon(t.id, 'desc', desc.value); });
     desc.addEventListener('blur', () => { if (!isNew) flushSaves(); });
 
-    const today = todayISO();
-    const quickDates = [['Today', today], ['Tomorrow', addDays(today, 1)], ['Next week', nextWeekday(1, false)]];
+    const today = todayISO(), tomorrow = addDays(today, 1);
+    let nextWeek = nextWeekday(1, false);
+    if (nextWeek === tomorrow) nextWeek = addDays(nextWeek, 7);
+    const quickDates = [['Today', today], ['Tomorrow', tomorrow], ['Next week', nextWeek]];
+    // Choosing in the phone's own date/time picker must not rebuild the panel while that
+    // picker is still open (it would close it mid-choice). The labels update in place and
+    // the rest of the panel catches up once the picker closes.
+    const cur = () => (isNew ? t : byId.get(t.id) || t);
+    const setWhen = fields => {
+      if (isNew) { Object.assign(t, fields); if (!t.due) t.time = ''; } else patch(t.id, fields);
+      const c = cur();
+      dateField.show(c.due, c.due ? dayLabel(c.due) : '');
+      timeField.show(c.time, c.time ? fmtTime(c.time) : '');
+    };
+    const dateField = pickerField('date', t.due, 'Add date', v => setWhen(v ? { due: v } : { due: '', time: '' }));
+    const timeField = pickerField('time', t.time, 'Add time', v => setWhen(v ? { time: v, due: cur().due || today } : { time: '' }));
+    dateField.show(t.due, t.due ? dayLabel(t.due) : '');
+    timeField.show(t.time, t.time ? fmtTime(t.time) : '');
     const dateRow = h('div', { class: 'fctl' },
-      h('input', { class: 'input', type: 'date', 'data-f': 'due', value: t.due, 'aria-label': 'Due date', onchange: e => set('due', e.target.value) }),
-      t.due ? h('input', { class: 'input', type: 'time', 'data-f': 'time', value: t.time, 'aria-label': 'Due time', onchange: e => set('time', e.target.value) }) : null,
+      h('div', { class: 'whens' }, dateField.el, timeField.el),
       h('div', { class: 'quick' },
-        quickDates.map(([label, d]) => h('button', { type: 'button', class: t.due === d ? 'on' : '', text: label, onclick: () => set('due', d) })),
-        t.due ? h('button', { type: 'button', text: 'Clear', onclick: () => set('due', '') }) : null));
+        quickDates.map(([label, d]) => h('button', { type: 'button', class: t.due === d ? 'on' : '', text: label, onclick: () => set('due', d) }))));
 
     const repeat = h('select', { class: 'select', 'data-f': 'repeat', 'aria-label': 'Repeat', onchange: e => set('repeat', e.target.value) },
       REPEATS.map(r => h('option', { value: r, text: repeatLabel(r, t.due), selected: r === (t.repeat || '') })));
@@ -2013,10 +2144,14 @@
 
     const foot = h('div', { class: 'pnl-foot' });
     let addBtn = null;
-    const updateAddBtn = () => { if (addBtn) addBtn.disabled = !t.title.trim(); };
+    const updateAddBtn = () => {
+      if (addBtn) addBtn.disabled = !t.title.trim();
+      const top = head.querySelector('.pnl-add');
+      if (top) top.disabled = !t.title.trim();
+    };
     if (isNew) {
       addBtn = h('button', { class: 'btn primary', type: 'button', text: 'Add task', onclick: submitNew });
-      foot.append(h('span', { class: 'meta', text: 'Ctrl+Enter to add' }), h('button', { class: 'btn', type: 'button', text: 'Cancel', onclick: closePanel }), addBtn);
+      foot.append(h('span', { class: 'meta kbd-hint', text: 'Ctrl+Enter to add' }), h('button', { class: 'btn', type: 'button', text: 'Cancel', onclick: closePanel }), addBtn);
       updateAddBtn();
     } else {
       const meta = [t.created ? 'Created ' + fmtDay(localDayOf(t.created), { weekday: undefined }) : '', ''].filter(Boolean).join(' · ');
@@ -2025,6 +2160,36 @@
           : h('button', { class: 'btn tonal', type: 'button', onclick: () => { closePanel(); complete(t.id, $('board').querySelector(`.task[data-id="${CSS.escape(t.id)}"]`)); } }, icon('check'), 'Mark complete'));
     }
     return [head, scroll, foot];
+  }
+
+  const dayLabel = iso => { const r = relDay(iso); return /^(Today|Tomorrow|Yesterday)$/.test(r) ? r : fmtDay(iso); };
+
+  // A big tappable field for a date or time. The real input lies invisibly on top of it, so
+  // on a phone one tap opens the phone's own picker; with a mouse, a click opens the browser's.
+  function pickerField(type, value, placeholder, onPick) {
+    const field = type === 'date' ? 'due' : 'time';
+    const text = h('span', { class: 'pick-text' });
+    const input = h('input', { class: 'pick-input', type, value, 'data-f': field, 'aria-label': type === 'date' ? 'Due date' : 'Due time' });
+    const open = () => { try { input.showPicker(); } catch (e) {} };
+    input.addEventListener('click', open);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    input.addEventListener('change', () => onPick(input.value));
+    // When the picker closes, refresh the rest of the panel (quick chips, repeat labels).
+    input.addEventListener('blur', () => setTimeout(() => {
+      const a = document.activeElement;
+      if (S.panel && !(a && $('panel').contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) renderPanel();
+    }, 0));
+    const clear = iconBtn('close', type === 'date' ? 'Remove date' : 'Remove time', e => { e.preventDefault(); onPick(''); renderPanel(); }, 'pick-clear');
+    const el = h('label', { class: 'pick' }, icon(type === 'date' ? 'event' : 'clock'), text, input, clear);
+    return {
+      el,
+      show(v, label) {
+        el.classList.toggle('set', !!v);
+        text.textContent = v ? label : placeholder;
+        if (input.value !== v) input.value = v;
+        clear.hidden = !v;
+      },
+    };
   }
 
   function submitNew() {
@@ -2073,11 +2238,14 @@
    * Menus, dialogs, snackbar
    * ==================================================================== */
   let menuReturn = null;
-  function openMenu(items, at) {
+  // On phones a menu opens as a sheet from the bottom of the screen, within thumb reach.
+  const useSheet = () => matchMedia('(max-width: 640px), (hover: none) and (pointer: coarse)').matches;
+  function openMenu(items, at, opts = {}) {
     closeMenu();
     menuReturn = at instanceof Element ? at : document.activeElement;
-    const layer = $('layer');
-    const menu = h('div', { class: 'menu', role: 'menu' });
+    const layer = $('layer'), sheet = useSheet();
+    const menu = h('div', { class: 'menu' + (sheet ? ' sheet' : ''), role: 'menu', 'aria-label': opts.title || null });
+    if (sheet && opts.title) menu.append(h('div', { class: 'menu-title', text: opts.title }));
     items.forEach(it => {
       if (!it) return;
       if (it === '-') return menu.append(h('hr'));
@@ -2089,8 +2257,16 @@
         onclick: () => { closeMenu(false); it.action(); },
       }, it.color ? h('span', { class: 'cdot' }) : it.icon ? icon(it.icon) : h('span', { class: 'mi-space' }), h('span', { class: 'l', text: it.label }), it.hint ? h('kbd', { text: it.hint }) : null));
     });
-    const scrim = h('div', { class: 'menu-scrim', onclick: () => closeMenu(), oncontextmenu: e => { e.preventDefault(); closeMenu(); } });
+    const scrim = h('div', { class: 'menu-scrim' + (sheet ? ' dim' : ''), onclick: () => closeMenu(), oncontextmenu: e => { e.preventDefault(); closeMenu(); } });
     layer.append(scrim, menu);
+    menu.addEventListener('keydown', e => {
+      const btns = [...menu.querySelectorAll('.menu-i:not([disabled])')], i = btns.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        btns[(i + (e.key === 'ArrowDown' ? 1 : -1) + btns.length) % btns.length].focus();
+      } else if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); e.stopPropagation(); closeMenu(); }
+    });
+    if (sheet) { menu.tabIndex = -1; menu.focus({ preventScroll: true }); return; }
     const r = at instanceof Element ? at.getBoundingClientRect() : { left: at.x, right: at.x, top: at.y, bottom: at.y };
     const mw = menu.offsetWidth, mh = menu.offsetHeight, vw = innerWidth, vh = innerHeight;
     let left = at instanceof Element ? r.right - mw : r.left;
@@ -2100,13 +2276,6 @@
     if (top + mh > vh - 8) top = Math.max(8, r.top - mh - 4);
     menu.style.left = left + 'px';
     menu.style.top = top + 'px';
-    menu.addEventListener('keydown', e => {
-      const btns = [...menu.querySelectorAll('.menu-i:not([disabled])')], i = btns.indexOf(document.activeElement);
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        btns[(i + (e.key === 'ArrowDown' ? 1 : -1) + btns.length) % btns.length].focus();
-      } else if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); e.stopPropagation(); closeMenu(); }
-    });
     const first = menu.querySelector('.menu-i:not([disabled])');
     if (first) first.focus();
   }
@@ -2132,13 +2301,14 @@
       '-',
       { label: `Delete completed (${doneN})`, icon: 'doneAll', disabled: !doneN, action: () => clearCompleted(l) },
       { label: 'Delete list', icon: 'trash', danger: true, disabled: isDefault, action: () => deleteList(l) },
-    ], anchor);
+    ], anchor, { title: l.name });
   }
 
   function taskMenu(t, at) {
     if (t.archType === 'Deleted') return;
     const done = t.archived;
     const top = isTop(t);
+    const others = S.lists.filter(l => l.name !== t.list);
     openMenu([
       { label: 'Open details', icon: 'edit', hint: 'Enter', action: () => openPanel(t.id) },
       done ? { label: 'Mark not complete', icon: 'restore', action: () => uncomplete(t.id) }
@@ -2152,12 +2322,10 @@
       !done && !top ? { label: 'Outdent', icon: 'outdent', hint: '[', action: () => outdent(t.id) } : null,
       !done ? { label: 'Move up', icon: 'up', hint: 'Alt+↑', action: () => moveBy(t.id, -1) } : null,
       !done ? { label: 'Move down', icon: 'down', hint: 'Alt+↓', action: () => moveBy(t.id, 1) } : null,
-      '-',
-      { header: 'Move to list' },
-      ...S.lists.filter(l => l.name !== t.list).map(l => ({ label: l.name, color: COLOR_HEX[l.color], action: () => patch(t.id, { list: l.name }) })),
+      ...(others.length ? ['-', { header: 'Move to list' }, ...others.map(l => ({ label: l.name, color: COLOR_HEX[l.color], action: () => patch(t.id, { list: l.name }) }))] : []),
       '-',
       { label: 'Delete', icon: 'trash', danger: true, hint: 'Del', action: () => trash(t.id) },
-    ], at);
+    ], at, { title: t.title });
   }
 
   function openDialog(title, content, actions) {
@@ -2488,8 +2656,104 @@
     if (renderBlocked || action) { renderBlocked = false; renderNow(); }
   }
   let swallowClick = false;
-  function suppressClick() { swallowClick = true; setTimeout(() => { swallowClick = false; }, 60); }
+  let swallowTimer;
+  function suppressClick(ms = 60) { swallowClick = true; clearTimeout(swallowTimer); swallowTimer = setTimeout(() => { swallowClick = false; }, ms); }
   window.addEventListener('click', e => { if (swallowClick) { e.stopPropagation(); e.preventDefault(); swallowClick = false; } }, true);
+
+  /* ======================================================================
+   * Touch: swipe a task right to complete it (or bring back a completed one),
+   * swipe left to delete it, press and hold for its menu.
+   * ==================================================================== */
+  const touch = { active: false, heldAt: 0 };
+  const HOLD_MS = 450;
+  const swipeThreshold = () => Math.min(120, touch.width * 0.33);
+  function onTouchStart(e) {
+    if (e.pointerType !== 'touch' || touch.row || drag.start) return;
+    const row = e.target.closest('.task');
+    if (!row || e.target.closest('.grip, .row-actions')) return;
+    const t = byId.get(row.dataset.id);
+    if (!t || t.archType === 'Deleted') return;
+    Object.assign(touch, { row, t, pid: e.pointerId, x0: e.clientX, y0: e.clientY, dx: 0, mode: null,
+      canSwipe: matchMedia('(max-width: 640px)').matches });
+    touch.timer = setTimeout(onHold, HOLD_MS);
+    window.addEventListener('pointermove', onTouchMove);
+    window.addEventListener('pointerup', onTouchEnd);
+    window.addEventListener('pointercancel', onTouchCancel);
+  }
+  function onHold() {
+    if (touch.mode || !touch.row.isConnected) return;
+    touch.mode = 'hold';
+    touch.heldAt = Date.now();
+    touch.row.classList.add('held');
+    taskMenu(touch.t, touch.row);
+  }
+  function onTouchMove(e) {
+    if (e.pointerId !== touch.pid) return;
+    const dx = e.clientX - touch.x0, dy = e.clientY - touch.y0;
+    if (!touch.mode) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) return endTouch();
+      if (touch.canSwipe && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+        clearTimeout(touch.timer);
+        touch.mode = 'swipe';
+        touch.active = true;
+        touch.width = touch.row.getBoundingClientRect().width;
+        touch.row.classList.add('swiping');
+      } else {
+        if (Math.hypot(dx, dy) > 10) clearTimeout(touch.timer);
+        return;
+      }
+    }
+    if (touch.mode !== 'swipe') return;
+    touch.dx = dx;
+    const r = touch.row;
+    r.style.setProperty('--sx', dx + 'px');
+    r.classList.toggle('swipe-right', dx > 0);
+    r.classList.toggle('swipe-left', dx < 0);
+    r.classList.toggle('armed', Math.abs(dx) > swipeThreshold());
+  }
+  function onTouchEnd(e) {
+    if (e.pointerId !== touch.pid) return;
+    const { mode, row, t, dx } = touch;
+    if (mode === 'hold') suppressClick(300);
+    if (mode !== 'swipe') return endTouch();
+    suppressClick(300);
+    if (Math.abs(dx) <= swipeThreshold()) { snapBack(row); return endTouch(); }
+    // Slide the row away, then act; Undo is in the snackbar either way.
+    row.classList.add('swipe-out');
+    row.style.setProperty('--sx', (dx > 0 ? 1 : -1) * (touch.width + 24) + 'px');
+    endTouch(true);
+    setTimeout(() => {
+      row.style.visibility = 'hidden';
+      touch.active = false;
+      renderBlocked = false;
+      if (dx < 0) trash(t.id);
+      else if (t.archived) uncomplete(t.id);
+      else complete(t.id);
+      schedule();
+    }, 180);
+  }
+  function onTouchCancel(e) {
+    if (e.pointerId !== touch.pid) return;
+    if (touch.mode === 'swipe') snapBack(touch.row);
+    endTouch();
+  }
+  function snapBack(row) {
+    row.classList.add('swipe-back');
+    row.style.setProperty('--sx', '0px');
+    setTimeout(() => row.classList.remove('swiping', 'swipe-back', 'swipe-left', 'swipe-right', 'armed'), 200);
+  }
+  function endTouch(keepBlocked) {
+    clearTimeout(touch.timer);
+    window.removeEventListener('pointermove', onTouchMove);
+    window.removeEventListener('pointerup', onTouchEnd);
+    window.removeEventListener('pointercancel', onTouchCancel);
+    if (touch.row) touch.row.classList.remove('held');
+    touch.row = touch.t = null;
+    touch.mode = null;
+    if (keepBlocked) return;
+    touch.active = false;
+    if (renderBlocked && !drag.active && !composing) { renderBlocked = false; schedule(); }
+  }
 
   /* ======================================================================
    * Keyboard
@@ -2616,6 +2880,9 @@
     $('fab').append(icon('add'), h('span', { text: 'Create' }));
     $('fab').addEventListener('click', () => openNew());
     $('board').addEventListener('pointerdown', onPointerDown);
+    $('board').addEventListener('pointerdown', onTouchStart);
+    // iPhone only shows pressed (:active) styles when the page listens for touches.
+    document.addEventListener('touchstart', () => {}, { passive: true });
     $('board').addEventListener('wheel', e => {
       const b = $('board');
       if (e.target !== b || e.deltaX || !e.deltaY || b.scrollWidth <= b.clientWidth) return;
