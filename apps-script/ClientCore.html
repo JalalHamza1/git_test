@@ -404,29 +404,57 @@ const Idle = {
   }
 };
 
-/* ---------------------------------------------------------------- header */
+/* ---------------------------------------------------------------- header and navigation */
 
+/** Main navigation entries for the current user. */
+function navItems() {
+  const area = App.params.area || defaultArea();
+  const items = [{ key: 'board', label: t('nav.board'), fn: () => go('board', { area: area }) }];
+  if (!App.user.isKiosk) items.push({ key: 'actions', label: t('nav.actions'), fn: () => go('actions') });
+  if (hasAnyRole(['MANAGER', 'APU_MANAGER', 'ADMIN'])) items.push({ key: 'manager', label: t('nav.manager'), fn: () => go('manager') });
+  items.push({ key: 'escalation', label: t('nav.escalation'), fn: () => go('escalation') });
+  return items;
+}
+/** Which navigation entry a page belongs to (QRAP pages belong to the board). */
+function navKey(page) {
+  return ['actions', 'manager', 'escalation'].indexOf(page) >= 0 ? page : 'board';
+}
+function initials(name) {
+  return String(name || '?').split(/[\s.@]+/).filter(Boolean).slice(0, 2).map(w => w.charAt(0).toUpperCase()).join('') || '?';
+}
+
+/** Top bar: brand · navigation · (area on the board) · language · user. On small screens the navigation is a menu. */
 function renderHeader() {
   const hdr = clear(byId('hdr'));
-  const area = App.params.area || (App.params.page === 'board' ? defaultArea() : '');
-  const menuBox = h('div', { class: 'hdr-menu', hidden: true });
-  const item = (label, fn) => h('button', { onclick: () => { menuBox.hidden = true; fn(); } }, label);
-  addKids(menuBox, [
-    item(t('nav.board'), () => go('board', { area: area || defaultArea() })),
-    canCreateIn(area || defaultArea()) ? item(t('nav.new'), () => go('new', { area: area || defaultArea() })) : null,
-    App.user.isKiosk ? null : item(t('nav.actions'), () => go('actions')),
-    hasAnyRole(['MANAGER', 'APU_MANAGER', 'ADMIN']) ? item(t('nav.manager'), () => go('manager')) : null,
-    item(t('nav.escalation'), () => go('escalation')),
-    App.set.areas.length > 1 ? App.set.areas.map(a => item(t('nav.boardOf', { area: a.code }), () => go('board', { area: a.code }))) : null
-  ]);
+  const page = App.params.page || defaultPage();
+  const active = navKey(page);
+  const items = navItems();
+  const menu = h('div', { class: 'menu-panel', hidden: true });
+  addKids(menu, items.map(it => h('button', { onclick: () => { menu.hidden = true; it.fn(); } }, it.label)));
+  let areaCtl = null;
+  if (page === 'board') {
+    const area = App.params.area || defaultArea();
+    if (App.user.isKiosk || App.set.areas.length < 2) {
+      areaCtl = h('span', { class: 'hdr-area' }, area + ' · ' + areaName(area));
+    } else {
+      areaCtl = selectEl(App.set.areas.map(a => ({ value: a.code, label: a.code + ' · ' + a.name })), area, v => go('board', { area: v }), false);
+      areaCtl.classList.add('hdr-select');
+      areaCtl.setAttribute('aria-label', t('f.area'));
+      addKids(menu, [h('div', { class: 'menu-sep' }), App.set.areas.map(a => h('button', {
+        onclick: () => { menu.hidden = true; go('board', { area: a.code }); } }, t('nav.boardOf', { area: a.code })))]);
+    }
+  }
   addKids(hdr, [
-    h('div', { class: 'hdr-app', onclick: () => go(defaultPage(), { area: defaultArea() }) }, App.boot.appName || 'eQRAP Logistika'),
-    area ? h('div', { class: 'hdr-area' }, area + ' · ' + areaName(area)) : null,
-    h('div', { class: 'hdr-space' }),
-    h('div', { class: 'hdr-user', title: App.user.email || '' }, App.user.label || ''),
-    h('button', { class: 'hdr-btn', onclick: toggleLang, title: 'CZ / EN' }, I18N_LANG === 'cz' ? 'EN' : 'CZ'),
-    h('button', { class: 'hdr-btn', onclick: () => { menuBox.hidden = !menuBox.hidden; }, 'aria-label': t('nav.menu') }, '☰'),
-    menuBox
+    h('div', { class: 'brand', onclick: () => go(defaultPage(), { area: defaultArea() }) },
+      h('span', { class: 'brand-mark' }, 'Q'), App.boot.appName || 'eQRAP Logistika'),
+    h('nav', { class: 'nav' }, items.map(it => h('button', { class: 'nav-item' + (it.key === active ? ' on' : ''), onclick: it.fn }, it.label))),
+    h('div', { class: 'hdr-right' },
+      areaCtl,
+      h('button', { class: 'lang-btn', onclick: toggleLang, title: 'CZ / EN' }, I18N_LANG === 'cz' ? 'EN' : 'CZ'),
+      h('div', { class: 'user', title: App.user.email || '' }, h('span', { class: 'avatar' }, initials(App.user.label)),
+        h('span', { class: 'user-name' }, App.user.label || '')),
+      h('button', { class: 'menu-btn', onclick: () => { menu.hidden = !menu.hidden; }, 'aria-label': t('nav.menu') }, '☰ ' + t('nav.menu'))),
+    menu
   ]);
 }
 function toggleLang() {

@@ -16,12 +16,11 @@ Wiz.steps[3] = function (body) {
   other.hidden = S.roles.indexOf('OTHER') < 0;
   const options = listItems('ALERT_ROLE').map(o => Object.assign(o, { locked: riskAno && o.value === 'QUALITY' }));
   addKids(body, [
-    h('h2', null, t('sec.2')),
-    h('p', { class: 'muted' }, t('wiz.alertHint')),
-    field(null, multiToggle(options, S.roles, v => { S.roles = v; S.dirty = true; other.hidden = v.indexOf('OTHER') < 0; }, 'seg-grid'),
-      { name: 'roles' }),
-    riskAno ? h('p', { class: 'warnbox' }, t('wiz.qualityAuto')) : null,
-    other
+    formGroup(t('sec.2'),
+      field(t('f.roles'), multiToggle(options, S.roles, v => { S.roles = v; S.dirty = true; other.hidden = v.indexOf('OTHER') < 0; }),
+        { name: 'roles', required: true, hint: t('wiz.alertHint') }),
+      riskAno ? h('div', { class: 'note' }, t('wiz.qualityAuto')) : null,
+      other)
   ]);
 };
 
@@ -38,8 +37,8 @@ Wiz.steps[4] = function (body) {
     clear(checkBox);
     if (q.risk_stock_shipped !== 'ANO') return;
     addKids(checkBox, [
-      h('div', { class: 'warnbox' }, t('wiz.riskAno')),
-      h('div', { class: 'row' },
+      h('div', { class: 'note' }, t('wiz.riskAno')),
+      formGrid(
         field(t('f.checked_qty'), numInput(q.checked_qty, set('checked_qty')), { name: 'checked_qty' }),
         field(t('f.wrong_found_qty'), numInput(q.wrong_found_qty, set('wrong_found_qty')), { name: 'wrong_found_qty' })),
       checkbox(t('f.check_in_progress'), q.check_in_progress, set('check_in_progress'))
@@ -61,41 +60,45 @@ Wiz.steps[4] = function (body) {
     const upd = k => v => { a[k] = v; S.dirty = true; };
     const doneIn = dtInput(a.done_at, upd('done_at'), nowLocalInput());
     return h('div', { class: 'ia-row' },
-      h('div', { class: 'fld-label' }, t('wiz.actionN', { n: n })),
-      h('div', { class: 'row' },
-        field(t('f.ia_type'), selectEl(listItems('ACTION_TYPE'), a.type, upd('type')), { name: 'ia' + n + '_type' }),
-        field(t('f.ia_owner'), personSelect(a.owner_name, upd('owner_name'), S.area), { name: 'ia' + n + '_owner_name' })),
-      field(t('f.ia_text'), textInput(a.text, upd('text'), { max: 500, placeholder: t('wiz.actionTextHint') }), { name: 'ia' + n + '_text' }),
-      h('div', { class: 'row' },
-        field(t('f.ia_done'), h('div', { class: 'row' }, doneIn, h('div', { style: { flex: '0 0 auto' } },
-          button(t('btn.doneNow'), () => { a.done_at = nowLocalInput(); doneIn.value = a.done_at; S.dirty = true; }, 'ok'))),
-        { name: 'ia' + n + '_done' }),
-        h('div', { style: { flex: '0 0 auto', alignSelf: 'center' } }, button(t('btn.remove'), () => {
+      h('div', { class: 'ia-head' }, h('span', { class: 'ia-title' }, t('wiz.actionN', { n: n })),
+        button(t('btn.remove'), () => {
           if (a.id) a.remove = true; else S.ia.splice(S.ia.indexOf(a), 1);
           S.dirty = true;
           drawIa();
-        }, 'ghost'))));
+        }, 'link')),
+      formGrid(
+        field(t('f.ia_type'), selectEl(listItems('ACTION_TYPE'), a.type, upd('type')), { name: 'ia' + n + '_type' }),
+        field(t('f.ia_owner'), personSelect(a.owner_name, upd('owner_name'), S.area), { name: 'ia' + n + '_owner_name' })),
+      field(t('f.ia_text'), textInput(a.text, upd('text'), { max: 500, placeholder: t('wiz.actionTextHint') }), { name: 'ia' + n + '_text' }),
+      formGrid(
+        field(t('f.ia_done'), withButton(doneIn,
+          button(t('btn.doneNow'), () => { a.done_at = nowLocalInput(); doneIn.value = a.done_at; S.dirty = true; })),
+        { name: 'ia' + n + '_done', hint: t('wiz.doneHint') }),
+        h('div')));
   }
   drawIa();
 
-  const restored = field(t('f.restored_at'), h('div', { class: 'row' }, dtInput(q.restored_at, set('restored_at'), nowLocalInput()),
-    h('div', { style: { flex: '0 0 auto' } }, button(t('btn.now'), () => { q.restored_at = nowLocalInput(); S.dirty = true; Wiz.draw(); }))),
+  const restored = field(t('f.restored_at'), withButton(dtInput(q.restored_at, set('restored_at'), nowLocalInput()),
+    button(t('btn.now'), () => { q.restored_at = nowLocalInput(); S.dirty = true; Wiz.draw(); })),
   { name: 'restored_at', hint: t('wiz.restoredHint') });
   restored.hidden = q.process_stopped !== 'ANO';
 
   addKids(body, [
-    h('h2', null, t('sec.3')),
-    field(t('f.risk_stock_shipped'), yesNo(q.risk_stock_shipped, v => {
-      q.risk_stock_shipped = v; S.dirty = true; drawCheck();
-      if (Wiz.laterBtn) Wiz.laterBtn.disabled = false;
-    }), { name: 'risk_stock_shipped', required: true, hint: t('wiz.riskHint') }),
-    checkBox,
-    h('h3', null, t('f.ia'), h('span', { class: 'req' }, ' *')),
-    iaBox,
-    field(t('f.process_stopped'), yesNo(q.process_stopped, v => { q.process_stopped = v; S.dirty = true; restored.hidden = v !== 'ANO'; },
-      { lower: true, yesKind: 'warn' }), { name: 'process_stopped', required: true }),
-    restored,
-    h('p', { class: 'muted' }, t('wiz.laterHint'))
+    formGroup(t('wiz.g.risk'),
+      formGrid(
+        field(t('f.risk_stock_shipped'), yesNo(q.risk_stock_shipped, v => {
+          q.risk_stock_shipped = v; S.dirty = true; drawCheck();
+          if (Wiz.laterBtn) Wiz.laterBtn.disabled = !v;
+        }), { name: 'risk_stock_shipped', required: true, hint: t('wiz.riskHint') }),
+        h('div')),
+      checkBox),
+    formGroup(t('f.ia'), iaBox),
+    formGroup(t('wiz.g.process'),
+      formGrid(
+        field(t('f.process_stopped'), yesNo(q.process_stopped, v => { q.process_stopped = v; S.dirty = true; restored.hidden = v !== 'ANO'; },
+          { lower: true }), { name: 'process_stopped', required: true }),
+        restored)),
+    h('p', { class: 'fld-hint' }, t('wiz.laterHint'))
   ]);
 };
 
@@ -122,7 +125,7 @@ Wiz.s3Missing = function () {
 Wiz.steps[5] = function (body) {
   const S = Wiz.S;
   const q = S.q;
-  const edit = n => h('div', { class: 'btn-row' }, button(t('btn.edit'), () => Wiz.goStep(n), 'ghost'));
+  const edit = n => h('div', { class: 'btn-row' }, button(t('btn.edit'), () => Wiz.goStep(n), 'link'));
   const miss = Wiz.s3Missing();
   const thumbs = h('div', { class: 'thumbs' }, ['WRONG', 'CORRECT'].map(k => {
     const p = S.photos[k];
@@ -132,7 +135,7 @@ Wiz.steps[5] = function (body) {
     return h('div', { class: 'thumb thumb-' + k.toLowerCase() }, h('b', null, t('wiz.photo' + k)), img);
   }));
   addKids(body, [
-    h('h2', null, t('wiz.s5')),
+    h('p', { class: 'fld-hint' }, t('wiz.checkHint')),
     sectionCard('1', t('sec.1'), 'op', kvList([
       [t('f.safety'), yn(q.safety, true)],
       [t('f.what'), q.what],

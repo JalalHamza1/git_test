@@ -12,7 +12,7 @@ App.views.escalation = (() => {
     clear(root);
     if (!res.ok) { root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
     addKids(root, [
-      h('h1', null, t('esc.title')),
+      pageHead({ title: t('esc.title'), sub: t('esc.sub') }),
       block(t('esc.apu'), res.apu, true),
       block(t('esc.plant'), res.plant, true),
       block(t('esc.escalated'), res.escalated, false)
@@ -20,15 +20,17 @@ App.views.escalation = (() => {
   }
 
   function block(title, rows, showParent) {
-    return h('div', { class: 'card' }, h('h2', null, title, ' (', String(rows.length), ')'),
-      rows.length ? table([t('board.col.id'), t('board.col.what'), '1 – 7', t('f.status'), showParent ? t('f.parent_id') : t('f.assign_ref')],
-        rows.slice().reverse().map(r => [
-          h('span', null, qrapLink(r.id), r.safety ? h('span', { class: 'badge badge-safety' }, 'S') : null),
-          h('span', null, r.what, h('div', { class: 'small muted' }, r.area + ' · ' + fmtDT(r.det))),
-          chipsEl(r.chips),
-          h('span', { class: r.late ? 'pill-bad' : '' }, statusLabel(r.st) + (r.wait ? ' · ' + t('wait.' + r.wait) : '')),
-          qrapLink(showParent ? r.parent : r.copy)
-        ]), i => (rows[rows.length - 1 - i].late ? 'late' : '')) : h('p', { class: 'muted' }, '–'));
+    const list = rows.slice().reverse();
+    return card(title + ' (' + rows.length + ')',
+      list.length ? table([t('board.col.id'), t('board.col.what'), t('board.col.status'), t('board.col.progress'),
+        showParent ? t('f.parent_id') : t('f.assign_ref')],
+      list.map(r => [
+        h('span', null, qrapLink(r.id), ' ', qrapTags(r.safety, false)),
+        h('span', null, r.what, h('div', { class: 'small muted' }, r.area + ' · ' + fmtDT(r.det))),
+        h('span', null, statusBadge(r.st), r.wait ? h('div', { class: 'small ' + (r.late ? 'pill-bad' : 'muted') }, t('wait.' + r.wait)) : null),
+        chipsEl(r.chips),
+        qrapLink(showParent ? r.parent : r.copy)
+      ]), i => (list[i].late ? 'late' : '')) : h('p', { class: 'muted' }, '–'));
   }
 
   return { render: render };

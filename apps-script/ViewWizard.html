@@ -77,11 +77,10 @@ App.views.wizard = App.views.new = (() => {
   function draw() {
     const S = Wiz.S;
     const root = clear(Wiz.root);
-    root.appendChild(h('div', { class: 'progress' }, [1, 2, 3, 4, 5].map(n => h('div', {
-      class: n === S.step ? 'cur' : n < S.step ? 'done' : '',
-      onclick: n < S.step ? () => goStep(n) : null
-    }, n + ' ' + t('wiz.s' + n)))));
-    root.appendChild(h('h1', null, S.id ? S.id : t('wiz.newTitle'), S.status ? statusBadge(S.status) : null));
+    const trail = [boardCrumb(S.area)].concat(S.id && S.status !== 'DRAFT'
+      ? [qrapCrumb(S.id), { label: t('wiz.edit') }] : [{ label: S.id || t('wiz.newTitle') }]);
+    root.appendChild(pageHead({ crumbs: trail, title: S.id ? S.id : t('wiz.newTitle'), badges: S.status ? statusBadge(S.status) : null }));
+    root.appendChild(stepper());
     Wiz.errBox = errorBox();
     root.appendChild(Wiz.errBox);
     Wiz.body = h('div', { class: 'card' });
@@ -91,19 +90,33 @@ App.views.wizard = App.views.new = (() => {
   }
   Wiz.draw = draw;
 
+  /** 1 Popis — 2 Fotky — 3 Upozornění — 4 Opatření — 5 Kontrola (finished steps are clickable). */
+  function stepper() {
+    const S = Wiz.S;
+    const el = h('div', { class: 'stepper' });
+    [1, 2, 3, 4, 5].forEach(n => {
+      if (n > 1) el.appendChild(h('div', { class: 'step-line' + (n <= S.step ? ' done' : '') }));
+      el.appendChild(h('div', { class: 'step' + (n === S.step ? ' cur' : n < S.step ? ' done' : ''), onclick: n < S.step ? () => goStep(n) : null },
+        h('span', { class: 'step-dot' }, n < S.step ? '✓' : String(n)), h('span', { class: 'step-label' }, t('wiz.s' + n))));
+    });
+    return el;
+  }
+
+  /** Bottom bar: back / cancel on the left, "later" and the main button on the right. */
   function navBar() {
     const S = Wiz.S;
     const nav = h('div', { class: 'wiz-nav' });
     nav.appendChild(S.step > 1 ? button(t('btn.back'), () => goStep(S.step - 1), 'ghost', { big: true })
       : button(t('btn.cancel'), cancel, 'ghost', { big: true }));
+    nav.appendChild(h('div', { class: 'spacer' }));
     Wiz.laterBtn = null;
     if (S.step === 4) {
       Wiz.laterBtn = button(t('wiz.later'), later, 'ghost', { big: true });
       Wiz.laterBtn.disabled = !S.q.risk_stock_shipped;
       nav.appendChild(Wiz.laterBtn);
     }
-    if (S.step < 5) nav.appendChild(button(t('btn.next'), next, 'op', { big: true }));
-    else if (S.status === 'DRAFT') nav.appendChild(button(t('wiz.send'), submit, 'op', { big: true }));
+    if (S.step < 5) nav.appendChild(button(t('btn.next'), next, 'primary', { big: true }));
+    else if (S.status === 'DRAFT') nav.appendChild(button(t('wiz.send'), submit, 'primary', { big: true }));
     else nav.appendChild(button(t('wiz.saveClose'), () => go('qrap', { id: S.id }), 'primary', { big: true }));
     return nav;
   }
@@ -190,42 +203,53 @@ Wiz.steps[1] = function (body) {
   const drawLoc = () => {
     clear(locBox);
     const codes = locationsOf(S.area, q.zone);
+    locBox.className = 'stack';
     if (codes.length) locBox.appendChild(segmented(codes.map(c => ({ value: c, label: c })), q.location_code, v => { q.location_code = v; S.dirty = true; drawLoc(); }));
-    locBox.appendChild(h('div', { style: { marginTop: '8px' } },
-      textInput(codes.indexOf(q.location_code) >= 0 ? '' : q.location_code, v => { q.location_code = v.trim(); S.dirty = true; },
-        { placeholder: t('wiz.locOther'), max: 100 })));
+    locBox.appendChild(textInput(codes.indexOf(q.location_code) >= 0 ? '' : q.location_code, v => { q.location_code = v.trim(); S.dirty = true; },
+      { placeholder: codes.length ? t('wiz.locOther') : t('wiz.locType'), max: 100 }));
   };
   drawLoc();
   const repBox = h('div');
   const drawRep = () => { clear(repBox); if (q.repeat_7d === 'ANO') Wiz.repeatPicker(repBox); };
   drawRep();
   addKids(body, [
-    h('h2', null, t('sec.1')),
-    field(t('f.safety'), yesNo(q.safety, set('safety'), { lower: true }), { name: 'safety', required: true, hint: t('wiz.safetyHint') }),
-    field(t('f.what'), [textArea(q.what, v => { q.what = v; S.dirty = true; updWhat(); }, 3, 2000), whatHint], { name: 'what', required: true, hint: t('wiz.whatHint') }),
-    field(t('f.how_found'), segmented(listItems('HOW_FOUND'), q.how_found, v => { q.how_found = v; S.dirty = true; otherBox.hidden = v !== 'OTHER'; }, 'seg-grid'),
-      { name: 'how_found', required: true }),
-    otherBox,
-    field(t('f.detected_at'), h('div', { class: 'row' }, dtInput(q.detected_at, set('detected_at'), nowLocalInput()),
-      h('div', { style: { flex: '0 0 auto' } }, button(t('btn.now'), () => { q.detected_at = nowLocalInput(); S.dirty = true; Wiz.draw(); }))),
-    { name: 'detected_at', required: true, hint: t('wiz.whenHint') }),
-    field(t('f.zone'), segmented(zonesOf(S.area).map(z => ({ value: z, label: z })), q.zone, v => { q.zone = v; q.location_code = ''; S.dirty = true; drawLoc(); }, 'seg-grid'),
-      { name: 'zone', required: true }),
-    field(t('f.location_code'), locBox, { name: 'location_code', required: true }),
-    field(t('f.origin_zone'), selectEl(zonesOf(S.area), q.origin_zone, set('origin_zone'), t('lbl.unknown')), { name: 'origin_zone' }),
-    field(t('f.qty'), [h('div', { class: 'row' }, numInput(q.qty, set('qty')), segmented(listItems('UNIT'), q.unit, set('unit'))),
-      checkbox(t('f.nok_situation'), q.nok_situation, set('nok_situation'))], { name: 'qty', required: true }),
-    field(t('f.repeat_7d'), yesNo(q.repeat_7d, v => { q.repeat_7d = v; S.dirty = true; drawRep(); }, { yesKind: 'warn' }), { name: 'repeat_7d', required: true }),
-    field(null, repBox, { name: 'repeat_ref' }),
-    field(t('f.finder_name'), h('div', { class: 'row' },
-      personSelect(q.finder_name, set('finder_name'), S.area, { roles: ['OPERATOR', 'TL', 'SUPERVISOR'] }),
-      textInput(q.finder_badge, set('finder_badge'), { placeholder: t('wiz.badge'), inputmode: 'numeric', max: 40 })),
-    { name: 'finder_name', required: true }),
-    h('h3', null, t('wiz.optional')),
-    h('div', { class: 'row' },
-      field(t('f.material_no'), textInput(q.material_no, set('material_no'), { max: 60 }), { name: 'material_no' }),
-      field(t('f.hu_or_delivery_no'), textInput(q.hu_or_delivery_no, set('hu_or_delivery_no'), { max: 60 }), { name: 'hu_or_delivery_no' }),
-      field(t('f.supplier'), textInput(q.supplier, set('supplier'), { max: 100 }), { name: 'supplier' }))
+    formGroup(t('wiz.g.problem'),
+      formGrid(
+        field(t('f.safety'), yesNo(q.safety, set('safety'), { lower: true }), { name: 'safety', required: true, hint: t('wiz.safetyHint') }),
+        field(t('f.how_found'), segmented(listItems('HOW_FOUND'), q.how_found, v => { q.how_found = v; S.dirty = true; otherBox.hidden = v !== 'OTHER'; }),
+          { name: 'how_found', required: true, hint: t('wiz.howHint') })),
+      otherBox,
+      field(t('f.what'), [textArea(q.what, v => { q.what = v; S.dirty = true; updWhat(); }, 3, 2000), whatHint],
+        { name: 'what', required: true, hint: t('wiz.whatHint') }),
+      formGrid(
+        field(t('f.repeat_7d'), yesNo(q.repeat_7d, v => { q.repeat_7d = v; S.dirty = true; drawRep(); }), { name: 'repeat_7d', required: true }),
+        h('div')),
+      field(null, repBox, { name: 'repeat_ref' })),
+    formGroup(t('wiz.g.whenWhere'),
+      formGrid(
+        field(t('f.detected_at'), withButton(dtInput(q.detected_at, set('detected_at'), nowLocalInput()),
+          button(t('btn.now'), () => { q.detected_at = nowLocalInput(); S.dirty = true; Wiz.draw(); })),
+        { name: 'detected_at', required: true, hint: t('wiz.whenHint') }),
+        field(t('f.zone'), segmented(zonesOf(S.area).map(z => ({ value: z, label: z })), q.zone,
+          v => { q.zone = v; q.location_code = ''; S.dirty = true; drawLoc(); }), { name: 'zone', required: true }),
+        field(t('f.location_code'), locBox, { name: 'location_code', required: true }),
+        field(t('f.origin_zone'), selectEl(zonesOf(S.area), q.origin_zone, set('origin_zone'), t('lbl.unknown')), { name: 'origin_zone' }))),
+    formGroup(t('wiz.g.qty'),
+      formGrid(
+        field(t('f.qty'), numInput(q.qty, set('qty')), { name: 'qty', required: true }),
+        field(t('f.unit'), segmented(listItems('UNIT'), q.unit, set('unit')), { name: 'unit' })),
+      checkbox(t('f.nok_situation'), q.nok_situation, set('nok_situation'))),
+    formGroup(t('wiz.g.finder'),
+      formGrid(
+        field(t('f.finder_name'), personSelect(q.finder_name, set('finder_name'), S.area, { roles: ['OPERATOR', 'TL', 'SUPERVISOR'] }),
+          { name: 'finder_name', required: true, hint: t('wiz.finderHint') }),
+        field(t('f.finder_badge'), textInput(q.finder_badge, set('finder_badge'), { placeholder: t('wiz.badge'), inputmode: 'numeric', max: 40 }),
+          { name: 'finder_badge', hint: t('wiz.badgeHint') }))),
+    formGroup(t('wiz.optional'),
+      h('div', { class: 'form-grid form-grid-3' },
+        field(t('f.material_no'), textInput(q.material_no, set('material_no'), { max: 60 }), { name: 'material_no' }),
+        field(t('f.hu_or_delivery_no'), textInput(q.hu_or_delivery_no, set('hu_or_delivery_no'), { max: 60 }), { name: 'hu_or_delivery_no' }),
+        field(t('f.supplier'), textInput(q.supplier, set('supplier'), { max: 100 }), { name: 'supplier' })))
   ]);
 };
 
@@ -255,13 +279,13 @@ Wiz.steps[2] = function (body) {
     { name: 'photo_exception', required: true });
   exc.hidden = !S.q.photoExc;
   addKids(body, [
-    h('h2', null, t('wiz.s2')),
-    h('p', { class: 'muted' }, t('wiz.photoHint')),
-    h('div', { class: 'photo-slots' }, photoSlot('WRONG'), photoSlot('CORRECT')),
-    h('div', { style: { marginTop: '16px' } }, checkbox(t('wiz.photoExc'), S.q.photoExc, v => {
-      S.q.photoExc = v; S.dirty = true; exc.hidden = !v; if (!v) S.q.photo_exception = '';
-    })),
-    exc
+    formGroup(t('wiz.s2'),
+      h('p', { class: 'fld-hint' }, t('wiz.photoHint')),
+      h('div', { class: 'photo-slots' }, photoSlot('WRONG'), photoSlot('CORRECT')),
+      h('div', { style: { marginTop: '14px' } }, checkbox(t('wiz.photoExc'), S.q.photoExc, v => {
+        S.q.photoExc = v; S.dirty = true; exc.hidden = !v; if (!v) S.q.photo_exception = '';
+      })),
+      exc)
   ]);
 
   function photoSlot(kind) {
@@ -279,8 +303,7 @@ Wiz.steps[2] = function (body) {
     return h('div', { class: 'photo-slot ph-' + kind.toLowerCase() },
       h('div', { class: 'ph-title' }, t('wiz.photo' + kind)),
       frame,
-      h('label', { class: 'btn btn-big ' + (kind === 'WRONG' ? 'btn-danger' : 'btn-ok') }, input,
-        cur ? t('wiz.retake') : t('wiz.takePhoto')));
+      h('label', { class: 'btn btn-big btn-block' + (cur ? '' : ' btn-primary') }, input, cur ? t('wiz.retake') : t('wiz.takePhoto')));
   }
 
   async function upload(kind, file) {

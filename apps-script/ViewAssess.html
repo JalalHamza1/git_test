@@ -7,58 +7,60 @@
  */
 App.views.assess = (() => {
   async function render(root, params) {
-    root.appendChild(loadingEl());
-    const res = await api('apiGetQrap', params.id);
-    if (!root.isConnected) return;
-    clear(root);
-    if (!res.ok) { root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
-    const d = res.detail;
+    const d = await loadDetail(root, params.id);
+    if (!d) return;
     const q = d.q;
     const f = { c1: '', c2: '', c3: '', c4: '', c5: '', ojt_with: q.finder_name || '', feedback: '', feedback_type: '' };
     const box = errorBox();
     const kinds = d.photos.map(p => p.kind);
     const hints = {
-      c1: (q.s1_done_at ? '✓ ' : '✗ ') + t('assess.h1'),
-      c2: (d.s3.complete ? '✓ ' : '✗ ') + t('assess.h2') + (d.ia.length ? ' · ' + t('assess.hActions', { n: d.ia.length }) : ''),
-      c3: (kinds.indexOf('WRONG') >= 0 && kinds.indexOf('CORRECT') >= 0 ? '✓ ' : '✗ ') + t('assess.h3'),
-      c4: t('assess.h4', { n: d.shiftInfo.length, all: App.set.shifts.length }) + (q.learned ? ' · ✓ ' + t('f.learned') : ''),
-      c5: t('assess.h5')
+      c1: [!!q.s1_done_at, t('assess.h1')],
+      c2: [d.s3.complete, t('assess.h2') + (d.ia.length ? ' · ' + t('assess.hActions', { n: d.ia.length }) : '')],
+      c3: [kinds.indexOf('WRONG') >= 0 && kinds.indexOf('CORRECT') >= 0, t('assess.h3')],
+      c4: [null, t('assess.h4', { n: d.shiftInfo.length, all: App.set.shifts.length }) + (q.learned ? ' · ' + t('f.learned') + ' ✓' : '')],
+      c5: [null, t('assess.h5')]
     };
-    const photos = h('div', { class: 'thumbs' }, d.photos.filter(p => p.kind !== 'DOC').map(p => {
+    const photos = d.photos.filter(p => p.kind !== 'DOC').map(p => {
       const img = h('img', { alt: '' });
       loadPhoto(p.thumb_file_id, img);
-      return h('div', { class: 'thumb thumb-' + p.kind.toLowerCase(), style: { width: '46%' } }, h('b', null, t('wiz.photo' + p.kind)), img);
-    }));
-    const criteria = [1, 2, 3, 4, 5].map(n => field(t('assess.c' + n), [
-      h('div', { class: 'fld-hint' }, t('assess.sub' + n) + ' — ' + hints['c' + n]),
-      n === 3 ? photos : null,
-      segmented([{ value: 'OK', label: 'OK', kind: 'ok' }, { value: 'NOK', label: 'NOK', kind: 'danger' }, { value: 'NA', label: 'N/A' }],
-        f['c' + n], v => { f['c' + n] = v; }, 'seg-big')
-    ], { name: 'c' + n, required: true }));
+      return h('div', { class: 'thumb thumb-' + p.kind.toLowerCase() }, h('b', null, t('wiz.photo' + p.kind)), img);
+    });
+    const criteria = [1, 2, 3, 4, 5].map(n => {
+      const hint = hints['c' + n];
+      return h('div', { class: 'fld crit', 'data-field': 'c' + n },
+        h('div', null,
+          h('div', { class: 'crit-title' }, t('assess.c' + n), h('span', { class: 'req' }, ' *')),
+          h('div', { class: 'crit-sub' }, t('assess.sub' + n)),
+          h('div', { class: 'crit-hint' }, hint[0] === null ? null : mark(hint[0]), hint[0] === null ? '' : ' ', hint[1]),
+          n === 3 && photos.length ? h('div', { class: 'thumbs' }, photos) : null),
+        segmented([{ value: 'OK', label: 'OK' }, { value: 'NOK', label: 'NOK' }, { value: 'NA', label: 'N/A' }], f['c' + n], v => { f['c' + n] = v; }),
+        h('div', { class: 'fld-err' }));
+    });
     addKids(root, [
-      h('h1', null, t('assess.title'), ' · ', q.qrap_id),
-      h('div', { class: 'card' }, h('p', null, statusBadge(q.status), ' ', q.what)),
-      d.can.assess ? h('div', { class: 'card sec sec-mgr' }, box, criteria,
-        field(t('f.ojt_with'), personSelect(f.ojt_with, v => { f.ojt_with = v; }, q.area_code), { name: 'ojt_with' }),
-        field(t('f.feedback'), textArea('', v => { f.feedback = v; }, 3, 2000), { name: 'feedback', required: true }),
-        field(t('f.feedback_type'), segmented(['PRAISE', 'STRENGTH', 'IMPROVE'].map(x => ({ value: x, label: t('fb.' + x) })), '',
-          v => { f.feedback_type = v; }), { name: 'feedback_type' }),
-        h('p', { class: 'small muted' }, t('assess.auto', { user: App.user.name })),
-        button(t('assess.save'), async () => {
-          const errs = [];
-          ['c1', 'c2', 'c3', 'c4', 'c5'].forEach(c => { if (!f[c]) errs.push({ code: 'E_CRITERIA', field: c }); });
-          if (!f.feedback.trim()) errs.push({ code: 'E_REQUIRED', field: 'feedback' });
-          if (!setErrors(box, errs, root)) return;
-          const res2 = await api('apiSaveAssessment', Object.assign({ id: q.qrap_id }, f));
-          if (!res2.ok) { showErrors(res2, box, root); return; }
-          toast(t('assess.saved'), 'ok');
-          go('qrap', { id: q.qrap_id });
-        }, 'mgr', { big: true }))
-        : h('div', { class: 'warnbox' }, q.status === 'DRAFT' ? t('assess.draft') : t('err.E_FORBIDDEN')),
-      d.assess.length ? h('div', { class: 'card' }, h('h3', null, t('assess.history')),
+      pageHead({ crumbs: [boardCrumb(q.area_code), qrapCrumb(q.qrap_id), { label: t('qrap.assess') }], title: t('assess.title'),
+        badges: statusBadge(q.status), sub: q.qrap_id + ' · ' + q.what }),
+      d.can.assess ? card(null, box, criteria,
+        h('div', { style: { marginTop: '18px' } },
+          formGrid(
+            field(t('f.ojt_with'), personSelect(f.ojt_with, v => { f.ojt_with = v; }, q.area_code), { name: 'ojt_with' }),
+            field(t('f.feedback_type'), segmented(['PRAISE', 'STRENGTH', 'IMPROVE'].map(x => ({ value: x, label: t('fb.' + x) })), '',
+              v => { f.feedback_type = v; }), { name: 'feedback_type' })),
+          field(t('f.feedback'), textArea('', v => { f.feedback = v; }, 3, 2000), { name: 'feedback', required: true }),
+          h('p', { class: 'fld-hint' }, t('assess.auto', { user: App.user.name })),
+          button(t('assess.save'), async () => {
+            const errs = [];
+            ['c1', 'c2', 'c3', 'c4', 'c5'].forEach(c => { if (!f[c]) errs.push({ code: 'E_CRITERIA', field: c }); });
+            if (!f.feedback.trim()) errs.push({ code: 'E_REQUIRED', field: 'feedback' });
+            if (!setErrors(box, errs, root)) return;
+            const res = await api('apiSaveAssessment', Object.assign({ id: q.qrap_id }, f));
+            if (!res.ok) { showErrors(res, box, root); return; }
+            toast(t('assess.saved'), 'ok');
+            go('qrap', { id: q.qrap_id });
+          }, 'primary', { big: true })))
+        : card(null, h('div', { class: 'note' }, q.status === 'DRAFT' ? t('assess.draft') : t('err.E_FORBIDDEN'))),
+      d.assess.length ? card(t('assess.history'),
         table([t('f.at'), t('f.assessor'), '1', '2', '3', '4', '5', t('f.feedback')], d.assess.map(a => [fmtDT(a.at), personName(a.assessor),
-          a.c1, a.c2, a.c3, a.c4, a.c5, a.feedback + (a.feedback_type ? ' (' + t('fb.' + a.feedback_type) + ')' : '')]))) : null,
-      h('div', { class: 'btn-row' }, button(t('qrap.detail'), () => go('qrap', { id: q.qrap_id }), 'ghost'))
+          a.c1, a.c2, a.c3, a.c4, a.c5, a.feedback + (a.feedback_type ? ' (' + t('fb.' + a.feedback_type) + ')' : '')]))) : null
     ]);
   }
   return { render: render };

@@ -1,36 +1,132 @@
 <script>
 'use strict';
 /*
- * ClientForms – reusable form widgets and small display helpers.
+ * ClientForms – reusable page parts and form widgets.
  * Every input widget takes the current value and an onChange(value) callback, and returns a DOM node.
  */
+
+// ---------------------------------------------------------------- page structure
+
+/**
+ * Page header: breadcrumbs, title (+ badges), subtitle and actions on the right.
+ * o = {crumbs: [{label, go:[page, params]}], title, badges, sub, actions}
+ */
+function pageHead(o) {
+  return h('div', { class: 'page-head' },
+    h('div', { class: 'page-head-main' },
+      o.crumbs && o.crumbs.length ? crumbs(o.crumbs) : null,
+      h('h1', { class: 'page-title' }, o.title, o.badges || null),
+      o.sub ? h('div', { class: 'page-sub' }, o.sub) : null),
+    o.actions ? h('div', { class: 'page-actions' }, o.actions) : null);
+}
+
+/** Breadcrumbs. The last item is the current page (plain text, not a link). */
+function crumbs(items) {
+  const nav = h('nav', { class: 'crumbs', 'aria-label': 'breadcrumb' });
+  items.forEach((it, i) => {
+    if (i) nav.appendChild(h('span', { class: 'sep' }, '/'));
+    const isLink = it.go && i < items.length - 1;
+    nav.appendChild(isLink ? h('a', { href: '#', onclick: e => { e.preventDefault(); go(it.go[0], it.go[1]); } }, it.label)
+      : h('span', null, it.label));
+  });
+  return nav;
+}
+function boardCrumb(area) { return { label: t('nav.board') + ' ' + area, go: ['board', { area: area }] }; }
+function qrapCrumb(id) { return { label: id, go: ['qrap', { id: id }] }; }
+
+/** Section card: number, title and (in grey) who fills it. role: op | sup | pil | mgr */
+function sectionCard(num, title, role, ...content) {
+  return h('section', { class: 'card sec sec-' + role, id: 'sec-' + num },
+    h('div', { class: 'sec-head' }, h('span', { class: 'sec-num' }, num), h('h2', { class: 'sec-title' }, title),
+      role ? h('span', { class: 'sec-role' }, t('role.' + role)) : null),
+    content);
+}
+
+/** Plain card with an optional title. */
+function card(title, ...content) {
+  return h('div', { class: 'card' }, title ? h('h2', { class: 'card-title' }, title) : null, content);
+}
+
+/** Titled block inside a form card, and a 2-column grid for short fields. */
+function formGroup(title, ...kids) {
+  return h('div', { class: 'form-group' }, title ? h('div', { class: 'form-group-title' }, title) : null, kids);
+}
+function formGrid(...kids) { return h('div', { class: 'form-grid' }, kids); }
+
+/** One row of a bordered list: main content left, side content right. */
+function listRow(main, side, opts) {
+  opts = opts || {};
+  return h('div', { class: 'list-row' + (opts.cls ? ' ' + opts.cls : '') + (opts.onClick ? ' link' : ''), onclick: opts.onClick || null },
+    h('div', { class: 'list-row-main' }, main), side !== undefined && side !== null ? h('div', { class: 'list-row-side' }, side) : null);
+}
+
+/** Compact tab switcher (filters). options: [{value, label}] */
+function tabs(options, value, onChange) {
+  const wrap = h('div', { class: 'tabs', role: 'tablist' });
+  const btns = options.map((o, i) => h('button', {
+    type: 'button', role: 'tab', class: 'tab' + (o.value === value ? ' on' : ''), 'aria-selected': String(o.value === value),
+    onclick: () => {
+      btns.forEach(b => { b.classList.remove('on'); b.setAttribute('aria-selected', 'false'); });
+      btns[i].classList.add('on');
+      btns[i].setAttribute('aria-selected', 'true');
+      onChange(o.value);
+    }
+  }, o.label));
+  return addKids(wrap, btns);
+}
+
+// ---------------------------------------------------------------- status display
+
+/** Status pill with a small dot: blue = in progress, green = closed, grey = draft / escalated. */
+function statusBadge(st) {
+  const grp = st === 'DRAFT' || st === 'ESCALATED' ? 'neutral' : (st === 'CLOSED' || st === 'CLOSED_SOLVED') ? 'done' : 'active';
+  return h('span', { class: 'status status-' + grp }, h('i'), statusLabel(st));
+}
+/** Small label. kind: bad (SAFETY) | warn (repeat) | neutral */
+function tag(text, kind) { return h('span', { class: 'tag tag-' + (kind || 'neutral') }, text); }
+
+/** The QRAP tags: SAFETY, repeat, archived. */
+function qrapTags(safety, repeat, archived) {
+  return [safety ? tag('SAFETY', 'bad') : null, repeat ? tag(t('board.repeat'), 'warn') : null, archived ? tag(t('lbl.archived')) : null];
+}
+
+/** Section chips 1–7 (done / waiting / overdue / not yet / not needed). */
+function chipsEl(chips) {
+  return h('div', { class: 'chips', 'aria-label': t('board.chips') }, (chips || []).map((c, i) =>
+    h('span', { class: 'chip chip-' + c, title: t('chip.' + (i + 1)) + ': ' + t('chipState.' + c) }, String(i + 1))));
+}
+
+/** ✓ / ✗ marker. */
+function mark(ok) { return h('span', { class: ok ? 'ok-mark' : 'bad-mark' }, ok ? '✓' : '✗'); }
+
+// ---------------------------------------------------------------- form widgets
 
 /** Label + control + error line. opts: {name (data-field for server errors), required, hint, cls}. */
 function field(label, control, opts) {
   opts = opts || {};
   return h('div', { class: 'fld' + (opts.cls ? ' ' + opts.cls : ''), 'data-field': opts.name || '' },
     label ? h('label', { class: 'fld-label' }, label, opts.required ? h('span', { class: 'req' }, ' *') : null) : null,
-    opts.hint ? h('div', { class: 'fld-hint' }, opts.hint) : null,
     control,
+    opts.hint ? h('div', { class: 'fld-hint' }, opts.hint) : null,
     h('div', { class: 'fld-err' }));
 }
 
 /**
- * One choice as a dropdown. options: [{value, label, disabled}]. No default: an empty value shows "— vyberte —".
+ * One choice as a dropdown. options: [{value, label, disabled}]. No default: empty shows "— vyberte —".
  * (Named "segmented" for history; it used to be a row of buttons.)
  */
-function segmented(options, value, onChange, cls) {
-  const s = h('select', { class: 'dd' + (cls ? ' ' + cls : ''), onchange: e => onChange(e.target.value) });
+function segmented(options, value, onChange) {
+  const s = h('select', { class: 'dd', onchange: e => onChange(e.target.value) });
   s.appendChild(h('option', { value: '' }, t('lbl.choose')));
   options.forEach(o => s.appendChild(h('option', { value: o.value, disabled: !!o.disabled }, o.label)));
   s.value = value === undefined || value === null ? '' : value;
   return s;
 }
 
-/** Several choices as a compact checkbox list. locked values cannot be switched off. */
-function multiToggle(options, values, onChange, cls) {
+/** Several choices as a checkbox list. locked values cannot be switched off. */
+function multiToggle(options, values, onChange) {
   const sel = values.slice();
-  const wrap = h('div', { class: 'checklist' + (cls ? ' ' + cls : '') });
+  const wrap = h('div', { class: 'checklist' });
   options.forEach(o => {
     const box = h('input', { type: 'checkbox', checked: sel.indexOf(o.value) >= 0, disabled: !!o.locked, value: o.value,
       onchange: e => {
@@ -44,16 +140,16 @@ function multiToggle(options, values, onChange, cls) {
   return wrap;
 }
 
-/** ANO / NE buttons without a default. lower = show "ano / ne" (SAFETY wording). */
+/** ANO / NE dropdown without a default. lower = "ano / ne" (SAFETY wording). */
 function yesNo(value, onChange, opts) {
   opts = opts || {};
   return segmented([
-    { value: 'ANO', label: opts.lower ? t('lbl.yesLower') : t('lbl.yes'), kind: opts.yesKind || 'danger' },
-    { value: 'NE', label: opts.lower ? t('lbl.noLower') : t('lbl.no'), kind: 'ok' }
-  ], value, onChange, 'seg-big');
+    { value: 'ANO', label: opts.lower ? t('lbl.yesLower') : t('lbl.yes') },
+    { value: 'NE', label: opts.lower ? t('lbl.noLower') : t('lbl.no') }
+  ], value, onChange);
 }
 
-/** <select>. options: [{value, label}] or strings. */
+/** <select>. options: [{value, label}] or strings. placeholder false = no empty option. */
 function selectEl(options, value, onChange, placeholder) {
   const s = h('select', { onchange: e => onChange(e.target.value) });
   if (placeholder !== false) s.appendChild(h('option', { value: '' }, placeholder || t('lbl.choose')));
@@ -89,20 +185,26 @@ function dateInput(value, onChange, opts) {
 function checkbox(label, checked, onChange) {
   return h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: !!checked, onchange: e => onChange(e.target.checked) }), label);
 }
+/** Input with a small button next to it (e.g. date + "Teď"). */
+function withButton(input, btn) { return h('div', { class: 'input-with-btn' }, input, btn); }
 
 /** Person picker (value = name, or e-mail with byEmail). Only people with an e-mail when byEmail. */
 function personSelect(value, onChange, area, opts) {
   opts = opts || {};
   const list = peopleOf(area, opts.roles).filter(p => !opts.byEmail || p.email)
-    .map(p => ({ value: opts.byEmail ? p.email : p.name, label: p.name + (opts.showRoles ? ' (' + p.roles.join(', ') + ')' : '') }));
+    .map(p => ({ value: opts.byEmail ? p.email : p.name, label: p.name }));
   if (value && !list.some(o => o.value === value)) list.unshift({ value: value, label: opts.byEmail ? personName(value) : value });
   return selectEl(list, value, onChange, opts.placeholder);
 }
 
-/** Button that disables itself while its async handler runs. */
+/**
+ * Button that disables itself while its async handler runs.
+ * kind: primary | ghost (secondary) | danger | link.  opts: {big, block, disabled}
+ */
 function button(label, onClick, kind, opts) {
   opts = opts || {};
-  const b = h('button', { type: 'button', class: 'btn btn-' + (kind || 'ghost') + (opts.big ? ' btn-big' : ''), disabled: !!opts.disabled });
+  const b = h('button', { type: 'button', class: 'btn btn-' + (kind || 'ghost') + (opts.big ? ' btn-big' : '') + (opts.block ? ' btn-block' : ''),
+    disabled: !!opts.disabled });
   addKids(b, [label]);
   b.addEventListener('click', async () => {
     if (b.disabled) return;
@@ -112,19 +214,7 @@ function button(label, onClick, kind, opts) {
   return b;
 }
 
-/** Board chips 1–7. */
-function chipsEl(chips) {
-  return h('div', { class: 'chips', 'aria-label': t('board.chips') }, (chips || []).map((c, i) =>
-    h('span', { class: 'chip chip-' + c, title: t('chip.' + (i + 1)) + ': ' + t('chipState.' + c) }, String(i + 1))));
-}
-function statusBadge(st) { return h('span', { class: 'badge badge-st' }, statusLabel(st)); }
-
-/** Section card with the round number and role colour (op | sup | pil | mgr). */
-function sectionCard(num, title, role, ...content) {
-  return h('section', { class: 'card sec sec-' + role },
-    h('div', { class: 'sec-head' }, h('span', { class: 'sec-num' }, num), h('h2', { class: 'sec-title' }, title)),
-    content);
-}
+// ---------------------------------------------------------------- display helpers
 
 /** Definition list: [[label, value], …]; empty values are skipped. */
 function kvList(pairs) {
@@ -145,17 +235,17 @@ function setErrors(box, errs, root) {
   return errs.length === 0;
 }
 
-/** Simple table. rows: arrays of cells (strings or nodes). */
+/** Table in a bordered wrapper. rows: arrays of cells (strings or nodes). */
 function table(headers, rows, rowCls) {
-  return h('table', { class: 'tbl' },
+  return h('div', { class: 'table-wrap' }, h('table', { class: 'tbl' },
     h('thead', null, h('tr', null, headers.map(x => h('th', null, x)))),
-    h('tbody', null, rows.map((r, i) => h('tr', { class: rowCls ? rowCls(i) : null }, r.map(c => h('td', null, c))))));
+    h('tbody', null, rows.map((r, i) => h('tr', { class: rowCls ? rowCls(i) : null }, r.map(c => h('td', null, c)))))));
 }
 
 /** "Loading…" placeholder. */
 function loadingEl() { return h('div', { class: 'loading' }, t('msg.loading')); }
 
-/** Link-style button that opens a QRAP. */
+/** Link that opens a QRAP. */
 function qrapLink(id) {
   return id ? h('a', { href: '#', onclick: e => { e.preventDefault(); go('qrap', { id: id }); } }, id) : '';
 }
@@ -165,5 +255,15 @@ function yn(v, lower) {
   if (v === 'ANO') return lower ? t('lbl.yesLower') : t('lbl.yes');
   if (v === 'NE') return lower ? t('lbl.noLower') : t('lbl.no');
   return '–';
+}
+
+/** Loads a QRAP detail for a page; shows the error in root when it fails. Resolves with the detail or null. */
+async function loadDetail(root, id) {
+  root.appendChild(loadingEl());
+  const res = await api('apiGetQrap', id);
+  if (!root.isConnected) return null;
+  clear(root);
+  if (!res.ok) { root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return null; }
+  return res.detail;
 }
 </script>
