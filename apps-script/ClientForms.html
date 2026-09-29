@@ -15,38 +15,31 @@ function field(label, control, opts) {
     h('div', { class: 'fld-err' }));
 }
 
-/** Button group with one choice. options: [{value, label, kind (danger|ok|warn), disabled}]. */
+/**
+ * One choice as a dropdown. options: [{value, label, disabled}]. No default: an empty value shows "— vyberte —".
+ * (Named "segmented" for history; it used to be a row of buttons.)
+ */
 function segmented(options, value, onChange, cls) {
-  const wrap = h('div', { class: 'seg' + (cls ? ' ' + cls : ''), role: 'radiogroup' });
-  const btns = options.map(o => h('button', {
-    type: 'button', role: 'radio', disabled: !!o.disabled,
-    class: 'seg-btn' + (o.kind ? ' seg-' + o.kind : '') + (o.value === value ? ' on' : ''),
-    'aria-checked': String(o.value === value),
-    onclick: () => {
-      btns.forEach(b => { b.classList.remove('on'); b.setAttribute('aria-checked', 'false'); });
-      btns[options.indexOf(o)].classList.add('on');
-      btns[options.indexOf(o)].setAttribute('aria-checked', 'true');
-      onChange(o.value);
-    }
-  }, o.label));
-  return addKids(wrap, btns);
+  const s = h('select', { class: 'dd' + (cls ? ' ' + cls : ''), onchange: e => onChange(e.target.value) });
+  s.appendChild(h('option', { value: '' }, t('lbl.choose')));
+  options.forEach(o => s.appendChild(h('option', { value: o.value, disabled: !!o.disabled }, o.label)));
+  s.value = value === undefined || value === null ? '' : value;
+  return s;
 }
 
-/** Button group with several choices. locked values cannot be switched off. */
+/** Several choices as a compact checkbox list. locked values cannot be switched off. */
 function multiToggle(options, values, onChange, cls) {
   const sel = values.slice();
-  const wrap = h('div', { class: 'seg' + (cls ? ' ' + cls : '') });
+  const wrap = h('div', { class: 'checklist' + (cls ? ' ' + cls : '') });
   options.forEach(o => {
-    const b = h('button', { type: 'button', class: 'seg-btn' + (sel.indexOf(o.value) >= 0 ? ' on' : ''),
-      'aria-pressed': String(sel.indexOf(o.value) >= 0), disabled: !!o.locked }, o.label);
-    b.addEventListener('click', () => {
-      const i = sel.indexOf(o.value);
-      if (i >= 0) sel.splice(i, 1); else sel.push(o.value);
-      b.classList.toggle('on', i < 0);
-      b.setAttribute('aria-pressed', String(i < 0));
-      onChange(sel.slice());
-    });
-    wrap.appendChild(b);
+    const box = h('input', { type: 'checkbox', checked: sel.indexOf(o.value) >= 0, disabled: !!o.locked, value: o.value,
+      onchange: e => {
+        const i = sel.indexOf(o.value);
+        if (e.target.checked && i < 0) sel.push(o.value);
+        if (!e.target.checked && i >= 0) sel.splice(i, 1);
+        onChange(sel.slice());
+      } });
+    wrap.appendChild(h('label', { class: 'check-item' }, box, h('span', null, o.label)));
   });
   return wrap;
 }
