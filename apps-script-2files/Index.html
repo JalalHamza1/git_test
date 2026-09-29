@@ -1,0 +1,2893 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eQRAP Logistika</title>
+  <style>
+/* Styles – all CSS of the app. Touch friendly: controls are at least 48 px (≈ 12 mm) high. */
+:root {
+  --ink: #16202a; --muted: #56616d; --line: #cfd6de; --bg: #eef1f4; --card: #ffffff;
+  --hdr: #1f2d3d; --focus: #ffb300;
+  --op: #D7861B; --sup: #2F6DB5; --pil: #7B4FB8; --mgr: #0E8C83;
+  --done: #3B8A1E; --wait: #E08600; --late: #C62828; --todo: #b8c0c9;
+  --tap: 52px; --radius: 8px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { font-family: "Segoe UI", Roboto, Arial, sans-serif; font-size: 18px; line-height: 1.4; color: var(--ink);
+  background: var(--bg); -webkit-text-size-adjust: 100%; }
+h1 { font-size: 26px; margin: 0 0 12px; }
+h2 { font-size: 22px; margin: 0 0 10px; }
+h3 { font-size: 19px; margin: 14px 0 8px; }
+a { color: var(--sup); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.muted { color: var(--muted); }
+.small { font-size: 15px; }
+.nowrap { white-space: nowrap; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* ---------- header ---------- */
+.hdr { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 12px; padding: 8px 16px;
+  background: var(--hdr); color: #fff; min-height: 60px; }
+.hdr-app { font-weight: 700; font-size: 20px; white-space: nowrap; cursor: pointer; }
+.hdr-area { background: rgba(255,255,255,.15); border-radius: 20px; padding: 4px 12px; font-size: 16px; white-space: nowrap; }
+.hdr-space { flex: 1; }
+.hdr-user { font-size: 16px; opacity: .9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 34vw; }
+.hdr-btn { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,.4); border-radius: var(--radius);
+  min-height: 44px; min-width: 52px; padding: 0 12px; cursor: pointer; }
+.hdr-menu { position: absolute; right: 12px; top: 62px; background: #fff; color: var(--ink); border-radius: var(--radius);
+  box-shadow: 0 8px 30px rgba(0,0,0,.25); min-width: 240px; padding: 6px; }
+.hdr-menu button { display: block; width: 100%; text-align: left; min-height: var(--tap); border: 0; background: none;
+  padding: 0 14px; border-radius: 6px; cursor: pointer; }
+.hdr-menu button:hover { background: var(--bg); }
+.busybar { position: fixed; top: 0; left: 0; right: 0; height: 4px; z-index: 50; background: linear-gradient(90deg, var(--focus), var(--sup));
+  animation: busy 1s linear infinite; background-size: 200% 100%; }
+@keyframes busy { from { background-position: 0 0; } to { background-position: 200% 0; } }
+.offline { position: sticky; top: 60px; z-index: 19; display: flex; gap: 12px; align-items: center; justify-content: center;
+  flex-wrap: wrap; background: var(--late); color: #fff; font-weight: 700; padding: 10px 16px; }
+
+/* ---------- layout ---------- */
+.app { padding: 16px; max-width: 1200px; margin: 0 auto; padding-bottom: 120px; }
+.card { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 14px;
+  border: 1px solid var(--line); }
+.sec { border-left: 8px solid var(--line); }
+.sec-op { border-left-color: var(--op); } .sec-sup { border-left-color: var(--sup); }
+.sec-pil { border-left-color: var(--pil); } .sec-mgr { border-left-color: var(--mgr); }
+.sec-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.sec-num { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%;
+  color: #fff; font-weight: 700; flex: none; }
+.sec-op .sec-num { background: var(--op); } .sec-sup .sec-num { background: var(--sup); }
+.sec-pil .sec-num { background: var(--pil); } .sec-mgr .sec-num { background: var(--mgr); }
+.sec-title { font-size: 20px; font-weight: 700; margin: 0; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
+.row > * { flex: 1 1 240px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.kv { display: grid; grid-template-columns: minmax(140px, 32%) 1fr; gap: 6px 14px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.empty { padding: 30px; text-align: center; color: var(--muted); }
+.loading { padding: 40px; text-align: center; color: var(--muted); font-size: 20px; }
+
+/* ---------- buttons ---------- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--tap);
+  padding: 0 20px; border-radius: var(--radius); border: 2px solid transparent; font-weight: 700; cursor: pointer;
+  background: #e1e6eb; color: var(--ink); text-decoration: none; user-select: none; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-primary { background: var(--sup); color: #fff; }
+.btn-op { background: var(--op); color: #fff; }
+.btn-pil { background: var(--pil); color: #fff; }
+.btn-mgr { background: var(--mgr); color: #fff; }
+.btn-ok { background: var(--done); color: #fff; }
+.btn-danger { background: var(--late); color: #fff; }
+.btn-ghost { background: #fff; border-color: var(--line); }
+.btn-big { min-height: 68px; font-size: 22px; padding: 0 28px; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
+.btn-x { min-width: var(--tap); padding: 0; }
+
+/* ---------- forms ---------- */
+.fld { margin-bottom: 18px; }
+.fld-label { display: block; font-weight: 700; margin-bottom: 6px; }
+.fld-hint { color: var(--muted); font-size: 15px; margin: -2px 0 6px; }
+.req { color: var(--late); }
+.fld-err { color: var(--late); font-weight: 700; font-size: 16px; margin-top: 4px; }
+.fld-err:empty { display: none; }
+.fld.has-err input, .fld.has-err select, .fld.has-err textarea, .fld.has-err .seg { outline: 3px solid var(--late); outline-offset: 2px; }
+input[type=text], input[type=number], input[type=date], input[type=datetime-local], input[type=search], select, textarea {
+  width: 100%; min-height: var(--tap); border: 2px solid var(--line); border-radius: var(--radius); padding: 8px 12px;
+  background: #fff; }
+textarea { min-height: 96px; resize: vertical; }
+input:focus, select:focus, textarea:focus { border-color: var(--sup); outline: none; }
+.seg { display: flex; flex-wrap: wrap; gap: 8px; }
+.seg-btn { min-height: var(--tap); min-width: 90px; padding: 0 18px; border: 2px solid var(--line); border-radius: var(--radius);
+  background: #fff; font-weight: 700; cursor: pointer; }
+.seg-btn.on { background: var(--sup); border-color: var(--sup); color: #fff; }
+.seg-btn.seg-danger.on { background: var(--late); border-color: var(--late); }
+.seg-btn.seg-ok.on { background: var(--done); border-color: var(--done); }
+.seg-btn.seg-warn.on { background: var(--wait); border-color: var(--wait); }
+.seg-btn:disabled { opacity: .45; cursor: not-allowed; }
+.seg-big .seg-btn { min-height: 64px; min-width: 130px; font-size: 22px; }
+.seg-grid .seg-btn { flex: 1 1 200px; }
+.chk { display: flex; align-items: center; gap: 12px; min-height: var(--tap); cursor: pointer; font-weight: 600; }
+.chk input { width: 28px; height: 28px; flex: none; }
+.errbox { background: #fdecea; border: 2px solid var(--late); color: #7f1d1d; border-radius: var(--radius); padding: 10px 14px; margin-bottom: 14px; }
+.errbox ul, .warnbox ul { margin: 4px 0 0 20px; padding: 0; }
+.warnbox { background: #fff4e0; border: 2px solid var(--wait); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 14px; }
+.okbox { background: #e9f5e3; border: 2px solid var(--done); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 14px; }
+
+/* ---------- chips and badges ---------- */
+.chips { display: inline-flex; gap: 4px; flex-wrap: nowrap; }
+.chip { width: 30px; height: 30px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 15px; color: #fff; }
+.chip-done { background: var(--done); } .chip-wait { background: var(--wait); } .chip-late { background: var(--late); }
+.chip-todo { background: var(--todo); color: #31404f; } .chip-na { background: transparent; border: 2px dashed #8d99a6; color: #8d99a6; }
+.badge { display: inline-block; border-radius: 4px; padding: 1px 8px; font-size: 14px; font-weight: 700; margin-left: 6px; vertical-align: middle; }
+.badge-safety { background: var(--late); color: #fff; }
+.badge-rep { background: var(--wait); color: #fff; }
+.badge-st { background: #dfe6ee; color: var(--ink); }
+.badge-archived { background: #6b7785; color: #fff; }
+.pill-ok { color: var(--done); font-weight: 700; } .pill-bad { color: var(--late); font-weight: 700; }
+
+/* ---------- board ---------- */
+.board-top { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.board-top h1 { margin: 0; }
+.board-list { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  height: calc(100vh - 250px); min-height: 300px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.bhead, .brow { display: grid; grid-template-columns: 180px 1fr auto 190px; gap: 12px; align-items: center; padding: 10px 14px; }
+.bhead { position: sticky; top: 0; background: #f7f9fb; font-size: 15px; color: var(--muted); font-weight: 700;
+  border-bottom: 1px solid var(--line); z-index: 1; }
+.brow { border-bottom: 1px solid var(--line); cursor: pointer; min-height: 72px; border-left: 8px solid transparent; }
+.brow:hover { background: #f5f8fb; }
+.brow.late { border-left-color: var(--late); background: #fff1f0; }
+.brow.closed { opacity: .7; }
+.b-id { font-weight: 700; overflow-wrap: anywhere; }
+.b-text { font-weight: 600; }
+.b-meta { color: var(--muted); font-size: 15px; }
+.b-wait { font-size: 16px; font-weight: 600; }
+.brow.late .b-wait { color: var(--late); }
+.board-more { text-align: center; padding: 12px; color: var(--muted); }
+.bottombar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; display: flex; gap: 12px; padding: 12px 16px;
+  background: #fff; border-top: 1px solid var(--line); box-shadow: 0 -4px 16px rgba(0,0,0,.08); }
+.bottombar .btn { flex: 1; }
+
+/* ---------- wizard ---------- */
+.progress { display: flex; gap: 6px; margin-bottom: 16px; }
+.progress div { flex: 1; text-align: center; padding: 10px 4px; border-radius: 6px; background: #dde3e9; font-size: 15px; font-weight: 700; }
+.progress div.done { background: #cfe7c4; cursor: pointer; }
+.progress div.cur { background: var(--op); color: #fff; }
+.wiz-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; display: flex; gap: 12px; padding: 12px 16px; background: #fff;
+  border-top: 1px solid var(--line); box-shadow: 0 -4px 16px rgba(0,0,0,.08); }
+.wiz-nav .btn { flex: 1; }
+.photo-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.photo-slot { border: 5px solid var(--line); border-radius: var(--radius); padding: 12px; text-align: center; background: #fff; }
+.ph-wrong { border-color: var(--late); } .ph-correct { border-color: var(--done); }
+.ph-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+.ph-wrong .ph-title { color: var(--late); } .ph-correct .ph-title { color: var(--done); }
+.ph-frame { height: 260px; display: flex; align-items: center; justify-content: center; background: #f4f6f8; border-radius: 6px; margin-bottom: 10px; overflow: hidden; }
+.ph-frame img { max-width: 100%; max-height: 100%; }
+.ph-empty { color: var(--muted); font-size: 18px; }
+.ia-row { border: 2px solid var(--line); border-radius: var(--radius); padding: 12px; margin-bottom: 12px; background: #fbfcfd; }
+.ia-row .row > * { flex: 1 1 200px; }
+.sugg { display: block; width: 100%; text-align: left; border: 2px solid var(--line); border-radius: var(--radius); background: #fff;
+  padding: 10px 12px; margin-bottom: 8px; cursor: pointer; min-height: var(--tap); }
+.sugg.on { border-color: var(--sup); background: #eaf1fb; }
+
+/* ---------- detail ---------- */
+.top-card { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.top-card .grow { flex: 1 1 320px; }
+.qr { background: #fff; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); text-align: center; }
+.qr img, .qr canvas { display: block; margin: 0 auto; }
+.thumbs { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+.thumb { border: 4px solid var(--line); border-radius: 6px; width: 200px; min-height: 120px; cursor: pointer; background: #f4f6f8;
+  display: flex; flex-direction: column; align-items: center; }
+.thumb img { max-width: 100%; max-height: 180px; }
+.thumb-wrong { border-color: var(--late); } .thumb-correct { border-color: var(--done); }
+table.tbl { width: 100%; border-collapse: collapse; font-size: 16px; }
+.tbl th { text-align: left; background: #f1f4f7; padding: 8px; font-size: 15px; color: var(--muted); }
+.tbl td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.tbl tr.late td { background: #fff1f0; }
+.slots { display: flex; gap: 8px; flex-wrap: wrap; }
+.slot { border: 2px solid var(--line); border-radius: var(--radius); padding: 8px 10px; min-width: 150px; background: #fff; font-size: 15px; }
+.slot-EFFECTIVE { border-color: var(--done); background: #eef7ea; }
+.slot-NOT_EFFECTIVE { border-color: var(--late); background: #fdecea; }
+.slot-NOT_VERIFIED { border-color: var(--wait); background: #fff4e0; }
+.why-step { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; margin-bottom: 10px; }
+.why-root { font-weight: 700; color: var(--pil); }
+.check-list li { margin-bottom: 6px; }
+
+/* ---------- decision (phone) ---------- */
+.dec-opt { display: block; width: 100%; text-align: left; border: 3px solid var(--line); border-radius: var(--radius); padding: 14px;
+  margin-bottom: 10px; background: #fff; cursor: pointer; min-height: 64px; font-size: 19px; font-weight: 700; }
+.dec-opt.on { border-color: var(--sup); background: #eaf1fb; }
+.dec-opt:disabled { opacity: .5; cursor: not-allowed; }
+.dec-opt small { display: block; font-weight: 400; font-size: 15px; color: var(--muted); margin-top: 4px; }
+.shift-btn { min-width: 150px; }
+.shift-btn.on { background: var(--done); color: #fff; border-color: var(--done); }
+
+/* ---------- manager ---------- */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile { background: #fff; border: 1px solid var(--line); border-top: 6px solid var(--mgr); border-radius: var(--radius); padding: 12px; }
+.tile.alert { border-top-color: var(--late); }
+.tile-n { font-size: 38px; font-weight: 800; line-height: 1.1; }
+.tile-l { color: var(--muted); font-size: 15px; }
+.need { display: grid; grid-template-columns: 8px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px;
+  border-bottom: 1px solid var(--line); cursor: pointer; }
+.need-bar { align-self: stretch; border-radius: 4px; background: var(--wait); }
+.need.u-high .need-bar { background: var(--late); }
+
+/* ---------- toast and modal ---------- */
+.toast { position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%); z-index: 60; background: var(--ink); color: #fff;
+  padding: 16px 22px; border-radius: var(--radius); font-weight: 700; max-width: 92vw; box-shadow: 0 8px 24px rgba(0,0,0,.3); }
+.toast.ok { background: var(--done); } .toast.err { background: var(--late); } .toast.warn { background: var(--wait); }
+.modal-wrap { position: fixed; inset: 0; z-index: 70; background: rgba(10,20,30,.55); display: flex; align-items: center;
+  justify-content: center; padding: 16px; }
+.modal { background: #fff; border-radius: 10px; padding: 20px; width: 100%; max-width: 620px; max-height: 90vh; overflow: auto; }
+.modal-btns { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 16px; }
+.modal img.full { max-width: 100%; }
+
+/* ---------- small screens (phones) ---------- */
+@media (max-width: 760px) {
+  body { font-size: 17px; }
+  .app { padding: 12px; }
+  .bhead { display: none; }
+  .brow { grid-template-columns: 1fr auto; grid-template-areas: "id chips" "what what" "wait wait"; gap: 6px; }
+  .b-id { grid-area: id; } .b-what { grid-area: what; } .brow .chips { grid-area: chips; } .b-wait { grid-area: wait; }
+  .chip { width: 26px; height: 26px; font-size: 14px; }
+  .kv { grid-template-columns: 1fr; gap: 0 0; } .kv dd { margin-bottom: 8px; }
+  .grid2, .photo-slots { grid-template-columns: 1fr; }
+  .hdr-user { display: none; }
+  .ph-frame { height: 200px; }
+  .board-list { height: calc(100vh - 280px); }
+  .hdr { gap: 8px; padding: 8px 10px; }
+  .hdr-app { font-size: 17px; }
+  .bottombar .btn-big, .wiz-nav .btn-big { font-size: 18px; min-height: 60px; padding: 0 10px; }
+}
+@media (max-width: 480px) {
+  .hdr-area { display: none; }
+  .hdr-btn { min-width: 44px; padding: 0 8px; }
+}
+</style>
+
+</head>
+<body>
+  <!-- Index.html – page skeleton. Views are drawn into #app by the client router (ClientCore). -->
+  <header id="hdr" class="hdr"></header>
+  <div id="busy" class="busybar" hidden></div>
+  <div id="offline" class="offline" hidden></div>
+  <main id="app" class="app"><div class="loading">…</div></main>
+  <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+  <div id="modal" class="modal-wrap" hidden></div>
+
+  <!-- The only external library: QR codes (qrcodejs, MIT licence). -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Bootstrap data from doGet(): user, settings, URL parameters. -->
+  <script>window.BOOT = <?!= bootJson ?>;</script>
+  <script>
+'use strict';
+/*
+ * I18n – every UI text in Czech (default) and English. t('key', {param}) returns the text of the current language;
+ * {name} placeholders are replaced by params. Missing English texts fall back to Czech, missing keys return the key.
+ */
+let I18N_LANG = 'cz';
+try { const saved = localStorage.getItem('eqrap_lang'); if (saved === 'cz' || saved === 'en') I18N_LANG = saved; } catch (e) { /* private mode */ }
+
+function setLang(l) {
+  I18N_LANG = l === 'en' ? 'en' : 'cz';
+  try { localStorage.setItem('eqrap_lang', I18N_LANG); } catch (e) { /* ignore */ }
+  document.documentElement.lang = I18N_LANG === 'en' ? 'en' : 'cs';
+}
+
+function t(key, params) {
+  let s = (I18N[I18N_LANG] || {})[key];
+  if (s === undefined) s = I18N.cz[key];
+  if (s === undefined) return key;
+  if (params) s = s.replace(/\{(\w+)\}/g, (m, k) => (params[k] !== undefined && params[k] !== null ? String(params[k]) : ''));
+  return s;
+}
+
+const I18N = {
+  cz: {
+    // navigation and buttons
+    'nav.board': 'Tabule', 'nav.new': 'Nový QRAP', 'nav.actions': 'Moje akce', 'nav.manager': 'Manažer',
+    'nav.escalation': 'Eskalace', 'nav.boardOf': 'Tabule {area}', 'nav.menu': 'Menu',
+    'btn.ok': 'OK', 'btn.cancel': 'Zrušit', 'btn.close': 'Zavřít', 'btn.save': 'Uložit', 'btn.back': 'Zpět', 'btn.next': 'Další',
+    'btn.retry': 'Zkusit znovu', 'btn.continue': 'Pokračovat', 'btn.fix': 'Opravit', 'btn.leave': 'Odejít', 'btn.now': 'Teď',
+    'btn.doneNow': 'Hotovo teď', 'btn.remove': 'Odebrat', 'btn.edit': 'Upravit', 'btn.add': 'Přidat', 'btn.addNote': 'Přidat poznámku',
+    'btn.search': 'Hledat', 'btn.apply': 'Použít filtr',
+    // messages
+    'msg.offline': 'Bez připojení – zadaná data zůstávají na stránce.', 'msg.fix': 'Opravte prosím:', 'msg.warnTitle': 'Upozornění',
+    'msg.loading': 'Načítám…', 'msg.saved': 'Uloženo', 'msg.unknownPage': 'Neznámá stránka.',
+    'msg.bootHelp': 'Otevřete aplikaci v prohlížeči přihlášeném firemním účtem Google. Pokud problém trvá, kontaktujte správce.',
+    // labels
+    'lbl.yes': 'ANO', 'lbl.no': 'NE', 'lbl.yesLower': 'ano', 'lbl.noLower': 'ne', 'lbl.choose': '— vyberte —', 'lbl.other': 'jiné',
+    'lbl.unknown': 'nevím / stejné', 'lbl.open': 'otevřené', 'lbl.pcs': 'ks', 'lbl.late': 'po termínu', 'lbl.notYet': 'zatím ne',
+    'lbl.notNeeded': 'Není potřeba (rozhodnutí bez 5 Proč nebo eskalace).', 'lbl.archived': 'archiv',
+    // sections
+    'sec.1': 'POPIS PROBLÉMU', 'sec.2': 'Kdo byl upozorněn?', 'sec.3': 'OKAMŽITÁ OPATŘENÍ <24h', 'sec.4': 'Rozhodnutí OJT',
+    'sec.5': 'PŘÍČINA 5 Proč?', 'sec.6': 'Konečné akce', 'sec.7': 'Hodnocení QRQC',
+    // states and "čeká na"
+    'st.DRAFT': 'Rozpracováno', 'st.QR_OPEN': 'Opatření probíhají', 'st.WAIT_DECISION': 'Čeká na rozhodnutí',
+    'st.CLOSED_SOLVED': 'Vyřešeno bez 5 Proč', 'st.ESCALATED': 'Eskalováno', 'st.ANALYSIS': 'Analýza 5 Proč',
+    'st.ACTIONS_OPEN': 'Konečné akce', 'st.VERIFY': 'Ověření 5 směn', 'st.CLOSED': 'Uzavřeno',
+    'wait.OPERATOR': 'operátor (rozpracováno)', 'wait.TL': 'TL (opatření)', 'wait.SUPERVISOR': 'supervizor', 'wait.PILOT': 'pilot',
+    'wait.VERIFY': 'kontrola 5 směn', 'wait.APU': 'APU',
+    'chip.1': '① popis', 'chip.2': '② upozornění', 'chip.3': '③ opatření', 'chip.4': '④ rozhodnutí', 'chip.5': '⑤ 5 Proč',
+    'chip.6': '⑥ akce a efektivita', 'chip.7': '⑦ hodnocení',
+    'chipState.done': 'hotovo', 'chipState.wait': 'čeká', 'chipState.late': 'po termínu', 'chipState.todo': 'zatím ne', 'chipState.na': 'není potřeba',
+    // board
+    'board.title': 'Tabule QRAP', 'board.new': '+ Nový QRAP', 'board.pending': 'Pokračovat v rozpracovaném ({n})',
+    'board.pendingTitle': 'Rozpracované QRAP', 'board.noPending': 'Nic rozpracovaného.', 'board.f.open': 'otevřené', 'board.f.today': 'dnes',
+    'board.f.safety': 'bezpečnost', 'board.f.all': 'vše', 'board.col.id': 'Číslo', 'board.col.what': 'Co · kde · kdy',
+    'board.col.wait': 'Čeká na', 'board.waitFor': 'čeká na:', 'board.repeat': 'opakování', 'board.noText': '(bez popisu)',
+    'board.empty': 'Žádné QRAP.', 'board.older': '↑ starší QRAP se načtou při posunu nahoru', 'board.chips': 'Stav sekcí 1 až 7',
+    // fields
+    'f.safety': 'SAFETY', 'f.what': 'CO je za problém?', 'f.how_found': 'JAK byl objeven?', 'f.how_found_other': 'Jak – jiné (popište)',
+    'f.detected_at': 'KDY?', 'f.zone': 'KDE? – zóna', 'f.location_code': 'KDE? – lokace', 'f.origin_zone': 'Kde vzniklo?',
+    'f.where': 'KDE?', 'f.qty': 'KOLIK?', 'f.unit': 'Jednotka', 'f.nok_situation': 'NOK situace bez kusů',
+    'f.repeat_7d': 'Stejný problém v posledních 7 dnech?', 'f.repeat_ref': 'Číslo opakovaného QRAP', 'f.finder_name': 'JMÉNO',
+    'f.finder_badge': 'Odznak', 'f.material_no': 'Číslo materiálu', 'f.hu_or_delivery_no': 'Číslo manipulační jednotky / dodacího listu',
+    'f.supplier': 'Dodavatel', 'f.photo_exception': 'Důvod výjimky (proč nejsou fotky)', 'f.alert_other': 'Jiné – kdo',
+    'f.roles': 'Upozorněné role', 'f.risk_stock_shipped': 'Je riziko u zboží už na skladě nebo už expedovaného?',
+    'f.checked_qty': 'Zkontrolováno (ks)', 'f.wrong_found_qty': 'Nalezeno špatně (ks)', 'f.check_in_progress': 'kontrola probíhá',
+    'f.check': 'Kontrola (zkontrolováno / špatně)', 'f.ia': 'Okamžitá opatření', 'f.ia_type': 'Typ', 'f.ia_text': 'Co bylo uděláno',
+    'f.ia_owner': 'Kdo', 'f.ia_owner_name': 'Kdo', 'f.ia_done': 'Hotovo v', 'f.process_stopped': 'Proces zastaven?',
+    'f.restored_at': 'Proces obnoven v', 'f.containment_done_at': '③ kompletní v', 'f.area': 'Oblast', 'f.level': 'Úroveň',
+    'f.parent_id': 'Eskalováno z', 'f.assign_ref': 'Assign Sheet # (kopie)', 'f.sent_at': 'Odesláno', 'f.role': 'Role',
+    'f.notified_to': 'Kontakt', 'f.at': 'Kdy', 'f.shiftInfo': 'Informace všem směnám během 5\' meetingu', 'f.decision': 'Rozhodnutí',
+    'f.decision_comment': 'Komentář', 'f.pilots': 'Piloti', 'f.pilot': 'Pilot', 'f.pilot_email': 'Pilot', 'f.signed': 'Podepsal(a)',
+    'f.learned': 'Co jsme se naučili z QR?', 'f.std_update': 'Příležitost k aktualizaci STANDARDU?', 'f.std_update_ref': 'Který standard',
+    'f.action_text': 'Konečná akce', 'f.root_step': 'Odstraňuje krok 5 Proč', 'f.planned': 'Plán', 'f.done': 'Hotovo', 'f.status': 'Stav',
+    'f.evidence_url': 'Odkaz na důkaz', 'f.effect': 'Efektivita zkontrolována na 5 směnách bez chyb', 'f.closed': 'Uzavření schválil(a)',
+    'f.ojt_with': 'OJT s kým', 'f.feedback': 'Zpětná vazba', 'f.feedback_type': 'Typ zpětné vazby', 'f.assessor': 'Hodnotitel',
+    'f.note': 'Poznámka', 'f.review_date': 'Datum revize', 'f.author': 'Autor', 'f.shift_date': 'Datum směny', 'f.shift_code': 'Směna',
+    'f.result': 'Výsledek', 'f.checked_by': 'Zkontroloval(a)', 'f.reason': 'Důvod', 'f.decisionReq': 'Rozhodnutí',
+    'f.c1': '1 RED BOX', 'f.c2': '2 ROZDĚLENÍ', 'f.c3': '3 POROVNÁNÍ', 'f.c4': '4 POUČENÍ A SDÍLENÍ', 'f.c5': '5 ON JOB TRAINING',
+    'f.type': 'Typ', 'f.text': 'Text', 'f.owner_name': 'Kdo', 'f.part': 'Část',
+    // ③ rule parts
+    's3.RISK': 'odpověď na riziko', 's3.CHECK_IN_PROGRESS': 'kontrola ještě probíhá', 's3.CHECK_DATA': 'data kontroly',
+    's3.NO_ACTION': 'alespoň jedno opatření', 's3.ACTION_OPEN': 'všechna opatření hotová', 's3.PROCESS': 'odpověď „Proces zastaven?“',
+    's3.NOT_RESTORED': 'čas obnovení procesu',
+    // wizard
+    'wiz.s1': 'Popis', 'wiz.s2': 'Fotky', 'wiz.s3': 'Upozornění', 'wiz.s4': 'Opatření', 'wiz.s5': 'Kontrola a odeslání',
+    'wiz.newTitle': 'Nový QRAP', 'wiz.safetyHint': 'Jde o bezpečnost lidí (úraz, pád zboží, VZV…)? Vyberte vědomě.',
+    'wiz.whatHint': 'Popište fakta: co je špatně a u jakého zboží.', 'wiz.whatShort': 'Popis je velmi krátký (méně než 10 znaků).',
+    'wiz.whenHint': 'Čas objevení, ne čas zápisu.', 'wiz.locOther': 'nebo napište jiný kód lokace', 'wiz.badge': 'nebo číslo odznaku',
+    'wiz.optional': 'Nepovinné údaje', 'wiz.repeatPick': 'Vyberte QRAP z posledních 7 dnů (stejná oblast):',
+    'wiz.repeatManual': 'nebo napište číslo QRAP', 'wiz.repeatNone': 'Žádný podobný QRAP za posledních 7 dnů.',
+    'wiz.photoHint': 'Vyfoťte ŠPATNÝ a SPRÁVNÝ stav. Obě fotky jsou povinné.', 'wiz.photoWRONG': 'Foto ŠPATNĚ',
+    'wiz.photoCORRECT': 'Foto SPRÁVNĚ', 'wiz.photoDOC': 'Dokument', 'wiz.noPhoto': 'Zatím bez fotky', 'wiz.takePhoto': 'Vyfotit',
+    'wiz.retake': 'Vyfotit znovu', 'wiz.photoExc': 'Fotku nelze pořídit (výjimka s důvodem)', 'wiz.uploading': 'Nahrávám fotku…',
+    'wiz.photoSaved': 'Fotka uložena', 'wiz.alertHint': 'Koho jste informovali? Vyberte alespoň jednu roli.',
+    'wiz.qualityAuto': 'Kvalita je vybrána automaticky – je riziko u zboží na skladě nebo expedovaného.',
+    'wiz.riskHint': 'Může být stejná chyba i u zboží, které je už na skladě nebo už expedované?',
+    'wiz.riskAno': 'ANO → Kvalita dostane e-mail. Vyplňte data kontroly.', 'wiz.actionN': 'Opatření {n}',
+    'wiz.actionTextHint': 'Co přesně bylo uděláno', 'wiz.addAction': '+ Přidat opatření', 'wiz.restoredHint': 'Kdy proces znovu běží',
+    'wiz.laterHint': '„Dokončí TL později“ uloží rozpracovaná opatření. Stačí odpověď na riziko; zbytek ③ doplní TL.',
+    'wiz.later': 'Dokončí TL později', 'wiz.s3Complete': 'Okamžitá opatření ③ jsou kompletní.',
+    'wiz.s3Later': 'Opatření ③ ještě nejsou kompletní – chybí:', 'wiz.sendHint': 'Po odeslání dostane supervizor e-mail a QRAP se objeví na tabuli.',
+    'wiz.send': 'Odeslat', 'wiz.saveClose': 'Hotovo – zavřít', 'wiz.sent': 'QRAP {id} odeslán',
+    'wiz.leaveUnsaved': 'Máte neuložené změny. Opravdu odejít?', 'wiz.idleSaved': 'Koncept {id} uložen (nečinnost).',
+    'wiz.idleNotSaved': 'Změny nebyly uloženy (neplatné údaje).',
+    // detail
+    'qrap.qrHint': 'Naskenujte telefonem → stránka supervizora (rozhodnutí, uzavření, hodnocení).', 'qrap.continue': 'Pokračovat ve vyplňování',
+    'qrap.editQr': 'Upravit ①–③', 'qrap.finishS3': 'Doplnit opatření ③', 'qrap.decide': '④ Rozhodnutí', 'qrap.analysis': '⑤⑥ Analýza a akce',
+    'qrap.effect': 'Efektivita (5 směn)', 'qrap.close': 'Uzavření', 'qrap.assess': '⑦ Hodnocení', 'qrap.detail': 'Detail QRAP',
+    'qrap.qualityCheck': 'Kvalita – data kontroly',
+    // decision
+    'dec.title': '④ Rozhodnutí OJT', 'dec.CONTINUE': 'Pokračovat s analýzou a 5 Proč', 'dec.SOLVED': 'Problém vyřešen: ŽÁDNÉ 5 Proč',
+    'dec.ESCALATE': 'Eskalace na APU QRQC', 'dec.CONTINUE_sub': 'Příčina není známá nebo je co se naučit → piloti dostanou e-mail.',
+    'dec.SOLVED_sub': 'Opatření a OJT problém vyřešily. QRAP se uzavře.', 'dec.ESCALATE_sub': 'Přesahuje oblast → kopie pro {area}, tento QRAP se uzavře.',
+    'dec.addPilot': 'Piloti (vyberte)', 'dec.sign': 'Podepsat', 'dec.signHint': 'Podpis = váš účet {user} + čas. Rozhodnutí se zamkne.',
+    'dec.signed': 'Rozhodnutí podepsáno.', 'dec.escalated': 'Eskalováno – vytvořena kopie {id}.', 'dec.locked': 'Podepsáno a zamčeno.',
+    'dec.noRight': 'Rozhodnout může jen supervizor této oblasti (APU manažer u APU úrovně).',
+    'dec.notReady': 'Rozhodnutí je možné, až jsou okamžitá opatření ③ kompletní.', 'dec.s3Missing': 'Opatření ③ nejsou kompletní:',
+    'dec.shiftNoRight': 'Směny označuje supervizor nebo TL.',
+    // closure
+    'close.title': 'Uzavření QRAP', 'close.C_STATUS': 'QRAP je ve stavu Ověření 5 směn', 'close.C_ROOT': 'Kořenová příčina označena (⑤)',
+    'close.C_ACTIONS': 'Všechny konečné akce uzavřené', 'close.C_STD': 'Otázka na aktualizaci standardu zodpovězena',
+    'close.C_EFF': 'Efektivní na 5 různých směnách', 'close.C_LEARNED': '„Co jsme se naučili z QR?“ vyplněno',
+    'close.sign': 'Podepsat uzavření', 'close.signed': 'QRAP uzavřen.', 'close.done': 'Uzavřel(a) {who} · {at}',
+    'close.noRight': 'Uzavření podepisuje supervizor této oblasti.',
+    // analysis
+    'ana.title': '⑤⑥ Analýza a akce', 'ana.lesson': 'Poučení a standard', 'ana.readOnly': 'Jen pro čtení – upravovat mohou přidělení piloti a supervizor.',
+    'ana.addPilot': '+ přidat pilota', 'ana.addNd': '+ Přidat řetězec „Proč to nebylo zachyceno?“',
+    'ana.whyHint': 'Ptejte se „proč?“ na fakta, dokud nedojdete k příčině v procesu, kterou lze odstranit (ne k osobě).',
+    'ana.learnedHint': 'Povinné pro uzavření.', 'ana.stdHint': 'ANO vytvoří akci „Aktualizovat standard“.', 'ana.save': 'Uložit analýzu',
+    'ana.actions': 'Konečné akce', 'ana.needWhy': 'Nejdříve vyplňte a uložte 5 Proč – každá akce odstraňuje jeden krok.',
+    'ana.addAction': '+ Přidat konečnou akci', 'ana.newAction': 'Nová konečná akce', 'ana.removed': 'Odebraných akcí: {n}',
+    'ana.stdAction': 'Aktualizace standardu', 'ana.doneHint': 'Datum hotovo akci uzavře.', 'ana.firstPlan': 'původní plán',
+    'ana.removeConfirm': 'Odebrat akci? (zůstane v historii jako odebraná)',
+    'why.OCCURRENCE': 'Proč to vzniklo?', 'why.NON_DETECTION': 'Proč to nebylo zachyceno?', 'why.first': 'Proč vznikl problém?',
+    'why.firstNd': 'Proč problém nebyl zachycen dříve?', 'why.prompt': 'Proč: {prev}?', 'why.root': 'kořenová příčina',
+    // actions
+    'act.title': 'Moje akce', 'act.scope': 'Zobrazit', 'act.mine': 'Moje akce', 'act.team': 'Můj tým (N+1)', 'act.due': 'Termín',
+    'act.due.all': 'vše', 'act.due.late': 'po termínu', 'act.due.week': 'do 7 dnů', 'act.none': 'Žádné akce.',
+    'act.markDone': 'Hotovo', 'act.reviewDone': 'revize hotová',
+    'ast.OPENED': 'Otevřená', 'ast.CLOSED': 'Uzavřená', 'ast.REMOVED': 'Odebraná', 'ast.ALL': 'Vše',
+    // effectiveness
+    'eff.title': 'Efektivita – 5 směn', 'eff.round': 'Kolo {n}', 'eff.progress': 'efektivní na {n} z 5 různých směn',
+    'eff.hint': 'Každý slot musí být jiná směna (datum + směna). „Neefektivní“ vrátí QRAP do analýzy.',
+    'eff.notVerify': 'Efektivita se zapisuje ve stavu Ověření 5 směn.', 'eff.slot': 'Slot', 'eff.EFFECTIVE': 'Efektivní',
+    'eff.NOT_VERIFIED': 'Neověřeno', 'eff.NOT_EFFECTIVE': 'Neefektivní',
+    'eff.notEffConfirm': 'Chyba se znovu objevila? QRAP se vrátí do analýzy a počítání směn začne znovu.',
+    'eff.reopened': 'Analýza znovu otevřena, pilot a supervizor dostali e-mail.', 'eff.history': 'Předchozí kola', 'eff.roundCol': 'Kolo',
+    // assessment
+    'assess.title': '⑦ Hodnocení QRQC', 'assess.c1': '1 RED BOX', 'assess.c2': '2 ROZDĚLENÍ', 'assess.c3': '3 POROVNÁNÍ',
+    'assess.c4': '4 POUČENÍ A SDÍLENÍ', 'assess.c5': '5 ON JOB TRAINING', 'assess.sub1': 'Popis problému',
+    'assess.sub2': 'Třídění, ochrana a rozdělení úkolů', 'assess.sub3': 'Dobrý a špatný', 'assess.sub4': 'Komunikace a transversalizace',
+    'assess.sub5': 'OJT provedené managementem', 'assess.h1': '① kompletní', 'assess.h2': '③ kompletní', 'assess.hActions': '{n} opatření',
+    'assess.h3': 'obě fotky', 'assess.h4': 'informováno směn: {n}/{all}', 'assess.h5': 'bylo OJT s operátorem u tabule?',
+    'assess.auto': 'Hodnotitel a čas se uloží automaticky ({user}).', 'assess.save': 'Uložit hodnocení', 'assess.saved': 'Hodnocení uloženo',
+    'assess.none': 'Zatím bez hodnocení.', 'assess.count': 'Celkem hodnocení: {n}', 'assess.history': 'Všechna hodnocení',
+    'assess.draft': 'Rozpracovaný QRAP nelze hodnotit.',
+    'assessVal.OK': 'OK', 'assessVal.NOK': 'NOK', 'assessVal.NA': 'N/A',
+    'fb.PRAISE': 'pochvala', 'fb.STRENGTH': 'silná stránka', 'fb.IMPROVE': 'ke zlepšení',
+    // manager
+    'mgr.title': 'Manažer', 'mgr.searchHint': 'Hledat číslo QRAP, text, číslo materiálu, HU…', 'mgr.searchResults': 'Nalezeno: {n}',
+    'mgr.allAreas': 'všechny oblasti', 'mgr.from': 'Od (KDY)', 'mgr.to': 'Do (KDY)', 'mgr.st.open': 'otevřené', 'mgr.st.closed': 'uzavřené',
+    'mgr.st.all': 'vše', 'mgr.tile.newToday': 'Nové dnes', 'mgr.tile.waitDecision': 'Čeká na rozhodnutí', 'mgr.tile.s3Late': 'Opatření > 24 h',
+    'mgr.tile.actionsLate': 'Akce po termínu', 'mgr.tile.safetyWeek': 'Bezpečnost tento týden', 'mgr.tile.repeat7': 'Opakování 7 dní',
+    'mgr.tile.assessToday': 'Hodnocení dnes', 'mgr.assessToday': 'Hodnocení dnes per supervizor', 'mgr.count': 'Počet',
+    'mgr.needs': 'Potřebuje vás', 'mgr.nothing': 'Nic naléhavého.', 'mgr.list': 'QRAP podle filtru ({n})',
+    'need.DECISION_LATE': 'rozhodnutí po termínu', 'need.S3_LATE': 'opatření ③ déle než 24 h', 'need.ACTION_LATE': 'akce po termínu',
+    'need.WAIT_DECISION': 'čeká na rozhodnutí', 'need.SAFETY_OPEN': 'otevřený bezpečnostní problém',
+    // escalation
+    'esc.title': 'Eskalace', 'esc.apu': 'APU úroveň', 'esc.plant': 'Úroveň závodu', 'esc.escalated': 'Eskalované QRAP z oblastí',
+    // admin
+    'admin.title': 'Admin', 'admin.locked': 'Zamčené části', 'admin.reason': 'Důvod (uloží se do auditu)',
+    'admin.unlockQr': 'Odemknout ①–③', 'admin.unlockDecision': 'Odemknout ④ (zrušit rozhodnutí)', 'admin.reopen': 'Znovu otevřít',
+    'admin.archive': 'Archivovat', 'admin.unarchive': 'Vrátit z archivu',
+    // errors (codes from the server and the page)
+    'err.E_NO_IDENTITY': 'Neznámý uživatel – přihlaste se firemním účtem Google.', 'err.E_BOOT': 'Aplikaci se nepodařilo spustit.',
+    'err.E_FORBIDDEN': 'Na tuto akci nemáte oprávnění.', 'err.E_NOT_FOUND': 'Záznam nenalezen ({id}).',
+    'err.E_REQUIRED': 'Povinné: {fieldLabel}', 'err.E_INVALID': 'Neplatná hodnota: {fieldLabel}',
+    'err.E_FUTURE': '{fieldLabel} nemůže být v budoucnosti.', 'err.E_AREA': 'Neznámá oblast {area}.', 'err.E_STEP': 'Neplatný krok.',
+    'err.E_NO_ID': 'Nejdříve uložte krok 1.', 'err.E_QTY_ZERO': 'Zadejte počet větší než 0, nebo zapněte „NOK situace bez kusů“.',
+    'err.E_REPEAT_REF': 'Vyberte existující QRAP ze stejné oblasti z posledních 7 dnů.',
+    'err.E_PHOTOS': 'Chybí Foto ŠPATNĚ a Foto SPRÁVNĚ (nebo výjimka s důvodem).',
+    'err.E_ALERT_NONE': 'Vyberte alespoň jednu roli, která byla upozorněna.',
+    'err.E_WRONG_GT_CHECKED': '„Nalezeno špatně“ nemůže být víc než „Zkontrolováno“.',
+    'err.E_RESTORED_BEFORE': 'Obnovení procesu nemůže být před časem KDY.',
+    'err.E_IA_DONE_FUTURE': 'Opatření {row}: „hotovo v“ nemůže být v budoucnosti.',
+    'err.E_IA_DONE_BEFORE': 'Opatření {row}: „hotovo v“ nemůže být před časem KDY.', 'err.E_IA_ROW': 'Opatření {row}: chybí {fieldLabel}.',
+    'err.E_S3_INCOMPLETE': 'Okamžitá opatření ③ nejsou kompletní. {missing}', 'err.E_S1_INCOMPLETE': 'Popis ① není kompletní – vraťte se na krok 1.',
+    'err.E_ALREADY_SENT': 'QRAP už byl odeslán.', 'err.E_STATE': 'V aktuálním stavu QRAP to není možné.',
+    'err.E_KIOSK_SIGN': 'Kiosek nemůže podepisovat. Podepisuje supervizor na svém telefonu (naskenujte QR kód).',
+    'err.E_SOLVED_SAFETY': '„Problém vyřešen“ není možný u bezpečnostního problému (SAFETY = ano).',
+    'err.E_NO_PARENT': 'Oblast nemá nadřízenou APU úroveň (SET_AREAS.parent_code).',
+    'err.E_PILOT_REQUIRED': 'Vyberte alespoň jednoho pilota.', 'err.E_PILOT_UNKNOWN': 'Osoba {email} není v SET_PEOPLE (nebo nemá e-mail).',
+    'err.E_WHY_GAP': '„{chainLabel}“: krok {step} je prázdný – kroky musí jít po sobě.',
+    'err.E_ROOT_INVALID': 'Kořenová příčina musí být na vyplněném kroku.', 'err.E_ROOT_STEP': 'Vyberte krok 5 Proč, který akce odstraňuje.',
+    'err.E_PLANNED_PAST': 'Plán nemůže být v minulosti.', 'err.E_DONE_FUTURE': '„Hotovo“ nemůže být v budoucnosti.',
+    'err.E_URL': 'Odkaz musí začínat https://', 'err.E_ACTION_REMOVED': 'Akce je odebraná.', 'err.E_SLOT': 'Neplatný slot.',
+    'err.E_SLOT_FINAL': 'Tento slot už je potvrzen jako efektivní.', 'err.E_SHIFT': 'Vyberte platnou směnu.',
+    'err.E_SHIFT_DUP': 'Tato směna (datum + směna) už je použita – je potřeba 5 různých směn.',
+    'err.E_SHIFT_FUTURE': 'Směna nemůže být v budoucnosti.', 'err.E_CLOSURE': 'Uzavření zatím není možné: {items}',
+    'err.E_CRITERIA': 'Ohodnoťte {fieldLabel} (OK / NOK / N/A).',
+    'err.E_NO_PHOTO_FOLDER': 'Složka na fotky není nastavena (SET_CONFIG.PHOTO_FOLDER_ID). Kontaktujte správce.',
+    'err.E_PHOTO_SIZE': 'Fotka je příliš velká nebo prázdná.', 'err.E_PHOTO_KIND': 'Neplatný typ fotky.',
+    'err.E_PHOTO_READ': 'Fotku se nepodařilo načíst.', 'err.E_REASON': 'Napište důvod (alespoň 5 znaků).',
+    'err.E_LOCKED': 'Tato část je podepsaná a zamčená. Odemknout ji může jen admin.', 'err.E_NOT_LOCKED': 'Tato část není zamčená.',
+    'err.E_BUSY': 'Server je zaneprázdněný, zkuste to prosím znovu.', 'err.E_INTERNAL': 'Chyba serveru.', 'err.E_SERVER': 'Chyba serveru:',
+    'err.E_NOT_ADMIN': 'Jen pro admina.', 'err.E_SEARCH_SHORT': 'Zadejte alespoň 2 znaky.', 'err.E_SUFFIX': 'Došla písmena pro kopie QRAP.',
+    // warnings
+    'warn.W_WHAT_SHORT': 'Popis „CO“ má méně než 10 znaků. Je dost jasný?', 'warn.W_OLD_DETECTION': 'Čas KDY je starší než 24 hodin. Je správný?',
+    'warn.W_SOLVED_REPEAT': 'Problém se opakuje (7 dní) – opravdu „Problém vyřešen“ bez 5 Proč?',
+    'warn.W_SOLVED_WRONG': 'Při kontrole nalezeno {n} špatných kusů – opravdu „Problém vyřešen“?',
+    'warn.W_SHIFTS': 'Nejsou informovány všechny směny ({shifts}). Po podpisu je už nelze označit.',
+    'warn.W_FEW_WHYS': 'Jen {n} kroky 5 Proč – doporučeno alespoň 3.', 'warn.W_NO_ROOT': 'Není označena kořenová příčina.',
+    'warn.W_LEARNED_EMPTY': '„Co jsme se naučili z QR?“ je prázdné – je potřeba pro uzavření.'
+  },
+
+  en: {
+    'nav.board': 'Board', 'nav.new': 'New QRAP', 'nav.actions': 'My actions', 'nav.manager': 'Manager', 'nav.escalation': 'Escalation',
+    'nav.boardOf': 'Board {area}', 'nav.menu': 'Menu',
+    'btn.ok': 'OK', 'btn.cancel': 'Cancel', 'btn.close': 'Close', 'btn.save': 'Save', 'btn.back': 'Back', 'btn.next': 'Next',
+    'btn.retry': 'Try again', 'btn.continue': 'Continue', 'btn.fix': 'Fix', 'btn.leave': 'Leave', 'btn.now': 'Now', 'btn.doneNow': 'Done now',
+    'btn.remove': 'Remove', 'btn.edit': 'Edit', 'btn.add': 'Add', 'btn.addNote': 'Add note', 'btn.search': 'Search', 'btn.apply': 'Apply filter',
+    'msg.offline': 'No connection – what you typed stays on the page.', 'msg.fix': 'Please fix:', 'msg.warnTitle': 'Warning',
+    'msg.loading': 'Loading…', 'msg.saved': 'Saved', 'msg.unknownPage': 'Unknown page.',
+    'msg.bootHelp': 'Open the app in a browser signed in with your company Google account. If it persists, contact the admin.',
+    'lbl.yes': 'YES', 'lbl.no': 'NO', 'lbl.yesLower': 'yes', 'lbl.noLower': 'no', 'lbl.choose': '— choose —', 'lbl.other': 'other',
+    'lbl.unknown': 'unknown / same', 'lbl.open': 'open', 'lbl.pcs': 'pcs', 'lbl.late': 'overdue', 'lbl.notYet': 'not yet',
+    'lbl.notNeeded': 'Not needed (solved without 5 Why, or escalated).', 'lbl.archived': 'archived',
+    'sec.1': 'PROBLEM DESCRIPTION', 'sec.2': 'Who has been alerted?', 'sec.3': 'IMMEDIATE ACTIONS <24h', 'sec.4': 'OJT decision',
+    'sec.5': 'CAUSE 5 Why?', 'sec.6': 'Definitive actions', 'sec.7': 'QRQC assessment',
+    'st.DRAFT': 'Draft', 'st.QR_OPEN': 'Containment running', 'st.WAIT_DECISION': 'Waiting for decision', 'st.CLOSED_SOLVED': 'Solved, no 5 Why',
+    'st.ESCALATED': 'Escalated', 'st.ANALYSIS': '5 Why analysis', 'st.ACTIONS_OPEN': 'Definitive actions', 'st.VERIFY': '5-shift check',
+    'st.CLOSED': 'Closed',
+    'wait.OPERATOR': 'operator (draft)', 'wait.TL': 'TL (containment)', 'wait.SUPERVISOR': 'supervisor', 'wait.PILOT': 'pilot',
+    'wait.VERIFY': '5-shift check', 'wait.APU': 'APU',
+    'chip.1': '① description', 'chip.2': '② alerts', 'chip.3': '③ containment', 'chip.4': '④ decision', 'chip.5': '⑤ 5 Why',
+    'chip.6': '⑥ actions and effectiveness', 'chip.7': '⑦ assessment',
+    'chipState.done': 'done', 'chipState.wait': 'waiting', 'chipState.late': 'overdue', 'chipState.todo': 'not yet', 'chipState.na': 'not needed',
+    'board.title': 'QRAP board', 'board.new': '+ New QRAP', 'board.pending': 'Continue a draft ({n})', 'board.pendingTitle': 'Drafts',
+    'board.noPending': 'Nothing in progress.', 'board.f.open': 'open', 'board.f.today': 'today', 'board.f.safety': 'safety', 'board.f.all': 'all',
+    'board.col.id': 'Number', 'board.col.what': 'What · where · when', 'board.col.wait': 'Waiting for', 'board.waitFor': 'waiting for:',
+    'board.repeat': 'repeat', 'board.noText': '(no description)', 'board.empty': 'No QRAPs.',
+    'board.older': '↑ older QRAPs load when you scroll up', 'board.chips': 'State of sections 1 to 7',
+    'f.safety': 'SAFETY', 'f.what': 'WHAT is the problem?', 'f.how_found': 'HOW was it found?', 'f.how_found_other': 'How – other (describe)',
+    'f.detected_at': 'WHEN?', 'f.zone': 'WHERE? – zone', 'f.location_code': 'WHERE? – location', 'f.origin_zone': 'Where did it start?',
+    'f.where': 'WHERE?', 'f.qty': 'HOW MANY?', 'f.unit': 'Unit', 'f.nok_situation': 'NOK situation without pieces',
+    'f.repeat_7d': 'Same problem in the last 7 days?', 'f.repeat_ref': 'Number of the repeated QRAP', 'f.finder_name': 'NAME',
+    'f.finder_badge': 'Badge', 'f.material_no': 'Material number', 'f.hu_or_delivery_no': 'Handling unit / delivery note number',
+    'f.supplier': 'Supplier', 'f.photo_exception': 'Reason for the exception (why no photos)', 'f.alert_other': 'Other – who',
+    'f.roles': 'Alerted roles', 'f.risk_stock_shipped': 'Is there a risk on goods already in stock or already shipped?',
+    'f.checked_qty': 'Checked (pcs)', 'f.wrong_found_qty': 'Found wrong (pcs)', 'f.check_in_progress': 'check in progress',
+    'f.check': 'Check (checked / wrong)', 'f.ia': 'Immediate actions', 'f.ia_type': 'Type', 'f.ia_text': 'What was done', 'f.ia_owner': 'Who',
+    'f.ia_owner_name': 'Who', 'f.ia_done': 'Done at', 'f.process_stopped': 'Process stopped?', 'f.restored_at': 'Process restored at',
+    'f.containment_done_at': '③ complete at', 'f.area': 'Area', 'f.level': 'Level', 'f.parent_id': 'Escalated from',
+    'f.assign_ref': 'Assign Sheet # (copy)', 'f.sent_at': 'Sent', 'f.role': 'Role', 'f.notified_to': 'Contact', 'f.at': 'When',
+    'f.shiftInfo': 'Information to all shifts in the 5\' meeting', 'f.decision': 'Decision', 'f.decision_comment': 'Comment',
+    'f.pilots': 'Pilots', 'f.pilot': 'Pilot', 'f.pilot_email': 'Pilot', 'f.signed': 'Signed by', 'f.learned': 'What did we learn from the QR?',
+    'f.std_update': 'Opportunity to update a STANDARD?', 'f.std_update_ref': 'Which standard', 'f.action_text': 'Definitive action',
+    'f.root_step': 'Removes 5 Why step', 'f.planned': 'Planned', 'f.done': 'Done', 'f.status': 'Status', 'f.evidence_url': 'Evidence link',
+    'f.effect': 'Effectiveness checked on 5 shifts without mistakes', 'f.closed': 'Closure approved by', 'f.ojt_with': 'OJT with',
+    'f.feedback': 'Feedback', 'f.feedback_type': 'Feedback type', 'f.assessor': 'Assessor', 'f.note': 'Note', 'f.review_date': 'Review date',
+    'f.author': 'Author', 'f.shift_date': 'Shift date', 'f.shift_code': 'Shift', 'f.result': 'Result', 'f.checked_by': 'Checked by',
+    'f.reason': 'Reason', 'f.decisionReq': 'Decision', 'f.c1': '1 RED BOX', 'f.c2': '2 BREAKDOWN', 'f.c3': '3 COMPARE',
+    'f.c4': '4 LEARN AND SHARE', 'f.c5': '5 ON JOB TRAINING', 'f.type': 'Type', 'f.text': 'Text', 'f.owner_name': 'Who', 'f.part': 'Part',
+    'assessVal.OK': 'OK', 'assessVal.NOK': 'NOK', 'assessVal.NA': 'N/A',
+    's3.RISK': 'the risk answer', 's3.CHECK_IN_PROGRESS': 'the check is still running', 's3.CHECK_DATA': 'the check data',
+    's3.NO_ACTION': 'at least one action', 's3.ACTION_OPEN': 'all actions done', 's3.PROCESS': 'the "Process stopped?" answer',
+    's3.NOT_RESTORED': 'the restore time',
+    'wiz.s1': 'Description', 'wiz.s2': 'Photos', 'wiz.s3': 'Alerts', 'wiz.s4': 'Containment', 'wiz.s5': 'Check and send',
+    'wiz.newTitle': 'New QRAP', 'wiz.safetyHint': 'Is it about people\'s safety (injury, falling goods, forklift…)? Choose on purpose.',
+    'wiz.whatHint': 'Describe the facts: what is wrong and on which goods.', 'wiz.whatShort': 'The description is very short (under 10 characters).',
+    'wiz.whenHint': 'The time it was found, not the time of writing.', 'wiz.locOther': 'or type another location code',
+    'wiz.badge': 'or badge number', 'wiz.optional': 'Optional', 'wiz.repeatPick': 'Pick a QRAP from the last 7 days (same area):',
+    'wiz.repeatManual': 'or type the QRAP number', 'wiz.repeatNone': 'No similar QRAP in the last 7 days.',
+    'wiz.photoHint': 'Take a photo of the WRONG and the CORRECT state. Both are required.', 'wiz.photoWRONG': 'Photo WRONG',
+    'wiz.photoCORRECT': 'Photo CORRECT', 'wiz.photoDOC': 'Document', 'wiz.noPhoto': 'No photo yet', 'wiz.takePhoto': 'Take photo',
+    'wiz.retake': 'Take again', 'wiz.photoExc': 'A photo is not possible (exception with a reason)', 'wiz.uploading': 'Uploading photo…',
+    'wiz.photoSaved': 'Photo saved', 'wiz.alertHint': 'Who did you inform? Pick at least one role.',
+    'wiz.qualityAuto': 'Quality is selected automatically – there is a risk on stock or shipped goods.',
+    'wiz.riskHint': 'Could the same mistake be on goods already in stock or already shipped?',
+    'wiz.riskAno': 'YES → Quality gets an e-mail. Fill in the check data.', 'wiz.actionN': 'Action {n}',
+    'wiz.actionTextHint': 'What exactly was done', 'wiz.addAction': '+ Add action', 'wiz.restoredHint': 'When the process runs again',
+    'wiz.laterHint': '"TL will finish later" saves the open actions. Only the risk answer is needed; the TL completes ③ later.',
+    'wiz.later': 'TL will finish later', 'wiz.s3Complete': 'Immediate actions ③ are complete.',
+    'wiz.s3Later': 'Immediate actions ③ are not complete yet – missing:', 'wiz.sendHint': 'After sending, the supervisor gets an e-mail and the QRAP appears on the board.',
+    'wiz.send': 'Send', 'wiz.saveClose': 'Done – close', 'wiz.sent': 'QRAP {id} sent', 'wiz.leaveUnsaved': 'You have unsaved changes. Leave anyway?',
+    'wiz.idleSaved': 'Draft {id} saved (idle).', 'wiz.idleNotSaved': 'Changes were not saved (invalid values).',
+    'qrap.qrHint': 'Scan with a phone → supervisor page (decision, closure, assessment).', 'qrap.continue': 'Continue filling in',
+    'qrap.editQr': 'Edit ①–③', 'qrap.finishS3': 'Complete containment ③', 'qrap.decide': '④ Decision', 'qrap.analysis': '⑤⑥ Analysis and actions',
+    'qrap.effect': 'Effectiveness (5 shifts)', 'qrap.close': 'Closure', 'qrap.assess': '⑦ Assessment', 'qrap.detail': 'QRAP detail',
+    'qrap.qualityCheck': 'Quality – check data',
+    'dec.title': '④ OJT decision', 'dec.CONTINUE': 'Continue analysis and 5 Why', 'dec.SOLVED': 'Issue solved: NO 5 Why',
+    'dec.ESCALATE': 'Escalation to APU QRQC', 'dec.CONTINUE_sub': 'The cause is unknown or there is something to learn → pilots get an e-mail.',
+    'dec.SOLVED_sub': 'Containment and OJT solved it. The QRAP closes.', 'dec.ESCALATE_sub': 'Beyond the area → copy for {area}, this QRAP closes.',
+    'dec.addPilot': 'Pilots (choose)', 'dec.sign': 'Sign', 'dec.signHint': 'Signature = your account {user} + time. The decision is locked.',
+    'dec.signed': 'Decision signed.', 'dec.escalated': 'Escalated – copy {id} created.', 'dec.locked': 'Signed and locked.',
+    'dec.noRight': 'Only the supervisor of this area can decide (the APU manager on APU level).',
+    'dec.notReady': 'The decision is possible when containment ③ is complete.', 'dec.s3Missing': 'Containment ③ is not complete:',
+    'dec.shiftNoRight': 'Shifts are ticked by the supervisor or a TL.',
+    'close.title': 'QRAP closure', 'close.C_STATUS': 'The QRAP is in the 5-shift check', 'close.C_ROOT': 'Root cause marked (⑤)',
+    'close.C_ACTIONS': 'All definitive actions closed', 'close.C_STD': 'Standard question answered', 'close.C_EFF': 'Effective on 5 different shifts',
+    'close.C_LEARNED': '"What did we learn" filled in', 'close.sign': 'Sign the closure', 'close.signed': 'QRAP closed.',
+    'close.done': 'Closed by {who} · {at}', 'close.noRight': 'The closure is signed by the supervisor of this area.',
+    'ana.title': '⑤⑥ Analysis and actions', 'ana.lesson': 'Lesson and standard', 'ana.readOnly': 'Read only – assigned pilots and the supervisor can edit.',
+    'ana.addPilot': '+ add pilot', 'ana.addNd': '+ Add chain "Why was it not detected?"',
+    'ana.whyHint': 'Ask "why?" on facts until you reach a cause in the process that can be removed (not a person).',
+    'ana.learnedHint': 'Required for closure.', 'ana.stdHint': 'YES creates the action "Update standard".', 'ana.save': 'Save analysis',
+    'ana.actions': 'Definitive actions', 'ana.needWhy': 'First fill in and save the 5 Why – every action removes one step.',
+    'ana.addAction': '+ Add definitive action', 'ana.newAction': 'New definitive action', 'ana.removed': 'Removed actions: {n}',
+    'ana.stdAction': 'Standard update', 'ana.doneHint': 'A done date closes the action.', 'ana.firstPlan': 'first plan',
+    'ana.removeConfirm': 'Remove the action? (it stays in the history as removed)',
+    'why.OCCURRENCE': 'Why did it happen?', 'why.NON_DETECTION': 'Why was it not detected?', 'why.first': 'Why did the problem happen?',
+    'why.firstNd': 'Why was the problem not detected earlier?', 'why.prompt': 'Why: {prev}?', 'why.root': 'root cause',
+    'act.title': 'My actions', 'act.scope': 'Show', 'act.mine': 'My actions', 'act.team': 'My team (N+1)', 'act.due': 'Due',
+    'act.due.all': 'all', 'act.due.late': 'overdue', 'act.due.week': 'within 7 days', 'act.none': 'No actions.', 'act.markDone': 'Done',
+    'act.reviewDone': 'review done', 'ast.OPENED': 'Open', 'ast.CLOSED': 'Closed', 'ast.REMOVED': 'Removed', 'ast.ALL': 'All',
+    'eff.title': 'Effectiveness – 5 shifts', 'eff.round': 'Round {n}', 'eff.progress': 'effective on {n} of 5 different shifts',
+    'eff.hint': 'Every slot must be a different shift (date + shift). "Not effective" sends the QRAP back to the analysis.',
+    'eff.notVerify': 'Effectiveness is recorded in the 5-shift check state.', 'eff.slot': 'Slot', 'eff.EFFECTIVE': 'Effective',
+    'eff.NOT_VERIFIED': 'Not verified', 'eff.NOT_EFFECTIVE': 'Not effective',
+    'eff.notEffConfirm': 'Did the mistake come back? The QRAP returns to the analysis and the shift count restarts.',
+    'eff.reopened': 'Analysis reopened; the pilot and the supervisor got an e-mail.', 'eff.history': 'Previous rounds', 'eff.roundCol': 'Round',
+    'assess.title': '⑦ QRQC assessment', 'assess.c1': '1 RED BOX', 'assess.c2': '2 BREAKDOWN', 'assess.c3': '3 COMPARE',
+    'assess.c4': '4 LEARN AND SHARE', 'assess.c5': '5 ON JOB TRAINING', 'assess.sub1': 'Problem description',
+    'assess.sub2': 'Sort, secure and assign tasks', 'assess.sub3': 'Good and bad', 'assess.sub4': 'Communicate and transversalize',
+    'assess.sub5': 'OJT by management', 'assess.h1': '① complete', 'assess.h2': '③ complete', 'assess.hActions': '{n} actions',
+    'assess.h3': 'both photos', 'assess.h4': 'shifts informed: {n}/{all}', 'assess.h5': 'was there an OJT with the operator at the board?',
+    'assess.auto': 'The assessor and the time are saved automatically ({user}).', 'assess.save': 'Save assessment',
+    'assess.saved': 'Assessment saved', 'assess.none': 'No assessment yet.', 'assess.count': 'Assessments: {n}',
+    'assess.history': 'All assessments', 'assess.draft': 'A draft cannot be assessed.',
+    'fb.PRAISE': 'praise', 'fb.STRENGTH': 'strength', 'fb.IMPROVE': 'to improve',
+    'mgr.title': 'Manager', 'mgr.searchHint': 'Search QRAP number, text, material number, HU…', 'mgr.searchResults': 'Found: {n}',
+    'mgr.allAreas': 'all areas', 'mgr.from': 'From (WHEN)', 'mgr.to': 'To (WHEN)', 'mgr.st.open': 'open', 'mgr.st.closed': 'closed',
+    'mgr.st.all': 'all', 'mgr.tile.newToday': 'New today', 'mgr.tile.waitDecision': 'Waiting for decision', 'mgr.tile.s3Late': 'Containment > 24 h',
+    'mgr.tile.actionsLate': 'Overdue actions', 'mgr.tile.safetyWeek': 'Safety this week', 'mgr.tile.repeat7': 'Repeats 7 days',
+    'mgr.tile.assessToday': 'Assessments today', 'mgr.assessToday': 'Assessments today per supervisor', 'mgr.count': 'Count',
+    'mgr.needs': 'Needs you', 'mgr.nothing': 'Nothing urgent.', 'mgr.list': 'QRAPs by filter ({n})',
+    'need.DECISION_LATE': 'decision overdue', 'need.S3_LATE': 'containment ③ over 24 h', 'need.ACTION_LATE': 'action overdue',
+    'need.WAIT_DECISION': 'waiting for decision', 'need.SAFETY_OPEN': 'open safety problem',
+    'esc.title': 'Escalation', 'esc.apu': 'APU level', 'esc.plant': 'Plant level', 'esc.escalated': 'Escalated area QRAPs',
+    'admin.title': 'Admin', 'admin.locked': 'Locked parts', 'admin.reason': 'Reason (saved in the audit log)', 'admin.unlockQr': 'Unlock ①–③',
+    'admin.unlockDecision': 'Unlock ④ (cancel the decision)', 'admin.reopen': 'Reopen', 'admin.archive': 'Archive', 'admin.unarchive': 'Restore from archive',
+    'err.E_NO_IDENTITY': 'Unknown user – sign in with your company Google account.', 'err.E_BOOT': 'The app could not start.',
+    'err.E_FORBIDDEN': 'You are not allowed to do this.', 'err.E_NOT_FOUND': 'Not found ({id}).', 'err.E_REQUIRED': 'Required: {fieldLabel}',
+    'err.E_INVALID': 'Invalid value: {fieldLabel}', 'err.E_FUTURE': '{fieldLabel} cannot be in the future.', 'err.E_AREA': 'Unknown area {area}.',
+    'err.E_STEP': 'Invalid step.', 'err.E_NO_ID': 'Save step 1 first.', 'err.E_QTY_ZERO': 'Enter a number above 0, or switch on "NOK situation without pieces".',
+    'err.E_REPEAT_REF': 'Pick an existing QRAP of the same area from the last 7 days.',
+    'err.E_PHOTOS': 'Photo WRONG and Photo CORRECT are missing (or an exception with a reason).',
+    'err.E_ALERT_NONE': 'Pick at least one role that was alerted.', 'err.E_WRONG_GT_CHECKED': '"Found wrong" cannot be more than "Checked".',
+    'err.E_RESTORED_BEFORE': 'The restore time cannot be before WHEN.', 'err.E_IA_DONE_FUTURE': 'Action {row}: "done at" cannot be in the future.',
+    'err.E_IA_DONE_BEFORE': 'Action {row}: "done at" cannot be before WHEN.', 'err.E_IA_ROW': 'Action {row}: {fieldLabel} is missing.',
+    'err.E_S3_INCOMPLETE': 'Immediate actions ③ are not complete. {missing}', 'err.E_S1_INCOMPLETE': 'Description ① is not complete – go back to step 1.',
+    'err.E_ALREADY_SENT': 'The QRAP was already sent.', 'err.E_STATE': 'Not possible in the current QRAP state.',
+    'err.E_KIOSK_SIGN': 'The kiosk cannot sign. The supervisor signs on their phone (scan the QR code).',
+    'err.E_SOLVED_SAFETY': '"Issue solved" is not possible for a safety problem (SAFETY = yes).',
+    'err.E_NO_PARENT': 'The area has no parent APU level (SET_AREAS.parent_code).', 'err.E_PILOT_REQUIRED': 'Pick at least one pilot.',
+    'err.E_PILOT_UNKNOWN': '{email} is not in SET_PEOPLE (or has no e-mail).', 'err.E_WHY_GAP': '"{chainLabel}": step {step} is empty – steps must follow each other.',
+    'err.E_ROOT_INVALID': 'The root cause must be a filled step.', 'err.E_ROOT_STEP': 'Pick the 5 Why step this action removes.',
+    'err.E_PLANNED_PAST': 'The planned date cannot be in the past.', 'err.E_DONE_FUTURE': '"Done" cannot be in the future.',
+    'err.E_URL': 'The link must start with https://', 'err.E_ACTION_REMOVED': 'The action is removed.', 'err.E_SLOT': 'Invalid slot.',
+    'err.E_SLOT_FINAL': 'This slot is already confirmed as effective.', 'err.E_SHIFT': 'Pick a valid shift.',
+    'err.E_SHIFT_DUP': 'This shift (date + shift) is already used – 5 different shifts are needed.',
+    'err.E_SHIFT_FUTURE': 'The shift cannot be in the future.', 'err.E_CLOSURE': 'Closure is not possible yet: {items}',
+    'err.E_CRITERIA': 'Assess {fieldLabel} (OK / NOK / N/A).', 'err.E_NO_PHOTO_FOLDER': 'The photo folder is not set (SET_CONFIG.PHOTO_FOLDER_ID). Contact the admin.',
+    'err.E_PHOTO_SIZE': 'The photo is too big or empty.', 'err.E_PHOTO_KIND': 'Invalid photo type.', 'err.E_PHOTO_READ': 'The photo could not be read.',
+    'err.E_REASON': 'Write a reason (at least 5 characters).', 'err.E_LOCKED': 'This part is signed and locked. Only an admin can unlock it.',
+    'err.E_NOT_LOCKED': 'This part is not locked.', 'err.E_BUSY': 'The server is busy, please try again.', 'err.E_INTERNAL': 'Server error.',
+    'err.E_SERVER': 'Server error:', 'err.E_NOT_ADMIN': 'Admins only.', 'err.E_SEARCH_SHORT': 'Type at least 2 characters.',
+    'err.E_SUFFIX': 'No more letters for QRAP copies.',
+    'warn.W_WHAT_SHORT': 'The WHAT text has fewer than 10 characters. Is it clear enough?', 'warn.W_OLD_DETECTION': 'WHEN is more than 24 hours ago. Is it right?',
+    'warn.W_SOLVED_REPEAT': 'The problem repeats (7 days) – really "Issue solved" without 5 Why?',
+    'warn.W_SOLVED_WRONG': '{n} wrong pieces were found in the check – really "Issue solved"?',
+    'warn.W_SHIFTS': 'Not all shifts are informed ({shifts}). They cannot be ticked after signing.',
+    'warn.W_FEW_WHYS': 'Only {n} 5 Why steps – at least 3 are recommended.', 'warn.W_NO_ROOT': 'No root cause is marked.',
+    'warn.W_LEARNED_EMPTY': '"What did we learn" is empty – it is needed for closure.'
+  }
+};
+</script>
+
+  <script>
+'use strict';
+/*
+ * ClientCore – shared browser code:
+ *   App state · h() DOM builder · api() server calls with offline handling · router ·
+ *   toast / dialogs · date formatting (Europe/Prague) · lists and people · photos · QR code · idle timer · header.
+ * Security: user text is always inserted with textContent (h() does that), never with innerHTML.
+ */
+
+const App = {
+  boot: window.BOOT || {},
+  views: {},
+  params: {},
+  view: null,
+  get user() { return this.boot.user || {}; },
+  get set() { return this.boot.settings || { lists: {}, people: [], areas: [], shifts: [], locations: [], config: {} }; }
+};
+const PRAGUE = 'Europe/Prague';
+const FINAL_ST = ['CLOSED_SOLVED', 'ESCALATED', 'CLOSED'];
+
+/* ---------------------------------------------------------------- DOM builder */
+
+/**
+ * Creates an element. attrs: class, text, value, checked, disabled, hidden, style{}, dataset{}, on<event>, other attributes.
+ * Children: nodes, strings (become text nodes → safe), arrays, null/false (skipped).
+ */
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  Object.keys(attrs || {}).forEach(k => {
+    const v = attrs[k];
+    if (v === null || v === undefined || v === false) return;
+    if (k === 'class') el.className = v;
+    else if (k === 'text') el.textContent = v;
+    else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    else if (k === 'dataset') Object.assign(el.dataset, v);
+    else if (k.indexOf('on') === 0 && typeof v === 'function') el.addEventListener(k.slice(2), v);
+    else if (['value', 'checked', 'disabled', 'hidden', 'selected', 'multiple'].indexOf(k) >= 0) el[k] = v;
+    else el.setAttribute(k, v === true ? '' : String(v));
+  });
+  addKids(el, kids);
+  return el;
+}
+function addKids(el, kids) {
+  (kids || []).forEach(k => {
+    if (Array.isArray(k)) return addKids(el, k);
+    if (k === null || k === undefined || k === false) return;
+    el.appendChild(k instanceof Node ? k : document.createTextNode(String(k)));
+  });
+  return el;
+}
+function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
+function byId(id) { return document.getElementById(id); }
+
+/* ---------------------------------------------------------------- roles */
+
+function hasRole(r) { return (App.user.roles || []).indexOf(r) >= 0; }
+function hasAnyRole(list) { return list.some(hasRole); }
+function inArea(area) { const a = App.user.areas || []; return a.indexOf('*') >= 0 || a.indexOf(area) >= 0; }
+function canCreateIn(area) {
+  const a = App.set.areas.find(x => x.code === area);
+  return !!a && a.level === 'AREA' && inArea(area) && hasAnyRole(['KIOSK', 'OPERATOR', 'TL', 'SUPERVISOR', 'ADMIN']);
+}
+function defaultArea() {
+  const own = (App.user.areas || []).filter(a => a !== '*' && App.set.areas.some(x => x.code === a));
+  const lineAreas = App.set.areas.filter(a => a.level === 'AREA').map(a => a.code);
+  return own.find(a => lineAreas.indexOf(a) >= 0) || own[0] || lineAreas[0] || (App.set.areas[0] || {}).code || '';
+}
+
+/* ---------------------------------------------------------------- server calls */
+
+let busyCount = 0;
+const retryQueue = [];
+
+/**
+ * Calls a server function. Always resolves with the server object ({ok, …}).
+ * Network problems: shows the offline banner and keeps the call pending until it succeeds,
+ * so the page (and everything typed) stays as it is.
+ */
+function api(fn, ...args) {
+  return new Promise(resolve => {
+    const attempt = () => {
+      busy(1);
+      google.script.run
+        .withSuccessHandler(res => { busy(-1); setOffline(false); resolve(res || { ok: false, errors: [{ code: 'E_INTERNAL' }] }); })
+        .withFailureHandler(err => {
+          busy(-1);
+          const msg = String((err && err.message) || err);
+          if (/network|HTTP 0|Failed to fetch|connection|offline|timed? ?out/i.test(msg)) {
+            retryQueue.push(attempt);
+            setOffline(true);
+          } else {
+            resolve({ ok: false, errors: [{ code: 'E_SERVER', detail: msg }] });
+          }
+        })[fn](...args);
+    };
+    attempt();
+  });
+}
+function busy(delta) {
+  busyCount = Math.max(0, busyCount + delta);
+  const bar = byId('busy');
+  if (bar) bar.hidden = busyCount === 0;
+}
+function setOffline(on) {
+  const bar = byId('offline');
+  if (!on) { bar.hidden = true; return; }
+  clear(bar).hidden = false;
+  addKids(bar, [t('msg.offline'), h('button', { class: 'btn btn-ghost', onclick: retryNow }, t('btn.retry'))]);
+}
+function retryNow() {
+  const list = retryQueue.splice(0, retryQueue.length);
+  list.forEach(fn => fn());
+}
+window.addEventListener('online', retryNow);
+setInterval(() => { if (retryQueue.length && navigator.onLine !== false) retryNow(); }, 15000);
+
+/* ---------------------------------------------------------------- messages and dialogs */
+
+/** Text of one server error or warning ({code, field, …}). */
+function errText(e, prefix) {
+  const p = Object.assign({}, e);
+  if (e.field) p.fieldLabel = t('f.' + e.field);
+  if (e.code === 'E_IA_ROW') p.fieldLabel = t('f.ia_' + String(e.field).replace(/^ia\d+_/, ''));
+  if (e.missing) p.missing = e.missing.map(m => t('s3.' + m)).join(', ');
+  if (e.items) p.items = e.items.map(i => t('close.' + i)).join(', ');
+  if (e.chain) p.chainLabel = t('why.' + e.chain);
+  const key = (prefix || (String(e.code).indexOf('W_') === 0 ? 'warn.' : 'err.')) + e.code;
+  const txt = t(key, p);
+  return txt === key ? e.code + (e.detail ? ': ' + e.detail : '') : txt + (e.detail && (e.code === 'E_INTERNAL' || e.code === 'E_SERVER') ? ' (' + e.detail + ')' : '');
+}
+
+/** Shows server errors in a box (if given) or as a toast, and marks fields with data-field. */
+function showErrors(res, box, root) {
+  const errs = (res && res.errors) || [];
+  if (root) markFields(root, errs);
+  if (box) {
+    clear(box).hidden = !errs.length;
+    if (errs.length) addKids(box, [h('b', null, t('msg.fix')), h('ul', null, errs.map(e => h('li', null, errText(e))))]);
+    if (errs.length) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } else if (errs.length) {
+    toast(errs.map(e => errText(e)).join(' · '), 'err', 7000);
+  }
+}
+function markFields(root, errs) {
+  root.querySelectorAll('.fld.has-err').forEach(f => { f.classList.remove('has-err'); const m = f.querySelector('.fld-err'); if (m) m.textContent = ''; });
+  errs.forEach(e => {
+    if (!e.field) return;
+    const f = root.querySelector('.fld[data-field="' + e.field + '"]');
+    if (!f) return;
+    f.classList.add('has-err');
+    const m = f.querySelector('.fld-err');
+    if (m) m.textContent = errText(e);
+  });
+}
+
+let toastTimer = null;
+function toast(text, kind, ms) {
+  const el = byId('toast');
+  el.textContent = text;
+  el.className = 'toast ' + (kind || '');
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, ms || 3500);
+}
+
+/**
+ * Modal dialog. buttons: [{label, value, kind}]. Resolves with the value of the pressed button.
+ * onOk(value) may return false to keep the dialog open (e.g. empty input).
+ */
+function modal(opts) {
+  return new Promise(resolve => {
+    const wrap = clear(byId('modal'));
+    wrap.hidden = false;
+    const close = v => {
+      if (opts.onOk && v !== false && v !== null && opts.onOk(v) === false) return;
+      wrap.hidden = true;
+      clear(wrap);
+      resolve(v);
+    };
+    const buttons = opts.buttons || [{ label: t('btn.ok'), value: true, kind: 'primary' }];
+    wrap.appendChild(h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true' },
+      opts.title ? h('h2', null, opts.title) : null,
+      opts.body instanceof Node ? opts.body : h('p', null, opts.body || ''),
+      h('div', { class: 'modal-btns' }, buttons.map(b => h('button', { class: 'btn btn-' + (b.kind || 'ghost'), onclick: () => close(b.value) }, b.label)))));
+    const first = wrap.querySelector('input, textarea, select');
+    if (first) first.focus();
+  });
+}
+function confirmDlg(text, okLabel, kind) {
+  return modal({ body: text, buttons: [{ label: t('btn.cancel'), value: false }, { label: okLabel || t('btn.ok'), value: true, kind: kind || 'primary' }] })
+    .then(v => v === true);
+}
+/** Asks for a text (e.g. an admin reason). Resolves with the text or null. */
+function promptDlg(title, label, minLen) {
+  const input = h('textarea', { rows: 3 });
+  const err = h('div', { class: 'fld-err' });
+  return modal({
+    title: title,
+    body: h('div', { class: 'fld' }, h('label', { class: 'fld-label' }, label), input, err),
+    buttons: [{ label: t('btn.cancel'), value: null }, { label: t('btn.ok'), value: 'ok', kind: 'primary' }],
+    onOk: () => { if (input.value.trim().length < (minLen || 1)) { err.textContent = t('err.E_REASON'); return false; } return true; }
+  }).then(v => (v === 'ok' ? input.value.trim() : null));
+}
+/** Shows warnings and asks whether to continue. */
+function warnConfirm(warnings) {
+  if (!warnings || !warnings.length) return Promise.resolve(true);
+  return modal({
+    title: t('msg.warnTitle'),
+    body: h('div', { class: 'warnbox' }, h('ul', null, warnings.map(w => h('li', null, errText(w))))),
+    buttons: [{ label: t('btn.fix'), value: false }, { label: t('btn.continue'), value: true, kind: 'primary' }]
+  }).then(v => v === true);
+}
+
+/* ---------------------------------------------------------------- router */
+
+/** Shows a page. params become URL parameters (?page=…&id=…). opts.replace, opts.extra. */
+function go(page, params, opts) {
+  const p = Object.assign({}, params || {}, { page: page });
+  Object.keys(p).forEach(k => { if (p[k] === undefined || p[k] === null || p[k] === '') delete p[k]; else p[k] = String(p[k]); });
+  App.params = p;
+  try {
+    if (opts && opts.replace) google.script.history.replace(p, p);
+    else google.script.history.push(p, p);
+  } catch (e) { /* history is not available outside Apps Script */ }
+  render(opts && opts.extra);
+}
+/** Changes the URL without drawing again (e.g. the wizard step). */
+function setUrl(params) {
+  App.params = Object.assign({}, params);
+  try { google.script.history.replace(App.params, App.params); } catch (e) { /* ignore */ }
+}
+function defaultPage() {
+  if (App.user.isKiosk) return 'board';
+  if (hasAnyRole(['MANAGER', 'APU_MANAGER'])) return 'manager';
+  if (hasRole('PILOT') && !hasAnyRole(['SUPERVISOR', 'TL', 'OPERATOR'])) return 'actions';
+  return 'board';
+}
+function render(extra) {
+  if (App.view && App.view.leave) App.view.leave();
+  Idle.stop();
+  const page = App.params.page || defaultPage();
+  const view = App.views[page];
+  const root = clear(byId('app'));
+  byId('modal').hidden = true;
+  App.view = view || null;
+  renderHeader();
+  if (!view) { root.appendChild(h('div', { class: 'empty' }, t('msg.unknownPage'))); return; }
+  view.render(root, Object.assign({ page: page }, App.params), extra || {});
+  window.scrollTo(0, 0);
+  if (App.user.isKiosk && page !== 'board') {
+    Idle.start(App.set.config.IDLE_MINUTES || 3, () => (view.onIdle ? view.onIdle() : go('board', { area: defaultArea() })));
+  }
+}
+
+/* ---------------------------------------------------------------- dates (always Europe/Prague) */
+
+const partsFmt = new Intl.DateTimeFormat('en-GB', { timeZone: PRAGUE, year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'short' });
+function pragueParts(d) {
+  const o = {};
+  partsFmt.formatToParts(d).forEach(p => { o[p.type] = p.value; });
+  const dow = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 }[o.weekday];
+  return { y: o.year, m: o.month, d: o.day, H: o.hour === '24' ? '00' : o.hour, M: o.minute, dow: dow };
+}
+/** ISO → 'YYYY-MM-DDTHH:mm' (Prague) for datetime-local inputs. */
+function toLocalInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const p = pragueParts(d);
+  return p.y + '-' + p.m + '-' + p.d + 'T' + p.H + ':' + p.M;
+}
+function nowLocalInput() { return toLocalInput(new Date().toISOString()); }
+/** 'YYYY-MM-DDTHH:mm' (Prague wall clock) → milliseconds, whatever the time zone of this device. */
+function localToMs(s) {
+  const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+  if (!m) return NaN;
+  const guess = Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0));
+  const p = pragueParts(new Date(guess));
+  const shown = Date.UTC(+p.y, +p.m - 1, +p.d, +p.H, +p.M);
+  return guess - (shown - guess);
+}
+function todayLocal(offsetDays) { return toLocalInput(new Date(Date.now() + (offsetDays || 0) * 86400000).toISOString()).slice(0, 10); }
+function fmtDT(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return String(iso);
+  const p = pragueParts(d);
+  return (+p.d) + '.' + (+p.m) + '.' + p.y + ' ' + p.H + ':' + p.M;
+}
+function fmtD(day) {
+  const m = String(day || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? (+m[3]) + '.' + (+m[2]) + '.' + m[1] : String(day || '');
+}
+/** The shift running now: {code, date} (date = day the shift started). */
+function currentShift() {
+  const p = pragueParts(new Date());
+  const mins = +p.H * 60 + +p.M;
+  const yDow = p.dow === 1 ? 7 : p.dow - 1;
+  for (const s of App.set.shifts) {
+    const st = s.start.h * 60 + s.start.m;
+    const en = s.end.h * 60 + s.end.m;
+    if (en > st && mins >= st && mins < en && s.days.indexOf(p.dow) >= 0) return { code: s.code, date: todayLocal() };
+    if (en <= st && mins >= st && s.days.indexOf(p.dow) >= 0) return { code: s.code, date: todayLocal() };
+    if (en <= st && mins < en && s.days.indexOf(yDow) >= 0) return { code: s.code, date: todayLocal(-1) };
+  }
+  return null;
+}
+
+/* ---------------------------------------------------------------- lists, people, labels */
+
+function lang() { return I18N_LANG; }
+function listItems(list) {
+  return (App.set.lists[list] || []).map(x => ({ value: x.code, label: lang() === 'en' ? x.en : x.cz }));
+}
+function listLabel(list, code) {
+  const s = String(code || '');
+  if (s.indexOf('OTHER:') === 0) return t('lbl.other') + ': ' + s.slice(6);
+  const it = (App.set.lists[list] || []).find(x => x.code === s);
+  return it ? (lang() === 'en' ? it.en : it.cz) : s;
+}
+function peopleOf(area, roles) {
+  return App.set.people.filter(p => (!area || p.areas.indexOf('*') >= 0 || p.areas.indexOf(area) >= 0) &&
+    (!roles || roles.some(r => p.roles.indexOf(r) >= 0)) && p.roles.indexOf('KIOSK') < 0);
+}
+function personName(email) {
+  const p = App.set.people.find(x => x.email && x.email === String(email || '').toLowerCase());
+  return p ? p.name : String(email || '');
+}
+function areaName(code) { const a = App.set.areas.find(x => x.code === code); return a ? a.name : code; }
+function zonesOf(area) {
+  const out = [];
+  App.set.locations.forEach(l => { if (l.area === area && out.indexOf(l.zone) < 0) out.push(l.zone); });
+  return out;
+}
+function locationsOf(area, zone) { return App.set.locations.filter(l => l.area === area && l.zone === zone).map(l => l.code); }
+function statusLabel(st) { return t('st.' + st); }
+function shiftName(code) { const s = App.set.shifts.find(x => x.code === code); return s ? s.name : code; }
+
+/* ---------------------------------------------------------------- photos and QR */
+
+/** Resizes a camera picture in the browser. Resolves with base64 JPEG (no data: prefix). */
+function resizeImage(file, maxPx, quality) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * scale);
+      c.height = Math.round(img.naturalHeight * scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', quality).split(',')[1]);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image')); };
+    img.src = url;
+  });
+}
+const photoCache = {};
+/** Loads a photo through the server (users need no Drive access). */
+function loadPhoto(fileId, img) {
+  if (!fileId) return;
+  if (photoCache[fileId]) { img.src = photoCache[fileId]; return; }
+  api('apiGetPhoto', { fileId: fileId }).then(res => {
+    if (res.ok) { photoCache[fileId] = 'data:' + res.mime + ';base64,' + res.data; img.src = photoCache[fileId]; }
+  });
+}
+function showPhoto(fileId, title) {
+  const img = h('img', { class: 'full', alt: title || '' });
+  loadPhoto(fileId, img);
+  modal({ title: title, body: img, buttons: [{ label: t('btn.close'), value: true, kind: 'primary' }] });
+}
+/** QR code element (falls back to the plain link if the library did not load). */
+function qrCode(text) {
+  const box = h('div', { class: 'qr' });
+  try {
+    new QRCode(box, { text: text, width: 170, height: 170, correctLevel: QRCode.CorrectLevel.M });
+  } catch (e) {
+    box.appendChild(h('a', { href: text }, text));
+  }
+  return box;
+}
+
+/* ---------------------------------------------------------------- idle timer (kiosk) */
+
+const Idle = {
+  timer: null, cb: null, ms: 0,
+  start(minutes, cb) {
+    this.stop();
+    this.cb = cb;
+    this.ms = Math.max(1, Number(minutes) || 3) * 60000;
+    ['pointerdown', 'keydown', 'input', 'touchstart'].forEach(ev => document.addEventListener(ev, Idle.reset, true));
+    Idle.reset();
+  },
+  reset() {
+    clearTimeout(Idle.timer);
+    if (Idle.cb) Idle.timer = setTimeout(() => { const cb = Idle.cb; Idle.stop(); cb(); }, Idle.ms);
+  },
+  stop() {
+    clearTimeout(Idle.timer);
+    Idle.cb = null;
+    ['pointerdown', 'keydown', 'input', 'touchstart'].forEach(ev => document.removeEventListener(ev, Idle.reset, true));
+  }
+};
+
+/* ---------------------------------------------------------------- header */
+
+function renderHeader() {
+  const hdr = clear(byId('hdr'));
+  const area = App.params.area || (App.params.page === 'board' ? defaultArea() : '');
+  const menuBox = h('div', { class: 'hdr-menu', hidden: true });
+  const item = (label, fn) => h('button', { onclick: () => { menuBox.hidden = true; fn(); } }, label);
+  addKids(menuBox, [
+    item(t('nav.board'), () => go('board', { area: area || defaultArea() })),
+    canCreateIn(area || defaultArea()) ? item(t('nav.new'), () => go('new', { area: area || defaultArea() })) : null,
+    App.user.isKiosk ? null : item(t('nav.actions'), () => go('actions')),
+    hasAnyRole(['MANAGER', 'APU_MANAGER', 'ADMIN']) ? item(t('nav.manager'), () => go('manager')) : null,
+    item(t('nav.escalation'), () => go('escalation')),
+    App.set.areas.length > 1 ? App.set.areas.map(a => item(t('nav.boardOf', { area: a.code }), () => go('board', { area: a.code }))) : null
+  ]);
+  addKids(hdr, [
+    h('div', { class: 'hdr-app', onclick: () => go(defaultPage(), { area: defaultArea() }) }, App.boot.appName || 'eQRAP Logistika'),
+    area ? h('div', { class: 'hdr-area' }, area + ' · ' + areaName(area)) : null,
+    h('div', { class: 'hdr-space' }),
+    h('div', { class: 'hdr-user', title: App.user.email || '' }, App.user.label || ''),
+    h('button', { class: 'hdr-btn', onclick: toggleLang, title: 'CZ / EN' }, I18N_LANG === 'cz' ? 'EN' : 'CZ'),
+    h('button', { class: 'hdr-btn', onclick: () => { menuBox.hidden = !menuBox.hidden; }, 'aria-label': t('nav.menu') }, '☰'),
+    menuBox
+  ]);
+}
+function toggleLang() {
+  setLang(I18N_LANG === 'cz' ? 'en' : 'cz');
+  render();
+}
+
+/* ---------------------------------------------------------------- start */
+
+App.start = function () {
+  if (App.boot.error) {
+    clear(byId('app')).appendChild(h('div', { class: 'card errbox' }, h('h2', null, t('err.' + App.boot.error)),
+      h('p', null, t('msg.bootHelp')), App.boot.detail ? h('p', { class: 'small' }, App.boot.detail) : null));
+    return;
+  }
+  App.params = Object.assign({}, App.boot.params || {});
+  try {
+    google.script.history.setChangeHandler(e => { App.params = Object.assign({}, (e.location && e.location.parameter) || {}); render(); });
+  } catch (e) { /* not in Apps Script */ }
+  render();
+};
+</script>
+
+  <script>
+'use strict';
+/*
+ * ClientForms – reusable form widgets and small display helpers.
+ * Every input widget takes the current value and an onChange(value) callback, and returns a DOM node.
+ */
+
+/** Label + control + error line. opts: {name (data-field for server errors), required, hint, cls}. */
+function field(label, control, opts) {
+  opts = opts || {};
+  return h('div', { class: 'fld' + (opts.cls ? ' ' + opts.cls : ''), 'data-field': opts.name || '' },
+    label ? h('label', { class: 'fld-label' }, label, opts.required ? h('span', { class: 'req' }, ' *') : null) : null,
+    opts.hint ? h('div', { class: 'fld-hint' }, opts.hint) : null,
+    control,
+    h('div', { class: 'fld-err' }));
+}
+
+/** Button group with one choice. options: [{value, label, kind (danger|ok|warn), disabled}]. */
+function segmented(options, value, onChange, cls) {
+  const wrap = h('div', { class: 'seg' + (cls ? ' ' + cls : ''), role: 'radiogroup' });
+  const btns = options.map(o => h('button', {
+    type: 'button', role: 'radio', disabled: !!o.disabled,
+    class: 'seg-btn' + (o.kind ? ' seg-' + o.kind : '') + (o.value === value ? ' on' : ''),
+    'aria-checked': String(o.value === value),
+    onclick: () => {
+      btns.forEach(b => { b.classList.remove('on'); b.setAttribute('aria-checked', 'false'); });
+      btns[options.indexOf(o)].classList.add('on');
+      btns[options.indexOf(o)].setAttribute('aria-checked', 'true');
+      onChange(o.value);
+    }
+  }, o.label));
+  return addKids(wrap, btns);
+}
+
+/** Button group with several choices. locked values cannot be switched off. */
+function multiToggle(options, values, onChange, cls) {
+  const sel = values.slice();
+  const wrap = h('div', { class: 'seg' + (cls ? ' ' + cls : '') });
+  options.forEach(o => {
+    const b = h('button', { type: 'button', class: 'seg-btn' + (sel.indexOf(o.value) >= 0 ? ' on' : ''),
+      'aria-pressed': String(sel.indexOf(o.value) >= 0), disabled: !!o.locked }, o.label);
+    b.addEventListener('click', () => {
+      const i = sel.indexOf(o.value);
+      if (i >= 0) sel.splice(i, 1); else sel.push(o.value);
+      b.classList.toggle('on', i < 0);
+      b.setAttribute('aria-pressed', String(i < 0));
+      onChange(sel.slice());
+    });
+    wrap.appendChild(b);
+  });
+  return wrap;
+}
+
+/** ANO / NE buttons without a default. lower = show "ano / ne" (SAFETY wording). */
+function yesNo(value, onChange, opts) {
+  opts = opts || {};
+  return segmented([
+    { value: 'ANO', label: opts.lower ? t('lbl.yesLower') : t('lbl.yes'), kind: opts.yesKind || 'danger' },
+    { value: 'NE', label: opts.lower ? t('lbl.noLower') : t('lbl.no'), kind: 'ok' }
+  ], value, onChange, 'seg-big');
+}
+
+/** <select>. options: [{value, label}] or strings. */
+function selectEl(options, value, onChange, placeholder) {
+  const s = h('select', { onchange: e => onChange(e.target.value) });
+  if (placeholder !== false) s.appendChild(h('option', { value: '' }, placeholder || t('lbl.choose')));
+  options.forEach(o => {
+    const opt = typeof o === 'object' ? o : { value: o, label: o };
+    s.appendChild(h('option', { value: opt.value }, opt.label));
+  });
+  s.value = value || '';
+  return s;
+}
+
+function textInput(value, onChange, opts) {
+  opts = opts || {};
+  return h('input', { type: opts.type || 'text', value: value || '', placeholder: opts.placeholder || '',
+    maxlength: opts.max || 300, inputmode: opts.inputmode || null, oninput: e => onChange(e.target.value) });
+}
+function numInput(value, onChange) {
+  return h('input', { type: 'number', min: 0, step: 1, inputmode: 'numeric', value: value === '' || value === undefined ? '' : value,
+    oninput: e => onChange(e.target.value === '' ? '' : Number(e.target.value)) });
+}
+function textArea(value, onChange, rows, max) {
+  return h('textarea', { rows: rows || 3, maxlength: max || 2000, value: value || '', oninput: e => onChange(e.target.value) });
+}
+/** datetime-local (value 'YYYY-MM-DDTHH:mm', Prague). */
+function dtInput(value, onChange, max) {
+  return h('input', { type: 'datetime-local', value: value || '', max: max || null, oninput: e => onChange(e.target.value) });
+}
+function dateInput(value, onChange, opts) {
+  opts = opts || {};
+  return h('input', { type: 'date', value: value || '', min: opts.min || null, max: opts.max || null,
+    oninput: e => onChange(e.target.value) });
+}
+function checkbox(label, checked, onChange) {
+  return h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: !!checked, onchange: e => onChange(e.target.checked) }), label);
+}
+
+/** Person picker (value = name, or e-mail with byEmail). Only people with an e-mail when byEmail. */
+function personSelect(value, onChange, area, opts) {
+  opts = opts || {};
+  const list = peopleOf(area, opts.roles).filter(p => !opts.byEmail || p.email)
+    .map(p => ({ value: opts.byEmail ? p.email : p.name, label: p.name + (opts.showRoles ? ' (' + p.roles.join(', ') + ')' : '') }));
+  if (value && !list.some(o => o.value === value)) list.unshift({ value: value, label: opts.byEmail ? personName(value) : value });
+  return selectEl(list, value, onChange, opts.placeholder);
+}
+
+/** Button that disables itself while its async handler runs. */
+function button(label, onClick, kind, opts) {
+  opts = opts || {};
+  const b = h('button', { type: 'button', class: 'btn btn-' + (kind || 'ghost') + (opts.big ? ' btn-big' : ''), disabled: !!opts.disabled });
+  addKids(b, [label]);
+  b.addEventListener('click', async () => {
+    if (b.disabled) return;
+    b.disabled = true;
+    try { await onClick(); } finally { if (b.isConnected) b.disabled = !!opts.disabled; }
+  });
+  return b;
+}
+
+/** Board chips 1–7. */
+function chipsEl(chips) {
+  return h('div', { class: 'chips', 'aria-label': t('board.chips') }, (chips || []).map((c, i) =>
+    h('span', { class: 'chip chip-' + c, title: t('chip.' + (i + 1)) + ': ' + t('chipState.' + c) }, String(i + 1))));
+}
+function statusBadge(st) { return h('span', { class: 'badge badge-st' }, statusLabel(st)); }
+
+/** Section card with the round number and role colour (op | sup | pil | mgr). */
+function sectionCard(num, title, role, ...content) {
+  return h('section', { class: 'card sec sec-' + role },
+    h('div', { class: 'sec-head' }, h('span', { class: 'sec-num' }, num), h('h2', { class: 'sec-title' }, title)),
+    content);
+}
+
+/** Definition list: [[label, value], …]; empty values are skipped. */
+function kvList(pairs) {
+  const dl = h('dl', { class: 'kv' });
+  pairs.forEach(p => {
+    if (p[1] === '' || p[1] === null || p[1] === undefined || p[1] === false) return;
+    dl.appendChild(h('dt', null, p[0]));
+    dl.appendChild(h('dd', null, p[1]));
+  });
+  return dl;
+}
+
+function errorBox() { return h('div', { class: 'errbox', hidden: true, role: 'alert' }); }
+
+/** Shows a list of client-side errors in a box. errs: [{code, field, …}] like the server. */
+function setErrors(box, errs, root) {
+  showErrors({ errors: errs }, box, root);
+  return errs.length === 0;
+}
+
+/** Simple table. rows: arrays of cells (strings or nodes). */
+function table(headers, rows, rowCls) {
+  return h('table', { class: 'tbl' },
+    h('thead', null, h('tr', null, headers.map(x => h('th', null, x)))),
+    h('tbody', null, rows.map((r, i) => h('tr', { class: rowCls ? rowCls(i) : null }, r.map(c => h('td', null, c))))));
+}
+
+/** "Loading…" placeholder. */
+function loadingEl() { return h('div', { class: 'loading' }, t('msg.loading')); }
+
+/** Link-style button that opens a QRAP. */
+function qrapLink(id) {
+  return id ? h('a', { href: '#', onclick: e => { e.preventDefault(); go('qrap', { id: id }); } }, id) : '';
+}
+
+/** Yes / no text for ANO / NE. */
+function yn(v, lower) {
+  if (v === 'ANO') return lower ? t('lbl.yesLower') : t('lbl.yes');
+  if (v === 'NE') return lower ? t('lbl.noLower') : t('lbl.no');
+  return '–';
+}
+</script>
+
+  <script>
+'use strict';
+/*
+ * ViewBoard – the kiosk board (?page=board&area=WH1).
+ * One row per QRAP like the paper board: number · what / where / when · chips 1–7 · "čeká na".
+ * Newest at the bottom; the list starts scrolled to the bottom and loads older rows when scrolled up.
+ */
+App.views.board = (() => {
+  const PAGE = 40;
+  const S = { area: '', filter: 'open', rows: [], hasMore: false, loading: false, timer: null, list: null, pendingBtn: null };
+
+  function render(root, params, extra) {
+    S.area = String(params.area || defaultArea()).toUpperCase();
+    S.filter = params.filter || 'open';
+    S.rows = [];
+    S.hasMore = false;
+    S.list = h('div', { class: 'board-list', onscroll: onScroll });
+    S.pendingBtn = h('button', { class: 'btn btn-ghost btn-big', onclick: showPending }, t('board.pending', { n: '…' }));
+    const filters = segmented(['open', 'today', 'safety', 'all'].map(f => ({ value: f, label: t('board.f.' + f) })), S.filter,
+      f => { setUrl({ page: 'board', area: S.area, filter: f }); S.filter = f; load('replace'); });
+    addKids(root, [
+      h('div', { class: 'board-top' }, h('h1', null, t('board.title') + ' · ' + S.area), filters),
+      S.list,
+      h('div', { class: 'bottombar' },
+        canCreateIn(S.area) ? h('button', { class: 'btn btn-op btn-big', onclick: () => go('new', { area: S.area }) }, t('board.new')) : null,
+        canCreateIn(S.area) ? S.pendingBtn : null)
+    ]);
+    load('replace').then(() => { if (extra.toast) toast(extra.toast, 'ok', 6000); });
+    S.timer = setInterval(() => load('refresh'), 60000);
+  }
+
+  function leave() { clearInterval(S.timer); }
+
+  /** mode: replace (first load) · refresh (keep position) · older (prepend when scrolling up) */
+  async function load(mode) {
+    if (S.loading) return;
+    S.loading = true;
+    const req = { area: S.area, filter: S.filter, limit: mode === 'refresh' ? Math.max(PAGE, S.rows.length) : PAGE };
+    if (mode === 'older' && S.rows.length) req.before = S.rows[0].key;
+    const res = await api('apiGetBoard', req);
+    S.loading = false;
+    if (!res.ok) { showErrors(res); return; }
+    S.pendingBtn.textContent = t('board.pending', { n: res.pending });
+    const list = S.list;
+    const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
+    if (mode === 'older') {
+      const before = list.scrollHeight;
+      S.rows = res.rows.concat(S.rows);
+      S.hasMore = res.hasMore;
+      draw();
+      list.scrollTop = list.scrollHeight - before + list.scrollTop;
+    } else {
+      S.rows = res.rows;
+      S.hasMore = res.hasMore;
+      draw();
+      if (mode === 'replace' || atBottom) list.scrollTop = list.scrollHeight;
+    }
+  }
+
+  function draw() {
+    const list = clear(S.list);
+    list.appendChild(h('div', { class: 'bhead' }, h('div', null, t('board.col.id')), h('div', null, t('board.col.what')),
+      h('div', null, '1 – 7'), h('div', null, t('board.col.wait'))));
+    if (S.hasMore) list.appendChild(h('div', { class: 'board-more' }, t('board.older')));
+    if (!S.rows.length) list.appendChild(h('div', { class: 'empty' }, t('board.empty')));
+    S.rows.forEach(r => list.appendChild(rowEl(r)));
+  }
+
+  function rowEl(r) {
+    const open = () => go('qrap', { id: r.id });
+    return h('div', {
+      class: 'brow' + (r.late ? ' late' : '') + (FINAL_ST.indexOf(r.st) >= 0 ? ' closed' : ''),
+      role: 'button', tabindex: '0', onclick: open, onkeydown: e => { if (e.key === 'Enter') open(); }
+    },
+    h('div', { class: 'b-id' }, r.id, r.safety ? h('span', { class: 'badge badge-safety' }, 'SAFETY') : null,
+      r.rep ? h('span', { class: 'badge badge-rep' }, t('board.repeat')) : null),
+    h('div', { class: 'b-what' },
+      h('div', { class: 'b-text' }, r.what || t('board.noText')),
+      h('div', { class: 'b-meta' }, [r.zone, r.loc].filter(Boolean).join(' / ') + (r.det ? ' · ' + fmtDT(r.det) : ''))),
+    chipsEl(r.chips),
+    h('div', { class: 'b-wait' }, r.wait ? t('board.waitFor') + ' ' + t('wait.' + r.wait) : statusLabel(r.st)));
+  }
+
+  function onScroll() {
+    if (S.list.scrollTop < 80 && S.hasMore && !S.loading) load('older');
+  }
+
+  /** "Pokračovat v rozpracovaném": drafts and QRAPs whose ③ is still open. */
+  async function showPending() {
+    const res = await api('apiGetDrafts', S.area);
+    if (!res.ok) { showErrors(res); return; }
+    const pick = d => {
+      byId('modal').hidden = true;
+      const step = d.status !== 'DRAFT' ? 4 : !d.s1 ? 1 : !d.photos ? 2 : !d.s2 ? 3 : d.risk ? 5 : 4;
+      go('wizard', { id: d.id, step: step });
+    };
+    const body = h('div', null, res.drafts.length ? res.drafts.map(d => h('button', { class: 'sugg', onclick: () => pick(d) },
+      h('b', null, d.id), ' · ', statusLabel(d.status), h('br'), d.what || t('board.noText'),
+      h('div', { class: 'small muted' }, fmtDT(d.detected_at || d.created_at)))) : h('p', { class: 'muted' }, t('board.noPending')));
+    modal({ title: t('board.pendingTitle'), body: body, buttons: [{ label: t('btn.close'), value: true }] });
+  }
+
+  return { render: render, leave: leave };
+})();
+</script>
+
+  <script>
+'use strict';
+/*
+ * ViewWizard – the kiosk wizard (?page=new&area=WH1 or ?page=wizard&id=…&step=…).
+ * Steps: 1 Popis · 2 Fotky · 3 Upozornění · 4 Opatření · 5 Kontrola a odeslání.
+ * This file: state, navigation, saving, step 1 and step 2. Steps 3–5 and the checks are in ViewWizardSteps.
+ * Every "Další" validates in the browser, then saves on the server (which validates again).
+ */
+const Wiz = { S: null, root: null, body: null, errBox: null, laterBtn: null, steps: {}, validate: {}, data: {} };
+
+App.views.wizard = App.views.new = (() => {
+  /** Empty state for a new QRAP. */
+  function blank(area) {
+    return {
+      id: '', area: area, status: '', step: 1, dirty: false,
+      q: { detected_at: nowLocalInput(), nok_situation: false, check_in_progress: false, photo_exception: '', photoExc: false },
+      roles: [], other_text: '', ia: [], photos: { WRONG: null, CORRECT: null }, s3: null, can: { editQr: true }
+    };
+  }
+
+  /** Server state → wizard state (dates to local input format, "OTHER:text" split). */
+  function fromServer(st, step) {
+    const q = st.q;
+    const how = String(q.how_found || '');
+    Wiz.S = {
+      id: q.qrap_id, area: q.area_code, status: q.status, step: step || 1, dirty: false,
+      q: Object.assign({}, q, {
+        detected_at: toLocalInput(q.detected_at), restored_at: toLocalInput(q.restored_at),
+        how_found: how.indexOf('OTHER:') === 0 ? 'OTHER' : how,
+        how_found_other: how.indexOf('OTHER:') === 0 ? how.slice(6) : '',
+        nok_situation: q.nok_situation === true, check_in_progress: q.check_in_progress === true,
+        photoExc: !!q.photo_exception
+      }),
+      roles: st.alerts.map(a => a.role_code),
+      other_text: (st.alerts.find(a => a.role_code === 'OTHER') || {}).other_text || '',
+      ia: iaFromServer(st.ia),
+      photos: { WRONG: st.photos.find(p => p.kind === 'WRONG') || null, CORRECT: st.photos.find(p => p.kind === 'CORRECT') || null },
+      s3: st.s3, can: st.can
+    };
+  }
+  function iaFromServer(rows) {
+    return rows.map(a => ({ id: a.id, type: a.type, text: a.text, owner_name: a.owner_name, done_at: toLocalInput(a.done_at), remove: false }));
+  }
+
+  /** After a save: take the server's truth for ids, status and system fields; keep what is typed elsewhere. */
+  function mergeServer(st, step) {
+    const S = Wiz.S;
+    S.id = st.q.qrap_id;
+    S.status = st.q.status;
+    S.s3 = st.s3;
+    S.can = st.can;
+    ['qrap_id', 'status', 'area_code', 's1_done_at', 's2_done_at', 's3_done_at', 'sent_at', 'containment_done_at', 'finder_name']
+      .forEach(k => { S.q[k] = st.q[k]; });
+    S.roles = st.alerts.map(a => a.role_code);
+    S.photos = { WRONG: st.photos.find(p => p.kind === 'WRONG') || null, CORRECT: st.photos.find(p => p.kind === 'CORRECT') || null };
+    if (step === 4) S.ia = iaFromServer(st.ia);
+  }
+
+  async function render(root, params) {
+    Wiz.root = root;
+    if (params.id) {
+      root.appendChild(loadingEl());
+      const res = await api('apiGetWizard', params.id);
+      if (!root.isConnected) return;
+      clear(root);
+      if (!res.ok) { showErrors(res); root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
+      fromServer(res.state, Math.min(5, Math.max(1, Number(params.step) || 1)));
+      if (!Wiz.S.can.editQr) { root.appendChild(h('div', { class: 'empty' }, t('err.E_LOCKED'))); return; }
+    } else {
+      Wiz.S = blank(String(params.area || defaultArea()).toUpperCase());
+      if (!canCreateIn(Wiz.S.area)) { root.appendChild(h('div', { class: 'empty' }, t('err.E_FORBIDDEN'))); return; }
+    }
+    draw();
+  }
+
+  /** Draws the whole wizard page for the current step. */
+  function draw() {
+    const S = Wiz.S;
+    const root = clear(Wiz.root);
+    root.appendChild(h('div', { class: 'progress' }, [1, 2, 3, 4, 5].map(n => h('div', {
+      class: n === S.step ? 'cur' : n < S.step ? 'done' : '',
+      onclick: n < S.step ? () => goStep(n) : null
+    }, n + ' ' + t('wiz.s' + n)))));
+    root.appendChild(h('h1', null, S.id ? S.id : t('wiz.newTitle'), S.status ? statusBadge(S.status) : null));
+    Wiz.errBox = errorBox();
+    root.appendChild(Wiz.errBox);
+    Wiz.body = h('div', { class: 'card' });
+    root.appendChild(Wiz.body);
+    Wiz.steps[S.step](Wiz.body);
+    root.appendChild(navBar());
+  }
+  Wiz.draw = draw;
+
+  function navBar() {
+    const S = Wiz.S;
+    const nav = h('div', { class: 'wiz-nav' });
+    nav.appendChild(S.step > 1 ? button(t('btn.back'), () => goStep(S.step - 1), 'ghost', { big: true })
+      : button(t('btn.cancel'), cancel, 'ghost', { big: true }));
+    Wiz.laterBtn = null;
+    if (S.step === 4) {
+      Wiz.laterBtn = button(t('wiz.later'), later, 'ghost', { big: true });
+      Wiz.laterBtn.disabled = !S.q.risk_stock_shipped;
+      nav.appendChild(Wiz.laterBtn);
+    }
+    if (S.step < 5) nav.appendChild(button(t('btn.next'), next, 'op', { big: true }));
+    else if (S.status === 'DRAFT') nav.appendChild(button(t('wiz.send'), submit, 'op', { big: true }));
+    else nav.appendChild(button(t('wiz.saveClose'), () => go('qrap', { id: S.id }), 'primary', { big: true }));
+    return nav;
+  }
+
+  function goStep(n) {
+    const S = Wiz.S;
+    S.step = n;
+    if (S.id) setUrl({ page: 'wizard', id: S.id, step: n });
+    draw();
+    window.scrollTo(0, 0);
+  }
+  Wiz.goStep = goStep;
+
+  /** Saves one step on the server. mode: next | later | draft. */
+  async function save(step, mode) {
+    const S = Wiz.S;
+    const res = await api('apiSaveStep', { id: S.id, area: S.area, step: step, mode: mode, data: Wiz.data[step]() });
+    if (res.ok) { mergeServer(res.state, step); S.dirty = false; }
+    return res;
+  }
+
+  async function next() {
+    const S = Wiz.S;
+    const step = S.step;
+    const v = Wiz.validate[step]('next');
+    if (!setErrors(Wiz.errBox, v.errors, Wiz.body)) return;
+    if (!(await warnConfirm(v.warnings))) return;
+    const res = await save(step, 'next');
+    if (!res.ok) { showErrors(res, Wiz.errBox, Wiz.body); return; }
+    goStep(step + 1);
+  }
+
+  /** "Dokončí TL později": needs only the risk answer; ③ can be completed later. */
+  async function later() {
+    const v = Wiz.validate[4]('later');
+    if (!setErrors(Wiz.errBox, v.errors, Wiz.body)) return;
+    const res = await save(4, 'later');
+    if (!res.ok) { showErrors(res, Wiz.errBox, Wiz.body); return; }
+    goStep(5);
+  }
+
+  async function submit() {
+    const S = Wiz.S;
+    const errs = Wiz.validate[5]();
+    if (!setErrors(Wiz.errBox, errs)) return;
+    const res = await api('apiSubmitQrap', S.id);
+    if (!res.ok) { showErrors(res, Wiz.errBox); return; }
+    go('board', { area: S.area }, { extra: { toast: t('wiz.sent', { id: S.id }) } });
+  }
+
+  async function cancel() {
+    const S = Wiz.S;
+    if (S.dirty && !(await confirmDlg(t('wiz.leaveUnsaved'), t('btn.leave'), 'danger'))) return;
+    go(S.id ? 'qrap' : 'board', S.id ? { id: S.id } : { area: S.area });
+  }
+
+  /** Kiosk idle timeout: save what was typed as a draft, then back to the board. */
+  async function onIdle() {
+    const S = Wiz.S;
+    const step = S ? S.step : 0;
+    const hasText = S && (S.id || S.q.what || S.q.safety);
+    if (S && S.dirty && hasText && step >= 1 && step <= 4) {
+      const res = await save(step, 'draft');
+      toast(res.ok ? t('wiz.idleSaved', { id: S.id }) : t('wiz.idleNotSaved'), res.ok ? 'ok' : 'warn', 7000);
+    }
+    go('board', { area: S ? S.area : defaultArea() });
+  }
+
+  return { render: render, onIdle: onIdle, leave: () => {} };
+})();
+
+// ---------------------------------------------------------------- step 1: ① popis problému
+
+Wiz.steps[1] = function (body) {
+  const S = Wiz.S;
+  const q = S.q;
+  const set = k => v => { q[k] = v; S.dirty = true; };
+  const otherBox = field(t('f.how_found_other'), textInput(q.how_found_other, set('how_found_other')), { name: 'how_found_other', required: true });
+  otherBox.hidden = q.how_found !== 'OTHER';
+  const whatHint = h('div', { class: 'fld-hint' });
+  const updWhat = () => { whatHint.textContent = (q.what || '').trim().length < 10 ? t('wiz.whatShort') : ''; };
+  updWhat();
+  const locBox = h('div');
+  const drawLoc = () => {
+    clear(locBox);
+    const codes = locationsOf(S.area, q.zone);
+    if (codes.length) locBox.appendChild(segmented(codes.map(c => ({ value: c, label: c })), q.location_code, v => { q.location_code = v; S.dirty = true; drawLoc(); }));
+    locBox.appendChild(h('div', { style: { marginTop: '8px' } },
+      textInput(codes.indexOf(q.location_code) >= 0 ? '' : q.location_code, v => { q.location_code = v.trim(); S.dirty = true; },
+        { placeholder: t('wiz.locOther'), max: 100 })));
+  };
+  drawLoc();
+  const repBox = h('div');
+  const drawRep = () => { clear(repBox); if (q.repeat_7d === 'ANO') Wiz.repeatPicker(repBox); };
+  drawRep();
+  addKids(body, [
+    h('h2', null, t('sec.1')),
+    field(t('f.safety'), yesNo(q.safety, set('safety'), { lower: true }), { name: 'safety', required: true, hint: t('wiz.safetyHint') }),
+    field(t('f.what'), [textArea(q.what, v => { q.what = v; S.dirty = true; updWhat(); }, 3, 2000), whatHint], { name: 'what', required: true, hint: t('wiz.whatHint') }),
+    field(t('f.how_found'), segmented(listItems('HOW_FOUND'), q.how_found, v => { q.how_found = v; S.dirty = true; otherBox.hidden = v !== 'OTHER'; }, 'seg-grid'),
+      { name: 'how_found', required: true }),
+    otherBox,
+    field(t('f.detected_at'), h('div', { class: 'row' }, dtInput(q.detected_at, set('detected_at'), nowLocalInput()),
+      h('div', { style: { flex: '0 0 auto' } }, button(t('btn.now'), () => { q.detected_at = nowLocalInput(); S.dirty = true; Wiz.draw(); }))),
+    { name: 'detected_at', required: true, hint: t('wiz.whenHint') }),
+    field(t('f.zone'), segmented(zonesOf(S.area).map(z => ({ value: z, label: z })), q.zone, v => { q.zone = v; q.location_code = ''; S.dirty = true; drawLoc(); }, 'seg-grid'),
+      { name: 'zone', required: true }),
+    field(t('f.location_code'), locBox, { name: 'location_code', required: true }),
+    field(t('f.origin_zone'), selectEl(zonesOf(S.area), q.origin_zone, set('origin_zone'), t('lbl.unknown')), { name: 'origin_zone' }),
+    field(t('f.qty'), [h('div', { class: 'row' }, numInput(q.qty, set('qty')), segmented(listItems('UNIT'), q.unit, set('unit'))),
+      checkbox(t('f.nok_situation'), q.nok_situation, set('nok_situation'))], { name: 'qty', required: true }),
+    field(t('f.repeat_7d'), yesNo(q.repeat_7d, v => { q.repeat_7d = v; S.dirty = true; drawRep(); }, { yesKind: 'warn' }), { name: 'repeat_7d', required: true }),
+    field(null, repBox, { name: 'repeat_ref' }),
+    field(t('f.finder_name'), h('div', { class: 'row' },
+      personSelect(q.finder_name, set('finder_name'), S.area, { roles: ['OPERATOR', 'TL', 'SUPERVISOR'] }),
+      textInput(q.finder_badge, set('finder_badge'), { placeholder: t('wiz.badge'), inputmode: 'numeric', max: 40 })),
+    { name: 'finder_name', required: true }),
+    h('h3', null, t('wiz.optional')),
+    h('div', { class: 'row' },
+      field(t('f.material_no'), textInput(q.material_no, set('material_no'), { max: 60 }), { name: 'material_no' }),
+      field(t('f.hu_or_delivery_no'), textInput(q.hu_or_delivery_no, set('hu_or_delivery_no'), { max: 60 }), { name: 'hu_or_delivery_no' }),
+      field(t('f.supplier'), textInput(q.supplier, set('supplier'), { max: 100 }), { name: 'supplier' }))
+  ]);
+};
+
+/** "Stejný problém v posledních 7 dnech? = ANO": suggestions + manual number. */
+Wiz.repeatPicker = async function (box) {
+  const S = Wiz.S;
+  const q = S.q;
+  const list = h('div', null, loadingEl());
+  const manual = textInput(q.repeat_ref, v => { q.repeat_ref = v.trim().toUpperCase(); S.dirty = true; }, { placeholder: t('wiz.repeatManual'), max: 60 });
+  addKids(box, [h('div', { class: 'fld-label' }, t('wiz.repeatPick')), list, manual]);
+  const res = await api('apiSuggestRepeats', { area: S.area, id: S.id, material_no: q.material_no, zone: q.zone, what: q.what,
+    detected_at: q.detected_at });
+  clear(list);
+  if (!res.ok || !res.items.length) { list.appendChild(h('p', { class: 'muted' }, t('wiz.repeatNone'))); return; }
+  res.items.forEach(it => list.appendChild(h('button', {
+    type: 'button', class: 'sugg' + (q.repeat_ref === it.id ? ' on' : ''),
+    onclick: () => { q.repeat_ref = it.id; S.dirty = true; manual.value = it.id; list.querySelectorAll('.sugg').forEach(b => b.classList.remove('on')); }
+  }, h('b', null, it.id), ' · ', fmtDT(it.detected_at), ' · ', it.zone || '', h('br'), it.what)));
+  list.querySelectorAll('.sugg').forEach(b => b.addEventListener('click', () => b.classList.add('on')));
+};
+
+// ---------------------------------------------------------------- step 2: fotky
+
+Wiz.steps[2] = function (body) {
+  const S = Wiz.S;
+  const exc = field(t('f.photo_exception'), textArea(S.q.photo_exception, v => { S.q.photo_exception = v; S.dirty = true; }, 3, 500),
+    { name: 'photo_exception', required: true });
+  exc.hidden = !S.q.photoExc;
+  addKids(body, [
+    h('h2', null, t('wiz.s2')),
+    h('p', { class: 'muted' }, t('wiz.photoHint')),
+    h('div', { class: 'photo-slots' }, photoSlot('WRONG'), photoSlot('CORRECT')),
+    h('div', { style: { marginTop: '16px' } }, checkbox(t('wiz.photoExc'), S.q.photoExc, v => {
+      S.q.photoExc = v; S.dirty = true; exc.hidden = !v; if (!v) S.q.photo_exception = '';
+    })),
+    exc
+  ]);
+
+  function photoSlot(kind) {
+    const cur = S.photos[kind];
+    const frame = h('div', { class: 'ph-frame' });
+    if (cur) {
+      const img = h('img', { alt: t('wiz.photo' + kind) });
+      loadPhoto(cur.thumb_file_id, img);
+      frame.appendChild(img);
+    } else {
+      frame.appendChild(h('div', { class: 'ph-empty' }, t('wiz.noPhoto')));
+    }
+    const input = h('input', { type: 'file', accept: 'image/*', capture: 'environment', class: 'visually-hidden',
+      onchange: e => upload(kind, e.target.files && e.target.files[0]) });
+    return h('div', { class: 'photo-slot ph-' + kind.toLowerCase() },
+      h('div', { class: 'ph-title' }, t('wiz.photo' + kind)),
+      frame,
+      h('label', { class: 'btn btn-big ' + (kind === 'WRONG' ? 'btn-danger' : 'btn-ok') }, input,
+        cur ? t('wiz.retake') : t('wiz.takePhoto')));
+  }
+
+  async function upload(kind, file) {
+    if (!file) return;
+    let full;
+    let thumb;
+    try {
+      full = await resizeImage(file, 1600, 0.8);
+      thumb = await resizeImage(file, 400, 0.7);
+    } catch (e) {
+      toast(t('err.E_PHOTO_READ'), 'err');
+      return;
+    }
+    toast(t('wiz.uploading'), '', 30000);
+    const res = await api('apiUploadPhoto', { qrapId: S.id, kind: kind, full: full, thumb: thumb });
+    if (!res.ok) { showErrors(res); return; }
+    photoCache[res.photo.thumb_file_id] = 'data:image/jpeg;base64,' + thumb;
+    S.photos[kind] = res.photo;
+    toast(t('wiz.photoSaved'), 'ok');
+    Wiz.draw();
+  }
+};
+
+Wiz.data[1] = () => {
+  const q = Wiz.S.q;
+  const out = {};
+  ['safety', 'what', 'how_found', 'how_found_other', 'detected_at', 'zone', 'location_code', 'origin_zone', 'qty', 'unit',
+    'nok_situation', 'repeat_7d', 'repeat_ref', 'finder_name', 'finder_badge', 'material_no', 'hu_or_delivery_no', 'supplier']
+    .forEach(k => { out[k] = q[k] === undefined ? '' : q[k]; });
+  return out;
+};
+Wiz.data[2] = () => ({ photo_exception: Wiz.S.q.photoExc ? Wiz.S.q.photo_exception : '' });
+</script>
+
+  <script>
+'use strict';
+/*
+ * ViewWizardSteps – wizard steps 3 (② upozornění), 4 (③ okamžitá opatření), 5 (kontrola a odeslání)
+ * and the browser-side checks of every step. The server repeats every check (never trust the browser).
+ */
+
+// ---------------------------------------------------------------- step 3: ② kdo byl upozorněn?
+
+Wiz.steps[3] = function (body) {
+  const S = Wiz.S;
+  const riskAno = S.q.risk_stock_shipped === 'ANO';
+  if (riskAno && S.roles.indexOf('QUALITY') < 0) S.roles.push('QUALITY');
+  const other = field(t('f.alert_other'), textInput(S.other_text, v => { S.other_text = v; S.dirty = true; }, { max: 200 }),
+    { name: 'alert_other', required: true });
+  other.hidden = S.roles.indexOf('OTHER') < 0;
+  const options = listItems('ALERT_ROLE').map(o => Object.assign(o, { locked: riskAno && o.value === 'QUALITY' }));
+  addKids(body, [
+    h('h2', null, t('sec.2')),
+    h('p', { class: 'muted' }, t('wiz.alertHint')),
+    field(null, multiToggle(options, S.roles, v => { S.roles = v; S.dirty = true; other.hidden = v.indexOf('OTHER') < 0; }, 'seg-grid'),
+      { name: 'roles' }),
+    riskAno ? h('p', { class: 'warnbox' }, t('wiz.qualityAuto')) : null,
+    other
+  ]);
+};
+
+// ---------------------------------------------------------------- step 4: ③ okamžitá opatření <24h
+
+Wiz.steps[4] = function (body) {
+  const S = Wiz.S;
+  const q = S.q;
+  const set = k => v => { q[k] = v; S.dirty = true; };
+  if (!S.ia.some(a => !a.remove)) S.ia.push({ id: '', type: '', text: '', owner_name: '', done_at: '', remove: false });
+
+  const checkBox = h('div');
+  const drawCheck = () => {
+    clear(checkBox);
+    if (q.risk_stock_shipped !== 'ANO') return;
+    addKids(checkBox, [
+      h('div', { class: 'warnbox' }, t('wiz.riskAno')),
+      h('div', { class: 'row' },
+        field(t('f.checked_qty'), numInput(q.checked_qty, set('checked_qty')), { name: 'checked_qty' }),
+        field(t('f.wrong_found_qty'), numInput(q.wrong_found_qty, set('wrong_found_qty')), { name: 'wrong_found_qty' })),
+      checkbox(t('f.check_in_progress'), q.check_in_progress, set('check_in_progress'))
+    ]);
+  };
+  drawCheck();
+
+  const iaBox = h('div');
+  const drawIa = () => {
+    clear(iaBox);
+    S.ia.filter(a => !a.remove).forEach((a, i) => iaBox.appendChild(iaRow(a, i + 1)));
+    iaBox.appendChild(button(t('wiz.addAction'), () => {
+      S.ia.push({ id: '', type: '', text: '', owner_name: '', done_at: '', remove: false });
+      S.dirty = true;
+      drawIa();
+    }, 'ghost'));
+  };
+  function iaRow(a, n) {
+    const upd = k => v => { a[k] = v; S.dirty = true; };
+    const doneIn = dtInput(a.done_at, upd('done_at'), nowLocalInput());
+    return h('div', { class: 'ia-row' },
+      h('div', { class: 'fld-label' }, t('wiz.actionN', { n: n })),
+      h('div', { class: 'row' },
+        field(t('f.ia_type'), selectEl(listItems('ACTION_TYPE'), a.type, upd('type')), { name: 'ia' + n + '_type' }),
+        field(t('f.ia_owner'), personSelect(a.owner_name, upd('owner_name'), S.area), { name: 'ia' + n + '_owner_name' })),
+      field(t('f.ia_text'), textInput(a.text, upd('text'), { max: 500, placeholder: t('wiz.actionTextHint') }), { name: 'ia' + n + '_text' }),
+      h('div', { class: 'row' },
+        field(t('f.ia_done'), h('div', { class: 'row' }, doneIn, h('div', { style: { flex: '0 0 auto' } },
+          button(t('btn.doneNow'), () => { a.done_at = nowLocalInput(); doneIn.value = a.done_at; S.dirty = true; }, 'ok'))),
+        { name: 'ia' + n + '_done' }),
+        h('div', { style: { flex: '0 0 auto', alignSelf: 'center' } }, button(t('btn.remove'), () => {
+          if (a.id) a.remove = true; else S.ia.splice(S.ia.indexOf(a), 1);
+          S.dirty = true;
+          drawIa();
+        }, 'ghost'))));
+  }
+  drawIa();
+
+  const restored = field(t('f.restored_at'), h('div', { class: 'row' }, dtInput(q.restored_at, set('restored_at'), nowLocalInput()),
+    h('div', { style: { flex: '0 0 auto' } }, button(t('btn.now'), () => { q.restored_at = nowLocalInput(); S.dirty = true; Wiz.draw(); }))),
+  { name: 'restored_at', hint: t('wiz.restoredHint') });
+  restored.hidden = q.process_stopped !== 'ANO';
+
+  addKids(body, [
+    h('h2', null, t('sec.3')),
+    field(t('f.risk_stock_shipped'), yesNo(q.risk_stock_shipped, v => {
+      q.risk_stock_shipped = v; S.dirty = true; drawCheck();
+      if (Wiz.laterBtn) Wiz.laterBtn.disabled = false;
+    }), { name: 'risk_stock_shipped', required: true, hint: t('wiz.riskHint') }),
+    checkBox,
+    h('h3', null, t('f.ia'), h('span', { class: 'req' }, ' *')),
+    iaBox,
+    field(t('f.process_stopped'), yesNo(q.process_stopped, v => { q.process_stopped = v; S.dirty = true; restored.hidden = v !== 'ANO'; },
+      { lower: true, yesKind: 'warn' }), { name: 'process_stopped', required: true }),
+    restored,
+    h('p', { class: 'muted' }, t('wiz.laterHint'))
+  ]);
+};
+
+/** Which ③ rules are not met yet (same codes as section3State_ on the server). */
+Wiz.s3Missing = function () {
+  const q = Wiz.S.q;
+  const ia = Wiz.S.ia.filter(a => !a.remove);
+  const m = [];
+  const blank = v => v === '' || v === undefined || v === null;
+  if (!q.risk_stock_shipped) m.push('RISK');
+  if (q.risk_stock_shipped === 'ANO') {
+    if (q.check_in_progress) m.push('CHECK_IN_PROGRESS');
+    else if (blank(q.checked_qty) || blank(q.wrong_found_qty)) m.push('CHECK_DATA');
+  }
+  if (!ia.length) m.push('NO_ACTION');
+  else if (ia.some(a => !a.done_at)) m.push('ACTION_OPEN');
+  if (!q.process_stopped) m.push('PROCESS');
+  else if (q.process_stopped === 'ANO' && !q.restored_at) m.push('NOT_RESTORED');
+  return m;
+};
+
+// ---------------------------------------------------------------- step 5: kontrola a odeslání
+
+Wiz.steps[5] = function (body) {
+  const S = Wiz.S;
+  const q = S.q;
+  const edit = n => h('div', { class: 'btn-row' }, button(t('btn.edit'), () => Wiz.goStep(n), 'ghost'));
+  const miss = Wiz.s3Missing();
+  const thumbs = h('div', { class: 'thumbs' }, ['WRONG', 'CORRECT'].map(k => {
+    const p = S.photos[k];
+    if (!p) return null;
+    const img = h('img', { alt: t('wiz.photo' + k) });
+    loadPhoto(p.thumb_file_id, img);
+    return h('div', { class: 'thumb thumb-' + k.toLowerCase() }, h('b', null, t('wiz.photo' + k)), img);
+  }));
+  addKids(body, [
+    h('h2', null, t('wiz.s5')),
+    sectionCard('1', t('sec.1'), 'op', kvList([
+      [t('f.safety'), yn(q.safety, true)],
+      [t('f.what'), q.what],
+      [t('f.how_found'), q.how_found === 'OTHER' ? t('lbl.other') + ': ' + (q.how_found_other || '') : listLabel('HOW_FOUND', q.how_found)],
+      [t('f.detected_at'), fmtDT(localToMs(q.detected_at))],
+      [t('f.where'), [q.zone, q.location_code].filter(Boolean).join(' / ')],
+      [t('f.qty'), q.qty === '' || q.qty === undefined ? '' : q.qty + ' ' + listLabel('UNIT', q.unit) + (q.nok_situation ? ' · ' + t('f.nok_situation') : '')],
+      [t('f.repeat_7d'), q.repeat_7d === 'ANO' ? t('lbl.yes') + ' → ' + (q.repeat_ref || '?') : yn(q.repeat_7d)],
+      [t('f.finder_name'), [q.finder_name, q.finder_badge].filter(Boolean).join(' · ')],
+      [t('f.material_no'), q.material_no], [t('f.hu_or_delivery_no'), q.hu_or_delivery_no], [t('f.supplier'), q.supplier]
+    ]), thumbs, q.photoExc ? h('p', null, h('b', null, t('f.photo_exception') + ': '), q.photo_exception) : null, edit(1)),
+    sectionCard('2', t('sec.2'), 'op', h('p', null, S.roles.map(r => listLabel('ALERT_ROLE', r)).join(', ') || '–',
+      S.other_text && S.roles.indexOf('OTHER') >= 0 ? ' (' + S.other_text + ')' : ''), edit(3)),
+    sectionCard('3', t('sec.3'), 'op', kvList([
+      [t('f.risk_stock_shipped'), yn(q.risk_stock_shipped)],
+      [t('f.check'), q.risk_stock_shipped === 'ANO' ? (q.check_in_progress ? t('f.check_in_progress') :
+        (q.checked_qty || 0) + ' / ' + (q.wrong_found_qty || 0) + ' ' + t('lbl.pcs')) : ''],
+      [t('f.process_stopped'), yn(q.process_stopped, true) + (q.restored_at ? ' → ' + fmtDT(localToMs(q.restored_at)) : '')]
+    ]), table([t('f.ia_type'), t('f.ia_text'), t('f.ia_owner'), t('f.ia_done')], S.ia.filter(a => !a.remove).map(a =>
+      [listLabel('ACTION_TYPE', a.type), a.text, a.owner_name, a.done_at ? fmtDT(localToMs(a.done_at)) : t('lbl.open')])),
+    miss.length ? h('div', { class: 'warnbox' }, t('wiz.s3Later') + ' ' + miss.map(m => t('s3.' + m)).join(', '))
+      : h('div', { class: 'okbox' }, t('wiz.s3Complete')), edit(4)),
+    S.status === 'DRAFT' ? h('p', { class: 'muted' }, t('wiz.sendHint')) : null
+  ]);
+};
+
+// ---------------------------------------------------------------- checks (mirror of the server rules)
+
+Wiz.validate[1] = function () {
+  const q = Wiz.S.q;
+  const e = [];
+  const w = [];
+  const req = f => e.push({ code: 'E_REQUIRED', field: f });
+  if (!q.safety) req('safety');
+  const what = String(q.what || '').trim();
+  if (!what) req('what'); else if (what.length < 10) w.push({ code: 'W_WHAT_SHORT' });
+  if (!q.how_found) req('how_found');
+  else if (q.how_found === 'OTHER' && !String(q.how_found_other || '').trim()) req('how_found_other');
+  const det = localToMs(q.detected_at);
+  if (!q.detected_at || isNaN(det)) req('detected_at');
+  else if (det > Date.now() + 5 * 60000) e.push({ code: 'E_FUTURE', field: 'detected_at' });
+  else if (det < Date.now() - 24 * 3600000) w.push({ code: 'W_OLD_DETECTION' });
+  if (!q.zone) req('zone');
+  if (!q.location_code) req('location_code');
+  if (q.qty === '' || q.qty === undefined) req('qty');
+  else if (!Number.isInteger(q.qty) || q.qty < 0) e.push({ code: 'E_INVALID', field: 'qty' });
+  else if (q.qty === 0 && !q.nok_situation) e.push({ code: 'E_QTY_ZERO', field: 'qty' });
+  else if (q.qty > 0 && !q.unit) req('unit');
+  if (!q.repeat_7d) req('repeat_7d');
+  else if (q.repeat_7d === 'ANO' && !q.repeat_ref) e.push({ code: 'E_REPEAT_REF', field: 'repeat_ref' });
+  if (!q.finder_name && !String(q.finder_badge || '').trim()) req('finder_name');
+  return { errors: e, warnings: w };
+};
+
+Wiz.validate[2] = function () {
+  const S = Wiz.S;
+  const e = [];
+  const photos = S.photos.WRONG && S.photos.CORRECT;
+  if (!photos) {
+    if (!S.q.photoExc) e.push({ code: 'E_PHOTOS' });
+    else if (String(S.q.photo_exception || '').trim().length < 3) e.push({ code: 'E_REQUIRED', field: 'photo_exception' });
+  }
+  return { errors: e, warnings: [] };
+};
+
+Wiz.validate[3] = function () {
+  const S = Wiz.S;
+  const e = [];
+  if (!S.roles.length) e.push({ code: 'E_ALERT_NONE' });
+  if (S.roles.indexOf('OTHER') >= 0 && !String(S.other_text || '').trim()) e.push({ code: 'E_REQUIRED', field: 'alert_other' });
+  return { errors: e, warnings: [] };
+};
+
+Wiz.validate[4] = function (mode) {
+  const q = Wiz.S.q;
+  const e = [];
+  const num = v => v !== '' && v !== undefined && v !== null;
+  if (!q.risk_stock_shipped) e.push({ code: 'E_REQUIRED', field: 'risk_stock_shipped' });
+  if (num(q.checked_qty) && num(q.wrong_found_qty) && q.wrong_found_qty > q.checked_qty) {
+    e.push({ code: 'E_WRONG_GT_CHECKED', field: 'wrong_found_qty' });
+  }
+  const det = localToMs(q.detected_at);
+  if (q.process_stopped === 'ANO' && q.restored_at && localToMs(q.restored_at) < det) {
+    e.push({ code: 'E_RESTORED_BEFORE', field: 'restored_at' });
+  }
+  Wiz.S.ia.filter(a => !a.remove).forEach((a, i) => {
+    const n = i + 1;
+    if (!a.type) e.push({ code: 'E_IA_ROW', row: n, field: 'ia' + n + '_type' });
+    if (!String(a.text || '').trim()) e.push({ code: 'E_IA_ROW', row: n, field: 'ia' + n + '_text' });
+    if (!a.owner_name) e.push({ code: 'E_IA_ROW', row: n, field: 'ia' + n + '_owner_name' });
+    if (a.done_at) {
+      const d = localToMs(a.done_at);
+      if (d > Date.now() + 5 * 60000) e.push({ code: 'E_IA_DONE_FUTURE', row: n, field: 'ia' + n + '_done' });
+      else if (d < det) e.push({ code: 'E_IA_DONE_BEFORE', row: n, field: 'ia' + n + '_done' });
+    }
+  });
+  if (mode === 'next' && !e.length) {
+    const miss = Wiz.s3Missing();
+    if (miss.length) e.push({ code: 'E_S3_INCOMPLETE', missing: miss });
+  }
+  return { errors: e, warnings: [] };
+};
+
+/** Before "Odeslat". Returns a list of errors. */
+Wiz.validate[5] = function () {
+  const S = Wiz.S;
+  const e = [];
+  if (!S.q.s1_done_at) e.push({ code: 'E_S1_INCOMPLETE' });
+  e.push.apply(e, Wiz.validate[2]().errors);
+  e.push.apply(e, Wiz.validate[3]().errors);
+  if (!S.q.risk_stock_shipped) e.push({ code: 'E_REQUIRED', field: 'risk_stock_shipped' });
+  return e;
+};
+
+Wiz.data[3] = () => ({ roles: Wiz.S.roles.slice(), other_text: Wiz.S.other_text || '' });
+Wiz.data[4] = () => {
+  const q = Wiz.S.q;
+  const val = v => (v === undefined || v === null ? '' : v);
+  return {
+    risk_stock_shipped: val(q.risk_stock_shipped), checked_qty: val(q.checked_qty), wrong_found_qty: val(q.wrong_found_qty),
+    check_in_progress: !!q.check_in_progress, process_stopped: val(q.process_stopped), restored_at: val(q.restored_at),
+    actions: Wiz.S.ia.filter(a => a.id || a.type || a.text || a.owner_name).map(a => ({ id: a.id, type: a.type, text: a.text,
+      owner_name: a.owner_name, done_at: a.done_at, remove: a.remove }))
+  };
+};
+</script>
+
+  <script>
+'use strict';
+/*
+ * ViewQrap – read-only detail of one QRAP (?page=qrap&id=…): all 7 sections in the order of the paper row,
+ * photos, the buttons the current user may use next, a QR code to the supervisor page and the admin tools.
+ */
+App.views.qrap = (() => {
+  async function render(root, params) {
+    root.appendChild(loadingEl());
+    const res = await api('apiGetQrap', params.id);
+    if (!root.isConnected) return;
+    clear(root);
+    if (!res.ok) { root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
+    draw(root, res.detail);
+  }
+
+  function draw(root, d) {
+    const q = d.q;
+    addKids(root, [topCard(d), actionButtons(d), sec1(d), sec2(d), sec3(d), sec4(d), sec5(d), sec6(d), sec7(d), adminBox(d)]);
+  }
+
+  function topCard(d) {
+    const q = d.q;
+    const related = [];
+    if (q.parent_id) related.push([t('f.parent_id'), qrapLink(q.parent_id)]);
+    if (q.assign_ref) related.push([t('f.assign_ref'), qrapLink(q.assign_ref)]);
+    return h('div', { class: 'card top-card' },
+      h('div', { class: 'grow' },
+        h('h1', null, q.qrap_id, q.safety === 'ANO' ? h('span', { class: 'badge badge-safety' }, 'SAFETY') : null,
+          q.archived === true ? h('span', { class: 'badge badge-archived' }, t('lbl.archived')) : null),
+        h('p', null, statusBadge(q.status), d.waiting ? ' ' + t('board.waitFor') + ' ' + t('wait.' + d.waiting) : ''),
+        chipsEl(d.chips),
+        kvList([[t('f.area'), q.area_code + ' · ' + areaName(q.area_code)], [t('f.level'), q.level]].concat(related)),
+        h('p', { class: 'small muted' }, q.template_version)),
+      h('div', null, qrCode(d.links.decide), h('div', { class: 'small muted', style: { maxWidth: '190px' } }, t('qrap.qrHint'))));
+  }
+
+  /** Buttons for what this user may do next (flags come from the server). */
+  function actionButtons(d) {
+    const q = d.q;
+    const c = d.can;
+    const b = [];
+    if (c.editQr && q.status === 'DRAFT') b.push(button(t('qrap.continue'), () => go('wizard', { id: q.qrap_id, step: 1 }), 'op', { big: true }));
+    if (c.editQr && q.status !== 'DRAFT') {
+      b.push(button(t('qrap.editQr'), () => go('wizard', { id: q.qrap_id, step: 1 }), 'ghost'));
+      if (!d.s3.complete) b.push(button(t('qrap.finishS3'), () => go('wizard', { id: q.qrap_id, step: 4 }), 'op', { big: true }));
+    }
+    if (c.decide || c.shiftInfo) b.push(button(t('qrap.decide'), () => go('decide', { id: q.qrap_id }), 'primary', { big: true }));
+    if (['ANALYSIS', 'ACTIONS_OPEN', 'VERIFY', 'CLOSED'].indexOf(q.status) >= 0) {
+      b.push(button(t('qrap.analysis'), () => go('analysis', { id: q.qrap_id }), c.analyze ? 'pil' : 'ghost', { big: c.analyze }));
+    }
+    if (c.effect) b.push(button(t('qrap.effect'), () => go('effect', { id: q.qrap_id }), 'ok', { big: true }));
+    if (c.close) b.push(button(t('qrap.close'), () => go('close', { id: q.qrap_id }), 'primary', { big: true }));
+    if (c.assess) b.push(button(t('qrap.assess'), () => go('assess', { id: q.qrap_id }), 'mgr'));
+    b.push(button(t('nav.board'), () => go('board', { area: q.area_code }), 'ghost'));
+    return h('div', { class: 'btn-row' }, b);
+  }
+
+  function sec1(d) {
+    const q = d.q;
+    return sectionCard('1', t('sec.1'), 'op', kvList([
+      [t('f.safety'), yn(q.safety, true)],
+      [t('f.what'), q.what],
+      [t('f.how_found'), listLabel('HOW_FOUND', q.how_found)],
+      [t('f.detected_at'), fmtDT(q.detected_at)],
+      [t('f.where'), [q.zone, q.location_code].filter(Boolean).join(' / ')],
+      [t('f.origin_zone'), q.origin_zone],
+      [t('f.qty'), q.qty === '' ? '' : q.qty + ' ' + listLabel('UNIT', q.unit) + (q.nok_situation === true ? ' · ' + t('f.nok_situation') : '')],
+      [t('f.repeat_7d'), q.repeat_7d === 'ANO' ? h('span', null, t('lbl.yes') + ' → ', qrapLink(q.repeat_ref)) : yn(q.repeat_7d)],
+      [t('f.finder_name'), [q.finder_name, q.finder_badge].filter(Boolean).join(' · ')],
+      [t('f.material_no'), q.material_no], [t('f.hu_or_delivery_no'), q.hu_or_delivery_no], [t('f.supplier'), q.supplier],
+      [t('f.sent_at'), fmtDT(q.sent_at)]
+    ]), photos(d), q.photo_exception ? h('p', null, h('b', null, t('f.photo_exception') + ': '), q.photo_exception) : null);
+  }
+
+  function photos(d) {
+    return h('div', { class: 'thumbs' }, ['WRONG', 'CORRECT'].map(kind => {
+      const p = d.photos.find(x => x.kind === kind);
+      if (!p) return null;
+      const img = h('img', { alt: t('wiz.photo' + kind) });
+      loadPhoto(p.thumb_file_id, img);
+      return h('div', { class: 'thumb thumb-' + kind.toLowerCase(), onclick: () => showPhoto(p.file_id, t('wiz.photo' + kind)) },
+        h('b', null, t('wiz.photo' + kind)), img);
+    }));
+  }
+
+  function sec2(d) {
+    return sectionCard('2', t('sec.2'), 'op', d.alerts.length ? table([t('f.role'), t('f.notified_to'), t('f.at')], d.alerts.map(a => [
+      listLabel('ALERT_ROLE', a.role_code) + (a.other_text ? ' (' + a.other_text + ')' : ''), a.notified_to, fmtDT(a.notified_at)]))
+      : h('p', { class: 'muted' }, '–'));
+  }
+
+  function sec3(d) {
+    const q = d.q;
+    return sectionCard('3', t('sec.3'), 'op', kvList([
+      [t('f.risk_stock_shipped'), yn(q.risk_stock_shipped)],
+      [t('f.check'), q.risk_stock_shipped === 'ANO' ? (q.check_in_progress === true ? t('f.check_in_progress')
+        : (q.checked_qty === '' ? '–' : q.checked_qty) + ' / ' + (q.wrong_found_qty === '' ? '–' : q.wrong_found_qty) + ' ' + t('lbl.pcs')) : ''],
+      [t('f.process_stopped'), yn(q.process_stopped, true) + (q.restored_at ? ' → ' + fmtDT(q.restored_at) : '')],
+      [t('f.containment_done_at'), fmtDT(q.containment_done_at)]
+    ]), d.ia.length ? table([t('f.ia_type'), t('f.ia_text'), t('f.ia_owner'), t('f.ia_done')], d.ia.map(a =>
+      [listLabel('ACTION_TYPE', a.type), a.text, a.owner_name, a.done_at ? fmtDT(a.done_at) : t('lbl.open')])) : null,
+    d.s3.complete ? h('div', { class: 'okbox' }, t('wiz.s3Complete'))
+      : h('div', { class: 'warnbox' }, t('wiz.s3Later') + ' ' + d.s3.missing.map(m => t('s3.' + m)).join(', ')),
+    d.can.editCheck && !d.can.editQr ? checkForm(d) : null);
+  }
+
+  /** Quality may correct the ③ check data. */
+  function checkForm(d) {
+    const v = { checked_qty: d.q.checked_qty, wrong_found_qty: d.q.wrong_found_qty, check_in_progress: d.q.check_in_progress === true };
+    const box = errorBox();
+    const form = h('div', { class: 'card' }, h('h3', null, t('qrap.qualityCheck')), box,
+      h('div', { class: 'row' },
+        field(t('f.checked_qty'), numInput(v.checked_qty, x => { v.checked_qty = x; }), { name: 'checked_qty' }),
+        field(t('f.wrong_found_qty'), numInput(v.wrong_found_qty, x => { v.wrong_found_qty = x; }), { name: 'wrong_found_qty' })),
+      checkbox(t('f.check_in_progress'), v.check_in_progress, x => { v.check_in_progress = x; }),
+      button(t('btn.save'), async () => {
+        const res = await api('apiSaveStep', { id: d.q.qrap_id, step: 4, mode: 'later', data: v });
+        if (!res.ok) { showErrors(res, box, form); return; }
+        toast(t('msg.saved'), 'ok');
+        render(clear(byId('app')), App.params);
+      }, 'primary'));
+    return form;
+  }
+
+  function sec4(d) {
+    const q = d.q;
+    const shifts = App.set.shifts.map(s => {
+      const r = d.shiftInfo.find(x => x.shift_code === s.code);
+      return [s.name, r ? personName(r.informed_by) + ' · ' + fmtDT(r.informed_at) : '–'];
+    });
+    return sectionCard('4', t('sec.4'), 'sup',
+      h('h3', null, t('f.shiftInfo')), kvList(shifts),
+      kvList([
+        [t('f.decision'), q.decision ? t('dec.' + q.decision) : t('lbl.notYet')],
+        [t('f.decision_comment'), q.decision_comment],
+        [t('f.pilots'), d.pilots.map(p => p.name).join(', ')],
+        [t('f.assign_ref'), q.assign_ref ? qrapLink(q.assign_ref) : ''],
+        [t('f.signed'), q.decided_by ? personName(q.decided_by) + ' · ' + fmtDT(q.decided_at) : '']
+      ]));
+  }
+
+  function sec5(d) {
+    if (d.q.status === 'CLOSED_SOLVED' || d.q.status === 'ESCALATED') return sectionCard('5', t('sec.5'), 'pil', h('p', { class: 'muted' }, t('lbl.notNeeded')));
+    const chains = ['OCCURRENCE', 'NON_DETECTION'].map(ch => {
+      const steps = d.why.filter(w => w.chain === ch && w.text).sort((a, b) => a.step - b.step);
+      if (!steps.length) return null;
+      return h('div', null, h('h3', null, t('why.' + ch)), h('ol', null, steps.map(w => h('li', { class: w.is_root === true ? 'why-root' : '' },
+        w.text, w.is_root === true ? ' ← ' + t('why.root') : ''))));
+    });
+    return sectionCard('5', t('sec.5'), 'pil', chains.some(Boolean) ? chains : h('p', { class: 'muted' }, t('lbl.notYet')));
+  }
+
+  function sec6(d) {
+    const q = d.q;
+    if (q.status === 'CLOSED_SOLVED' || q.status === 'ESCALATED') return sectionCard('6', t('sec.6'), 'pil', h('p', { class: 'muted' }, t('lbl.notNeeded')));
+    const acts = d.actions.filter(a => a.status !== 'REMOVED');
+    return sectionCard('6', t('sec.6'), 'pil',
+      kvList([[t('f.learned'), q.learned], [t('f.std_update'), q.std_update ? yn(q.std_update) + (q.std_update_ref ? ' → ' + q.std_update_ref : '') : '']]),
+      acts.length ? table([t('f.action_text'), t('f.root_step'), t('f.pilot'), t('f.planned'), t('f.done'), t('f.status')], acts.map(a =>
+        [a.text, a.root_step, a.pilot_name, fmtD(a.planned), fmtD(a.done), t('ast.' + a.status) + (a.late ? ' · ' + t('lbl.late') : '')]),
+      i => (acts[i].late ? 'late' : '')) : null,
+      h('h3', null, t('f.effect'), ' (', t('eff.round', { n: d.eff.round }), ')'),
+      h('div', { class: 'slots' }, d.eff.slots.map((s, i) => h('div', { class: 'slot' + (s ? ' slot-' + s.result : '') },
+        h('b', null, (i + 1) + '. '), s ? [t('eff.' + s.result), h('br'), fmtD(s.shift_date) + ' · ' + shiftName(s.shift_code)] : '–'))),
+      kvList([[t('f.closed'), q.status === 'CLOSED' && q.closed_by ? personName(q.closed_by) + ' · ' + fmtDT(q.closed_at) : '']]));
+  }
+
+  function sec7(d) {
+    const a = d.assess[0];
+    if (!a) return sectionCard('7', t('sec.7'), 'mgr', h('p', { class: 'muted' }, t('assess.none')));
+    return sectionCard('7', t('sec.7'), 'mgr',
+      kvList([1, 2, 3, 4, 5].map(n => [t('assess.c' + n), t('assessVal.' + a['c' + n])]).concat([
+        [t('f.ojt_with'), a.ojt_with], [t('f.feedback'), a.feedback + (a.feedback_type ? ' (' + t('fb.' + a.feedback_type) + ')' : '')],
+        [t('f.assessor'), personName(a.assessor) + ' · ' + fmtDT(a.at)]])),
+      h('p', { class: 'small muted' }, t('assess.count', { n: d.assess.length })));
+  }
+
+  /** Admin: unlock ①–③ / ④, reopen, archive. A reason is always required. */
+  function adminBox(d) {
+    if (!d.can.admin) return null;
+    const q = d.q;
+    const run = async (fn, payload, title) => {
+      const reason = await promptDlg(title, t('admin.reason'), 5);
+      if (!reason) return;
+      const res = await api(fn, Object.assign({ id: q.qrap_id, reason: reason }, payload));
+      if (!res.ok) { showErrors(res); return; }
+      toast(t('msg.saved'), 'ok');
+      render(clear(byId('app')), App.params);
+    };
+    const locked = String(q.locked_parts || '').split(',');
+    return h('section', { class: 'card' }, h('h2', null, t('admin.title')), h('p', { class: 'small muted' }, t('admin.locked') + ': ' + (q.locked_parts || '–')),
+      h('div', { class: 'btn-row' },
+        locked.indexOf('QR') >= 0 && ['DRAFT', 'QR_OPEN', 'WAIT_DECISION'].indexOf(q.status) >= 0
+          ? button(t('admin.unlockQr'), () => run('apiAdminUnlock', { part: 'QR' }, t('admin.unlockQr')), 'danger') : null,
+        ['ANALYSIS', 'CLOSED_SOLVED'].indexOf(q.status) >= 0
+          ? button(t('admin.unlockDecision'), () => run('apiAdminUnlock', { part: 'DECISION' }, t('admin.unlockDecision')), 'danger') : null,
+        ['CLOSED', 'CLOSED_SOLVED'].indexOf(q.status) >= 0 ? button(t('admin.reopen'), () => run('apiAdminReopen', {}, t('admin.reopen')), 'danger') : null,
+        button(q.archived === true ? t('admin.unarchive') : t('admin.archive'),
+          () => run('apiAdminArchive', { archived: q.archived !== true }, q.archived === true ? t('admin.unarchive') : t('admin.archive')), 'ghost')));
+  }
+
+  return { render: render };
+})();
+</script>
+
+  <script>
+'use strict';
+/*
+ * ViewDecide – supervisor pages for the phone.
+ *   ?page=decide&id=…  ④ Rozhodnutí OJT: shift ticks, one decision, pilots, comment, signature.
+ *   ?page=close&id=…   Uzavření: closure checklist + signature.
+ * The server checks every guard again; the page only shows them early.
+ */
+App.views.decide = (() => {
+  let D = null;       // detail from the server
+  let form = null;    // {decision, comment, pilots[]}
+
+  async function render(root, params) {
+    root.appendChild(loadingEl());
+    const res = await api('apiGetQrap', params.id);
+    if (!root.isConnected) return;
+    clear(root);
+    if (!res.ok) { root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
+    D = res.detail;
+    form = { decision: '', comment: '', pilots: [] };
+    draw(root);
+  }
+
+  function draw(root) {
+    const q = D.q;
+    clear(root);
+    addKids(root, [
+      h('h1', null, t('dec.title'), ' · ', q.qrap_id),
+      summary(),
+      shiftsCard(),
+      q.decision ? decidedCard() : decisionCard(),
+      h('div', { class: 'btn-row' },
+        button(t('qrap.detail'), () => go('qrap', { id: q.qrap_id }), 'ghost'),
+        D.can.assess ? button(t('qrap.assess'), () => go('assess', { id: q.qrap_id }), 'mgr') : null,
+        D.can.close ? button(t('qrap.close'), () => go('close', { id: q.qrap_id }), 'primary') : null,
+        D.can.analyze ? button(t('qrap.analysis'), () => go('analysis', { id: q.qrap_id }), 'pil') : null)
+    ]);
+  }
+
+  /** Short facts of ①–③ so the supervisor can decide at the board. */
+  function summary() {
+    const q = D.q;
+    const photos = h('div', { class: 'thumbs' }, D.photos.filter(p => p.kind !== 'DOC').map(p => {
+      const img = h('img', { alt: '' });
+      loadPhoto(p.thumb_file_id, img);
+      return h('div', { class: 'thumb thumb-' + p.kind.toLowerCase(), style: { width: '46%' }, onclick: () => showPhoto(p.file_id) },
+        h('b', null, t('wiz.photo' + p.kind)), img);
+    }));
+    return h('div', { class: 'card sec sec-op' },
+      h('p', null, statusBadge(q.status), q.safety === 'ANO' ? h('span', { class: 'badge badge-safety' }, 'SAFETY') : null,
+        q.repeat_7d === 'ANO' ? h('span', { class: 'badge badge-rep' }, t('board.repeat')) : null),
+      h('p', { style: { fontSize: '20px', fontWeight: '700' } }, q.what),
+      kvList([
+        [t('f.detected_at'), fmtDT(q.detected_at)],
+        [t('f.where'), [q.zone, q.location_code].filter(Boolean).join(' / ')],
+        [t('f.qty'), q.qty === '' ? '' : q.qty + ' ' + listLabel('UNIT', q.unit)],
+        [t('f.repeat_7d'), q.repeat_7d === 'ANO' ? h('span', null, t('lbl.yes') + ' → ', qrapLink(q.repeat_ref)) : yn(q.repeat_7d)],
+        [t('f.risk_stock_shipped'), yn(q.risk_stock_shipped)],
+        [t('f.wrong_found_qty'), q.wrong_found_qty === '' ? '' : String(q.wrong_found_qty)],
+        [t('f.finder_name'), q.finder_name]
+      ]),
+      photos,
+      D.s3.complete ? h('div', { class: 'okbox' }, t('wiz.s3Complete'))
+        : h('div', { class: 'warnbox' }, t('dec.s3Missing') + ' ' + D.s3.missing.map(m => t('s3.' + m)).join(', ')));
+  }
+
+  /** "Informace všem směnám během 5' meetingu" – one tick per shift. */
+  function shiftsCard() {
+    const q = D.q;
+    const btns = App.set.shifts.map(s => {
+      const r = D.shiftInfo.find(x => x.shift_code === s.code);
+      const label = r ? '✓ ' + s.name + ' · ' + personName(r.informed_by) + ' ' + fmtDT(r.informed_at) : s.name;
+      return button(label, async () => {
+        const res = await api('apiSaveShiftInfo', { id: q.qrap_id, shift_code: s.code });
+        if (!res.ok) { showErrors(res); return; }
+        D.shiftInfo = res.shiftInfo;
+        draw(byId('app'));
+      }, 'ghost shift-btn' + (r ? ' on' : ''), { disabled: !!r || !D.can.shiftInfo });
+    });
+    return h('div', { class: 'card sec sec-sup' }, h('h2', null, t('f.shiftInfo')), h('div', { class: 'btn-row' }, btns),
+      !D.can.shiftInfo && !q.decision ? h('p', { class: 'small muted' }, t('dec.shiftNoRight')) : null);
+  }
+
+  function decisionCard() {
+    const q = D.q;
+    const box = errorBox();
+    if (!D.can.decide) {
+      const why = App.user.isKiosk ? t('err.E_KIOSK_SIGN') : q.status !== 'WAIT_DECISION' ? t('dec.notReady') : t('dec.noRight');
+      return h('div', { class: 'card sec sec-sup' }, h('h2', null, t('f.decision')), h('p', { class: 'warnbox' }, why));
+    }
+    const guards = h('div');
+    const pilotBox = h('div');
+    const opt = (value, sub, disabled) => h('button', {
+      type: 'button', class: 'dec-opt' + (form.decision === value ? ' on' : ''), disabled: disabled,
+      onclick: () => { form.decision = value; draw(byId('app')); }
+    }, t('dec.' + value), h('small', null, sub));
+    const parent = D.parentArea;
+    const existing = D.pilots.map(p => p.email);
+    if (form.decision === 'CONTINUE') {
+      addKids(pilotBox, [
+        existing.length ? h('p', null, t('f.pilots') + ': ' + D.pilots.map(p => p.name).join(', ')) : null,
+        field(t('dec.addPilot'), multiToggle(App.set.people.filter(p => p.email && p.roles.indexOf('KIOSK') < 0 && existing.indexOf(p.email) < 0)
+          .sort((a, b) => (b.roles.indexOf('PILOT') >= 0) - (a.roles.indexOf('PILOT') >= 0)) // people with the PILOT role first
+          .map(p => ({ value: p.email, label: p.name })), form.pilots, v => { form.pilots = v; }), { name: 'pilots', required: !existing.length })
+      ]);
+    }
+    const warn = [];
+    if (form.decision === 'SOLVED' && q.repeat_7d === 'ANO') warn.push(t('warn.W_SOLVED_REPEAT'));
+    if (form.decision === 'SOLVED' && Number(q.wrong_found_qty) > 0) warn.push(t('warn.W_SOLVED_WRONG', { n: q.wrong_found_qty }));
+    if (warn.length) guards.appendChild(h('div', { class: 'warnbox' }, h('ul', null, warn.map(w => h('li', null, w)))));
+    return h('div', { class: 'card sec sec-sup' },
+      h('h2', null, t('f.decision')), box,
+      opt('CONTINUE', t('dec.CONTINUE_sub')),
+      opt('SOLVED', q.safety === 'ANO' ? t('err.E_SOLVED_SAFETY') : t('dec.SOLVED_sub'), q.safety === 'ANO'),
+      opt('ESCALATE', parent ? t('dec.ESCALATE_sub', { area: parent }) : t('err.E_NO_PARENT'), !parent),
+      pilotBox, guards,
+      field(t('f.decision_comment'), textArea(form.comment, v => { form.comment = v; }, 3, 2000),
+        { name: 'decision_comment', required: form.decision === 'SOLVED' || form.decision === 'ESCALATE' }),
+      button(t('dec.sign'), () => sign(box), 'primary', { big: true }),
+      h('p', { class: 'small muted' }, t('dec.signHint', { user: App.user.email })));
+  }
+
+  async function sign(box, confirmed) {
+    const q = D.q;
+    const errs = [];
+    if (!form.decision) errs.push({ code: 'E_REQUIRED', field: 'decision' });
+    if ((form.decision === 'SOLVED' || form.decision === 'ESCALATE') && !form.comment.trim()) errs.push({ code: 'E_REQUIRED', field: 'decision_comment' });
+    if (form.decision === 'CONTINUE' && !D.pilots.length && !form.pilots.length) errs.push({ code: 'E_PILOT_REQUIRED', field: 'pilots' });
+    if (!setErrors(box, errs, byId('app'))) return;
+    const res = await api('apiSignDecision', { id: q.qrap_id, decision: form.decision, comment: form.comment, pilots: form.pilots,
+      confirmWarnings: !!confirmed });
+    if (!res.ok && res.needConfirm) {
+      if (await warnConfirm(res.warnings)) return sign(box, true);
+      return;
+    }
+    if (!res.ok) { showErrors(res, box, byId('app')); return; }
+    toast(res.copyId ? t('dec.escalated', { id: res.copyId }) : t('dec.signed'), 'ok', 6000);
+    render(clear(byId('app')), { id: q.qrap_id });
+  }
+
+  function decidedCard() {
+    const q = D.q;
+    return h('div', { class: 'card sec sec-sup' }, h('h2', null, t('f.decision')), kvList([
+      [t('f.decision'), t('dec.' + q.decision)],
+      [t('f.decision_comment'), q.decision_comment],
+      [t('f.pilots'), D.pilots.map(p => p.name).join(', ')],
+      [t('f.assign_ref'), q.assign_ref ? qrapLink(q.assign_ref) : ''],
+      [t('f.signed'), personName(q.decided_by) + ' · ' + fmtDT(q.decided_at)]
+    ]), h('p', { class: 'okbox' }, t('dec.locked')));
+  }
+
+  return { render: render };
+})();
+
+App.views.close = (() => {
+  async function render(root, params) {
+    root.appendChild(loadingEl());
+    const res = await api('apiGetQrap', params.id);
+    if (!root.isConnected) return;
+    clear(root);
+    if (!res.ok) { root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
+    const d = res.detail;
+    const q = d.q;
+    const box = errorBox();
+    addKids(root, [
+      h('h1', null, t('close.title'), ' · ', q.qrap_id),
+      h('div', { class: 'card sec sec-pil' },
+        h('p', null, statusBadge(q.status), ' ', q.what),
+        h('ul', { class: 'check-list' }, d.closure.items.map(i => h('li', { class: i.ok ? 'pill-ok' : 'pill-bad' },
+          (i.ok ? '✓ ' : '✗ ') + t('close.' + i.code)))),
+        h('div', { class: 'slots' }, d.eff.slots.map((s, i) => h('div', { class: 'slot' + (s ? ' slot-' + s.result : '') },
+          h('b', null, (i + 1) + '. '), s ? [t('eff.' + s.result), h('br'), fmtD(s.shift_date) + ' · ' + shiftName(s.shift_code)] : '–')))),
+      box,
+      q.status === 'CLOSED' ? h('div', { class: 'okbox' }, t('close.done', { who: personName(q.closed_by), at: fmtDT(q.closed_at) }))
+        : d.can.close ? button(t('close.sign'), async () => {
+          const r = await api('apiSignClosure', { id: q.qrap_id });
+          if (!r.ok) { showErrors(r, box); return; }
+          toast(t('close.signed'), 'ok', 6000);
+          render(clear(byId('app')), params);
+        }, 'primary', { big: true, disabled: !d.closure.ok })
+          : h('div', { class: 'warnbox' }, App.user.isKiosk ? t('err.E_KIOSK_SIGN') : t('close.noRight')),
+      h('div', { class: 'btn-row' }, button(t('qrap.detail'), () => go('qrap', { id: q.qrap_id }), 'ghost'),
+        d.can.effect ? button(t('qrap.effect'), () => go('effect', { id: q.qrap_id }), 'ok') : null)
+    ]);
+  }
+  return { render: render };
+})();
+</script>
+
+  <script>
+'use strict';
+/*
+ * ViewAnalysis – ⑤ PŘÍČINA 5 Proč? and ⑥ Konečné akce for the pilot (PC), ?page=analysis&id=…
+ * ⑤ + lesson + standard question are saved together (apiSaveAnalysis); each action row is saved on its own
+ * (apiSaveDefAction). The status (ANALYSIS → ACTIONS_OPEN → VERIFY) is moved by the server.
+ */
+App.views.analysis = (() => {
+  let D = null;
+  let F = null; // form state for ⑤ and the single ⑥ fields
+
+  async function render(root, params) {
+    root.appendChild(loadingEl());
+    const res = await api('apiGetQrap', params.id);
+    if (!root.isConnected) return;
+    clear(root);
+    if (!res.ok) { root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
+    D = res.detail;
+    const text = (ch, n) => ((D.why.find(w => w.chain === ch && Number(w.step) === n) || {}).text || '');
+    const root_ = ch => Number((D.why.find(w => w.chain === ch && w.is_root === true) || {}).step || 0);
+    F = {
+      why: { OCCURRENCE: [1, 2, 3, 4, 5].map(n => text('OCCURRENCE', n)), NON_DETECTION: [1, 2, 3, 4, 5].map(n => text('NON_DETECTION', n)) },
+      root: { OCCURRENCE: root_('OCCURRENCE'), NON_DETECTION: root_('NON_DETECTION') },
+      showNd: D.why.some(w => w.chain === 'NON_DETECTION' && w.text),
+      learned: D.q.learned || '', std_update: D.q.std_update || '', std_update_ref: D.q.std_update_ref || ''
+    };
+    draw(root);
+  }
+
+  function draw(root) {
+    const q = D.q;
+    const edit = D.can.analyze;
+    clear(root);
+    addKids(root, [
+      h('h1', null, t('ana.title'), ' · ', q.qrap_id),
+      h('div', { class: 'card' }, h('p', null, statusBadge(q.status), ' ', q.what), chipsEl(D.chips),
+        h('p', { class: 'small' }, t('f.pilots') + ': ' + (D.pilots.map(p => p.name).join(', ') || '–')),
+        D.can.isDecider && edit ? pilotAdder() : null,
+        !edit ? h('p', { class: 'warnbox' }, t('ana.readOnly')) : null),
+      whyCard(edit),
+      actionsCard(edit),
+      h('div', { class: 'btn-row' },
+        button(t('qrap.detail'), () => go('qrap', { id: q.qrap_id }), 'ghost'),
+        D.can.effect ? button(t('qrap.effect'), () => go('effect', { id: q.qrap_id }), 'ok') : null,
+        D.can.close ? button(t('qrap.close'), () => go('close', { id: q.qrap_id }), 'primary') : null)
+    ]);
+  }
+
+  function reload() { render(clear(byId('app')), App.params); }
+
+  function pilotAdder() {
+    let email = '';
+    return h('div', { class: 'row' },
+      personSelect('', v => { email = v; }, '', { byEmail: true, placeholder: t('ana.addPilot') }),
+      h('div', { style: { flex: '0 0 auto' } }, button(t('btn.add'), async () => {
+        if (!email) return;
+        const res = await api('apiAddPilot', { id: D.q.qrap_id, email: email });
+        if (!res.ok) { showErrors(res); return; }
+        toast(t('msg.saved'), 'ok');
+        reload();
+      }, 'pil')));
+  }
+
+  /** Previous answer as a question: "Proč: <answer without the final dot>?" */
+  function whyPrompt(n, prev) {
+    return n + '. ' + t('why.prompt', { prev: String(prev || '').trim().replace(/[.?!…\s]+$/, '') || '…' });
+  }
+
+  /** ⑤: each prompt quotes the previous answer ("Proč: …?"). */
+  function chainEl(ch, edit) {
+    const list = h('div');
+    const drawSteps = () => {
+      clear(list);
+      F.why[ch].forEach((txt, i) => {
+        const prev = i === 0 ? '' : F.why[ch][i - 1];
+        const label = i === 0 ? (i + 1) + '. ' + t(ch === 'OCCURRENCE' ? 'why.first' : 'why.firstNd') : whyPrompt(i + 1, prev);
+        const ta = textArea(txt, v => {
+          F.why[ch][i] = v;
+          const next = list.querySelectorAll('.fld-label')[i + 1];
+          if (next) next.textContent = whyPrompt(i + 2, v);
+        }, 2, 1000);
+        ta.disabled = !edit;
+        const rootChk = h('label', { class: 'chk' }, h('input', { type: 'radio', name: 'root_' + ch, checked: F.root[ch] === i + 1, disabled: !edit,
+          onchange: () => { F.root[ch] = i + 1; } }), t('why.root'));
+        list.appendChild(h('div', { class: 'why-step' }, field(label, ta, { name: 'why_' + ch + '_' + (i + 1) }), rootChk));
+      });
+    };
+    drawSteps();
+    return h('div', null, h('h3', null, t('why.' + ch)), list);
+  }
+
+  function whyCard(edit) {
+    const box = errorBox();
+    const stdRef = field(t('f.std_update_ref'), textInput(F.std_update_ref, v => { F.std_update_ref = v; }, { max: 300 }), { name: 'std_update_ref', required: true });
+    stdRef.hidden = F.std_update !== 'ANO';
+    const nd = F.showNd ? chainEl('NON_DETECTION', edit)
+      : edit ? button(t('ana.addNd'), () => { F.showNd = true; draw(byId('app')); }, 'ghost') : null;
+    return h('div', null,
+      sectionCard('5', t('sec.5'), 'pil', box, chainEl('OCCURRENCE', edit), nd,
+        edit ? h('p', { class: 'small muted' }, t('ana.whyHint')) : null),
+      sectionCard('6', t('ana.lesson'), 'pil',
+        field(t('f.learned'), textArea(F.learned, v => { F.learned = v; }, 3, 2000), { name: 'learned', required: true, hint: t('ana.learnedHint') }),
+        field(t('f.std_update'), segmented([{ value: 'NE', label: t('lbl.no'), kind: 'ok' }, { value: 'ANO', label: t('lbl.yes') }], F.std_update,
+          v => { F.std_update = v; stdRef.hidden = v !== 'ANO'; }), { name: 'std_update', hint: t('ana.stdHint') }),
+        stdRef,
+        edit ? button(t('ana.save'), () => save(box), 'pil', { big: true }) : null));
+  }
+
+  async function save(box) {
+    const res = await api('apiSaveAnalysis', { id: D.q.qrap_id, why: { OCCURRENCE: F.why.OCCURRENCE, NON_DETECTION: F.showNd ? F.why.NON_DETECTION : [] },
+      root: F.root, learned: F.learned, std_update: F.std_update, std_update_ref: F.std_update_ref });
+    if (!res.ok) { showErrors(res, box, byId('app')); return; }
+    toast(t('msg.saved') + ' · ' + statusLabel(res.status), 'ok');
+    if (res.warnings && res.warnings.length) await warnConfirm(res.warnings);
+    reload();
+  }
+
+  /** Options for "linked root step": every filled why of both chains. */
+  function rootOptions() {
+    const out = [];
+    ['OCCURRENCE', 'NON_DETECTION'].forEach(ch => D.why.filter(w => w.chain === ch && w.text).sort((a, b) => a.step - b.step).forEach(w => {
+      out.push({ value: (ch === 'OCCURRENCE' ? 'O' : 'N') + w.step, label: (ch === 'OCCURRENCE' ? 'O' : 'N') + w.step + ' · ' + w.text.slice(0, 60) });
+    }));
+    return out;
+  }
+
+  function actionsCard(edit) {
+    const rows = D.actions.filter(a => a.status !== 'REMOVED');
+    const removed = D.actions.filter(a => a.status === 'REMOVED');
+    const list = h('div');
+    rows.forEach(a => list.appendChild(actionRow(a, edit || a.canEdit)));
+    const addBox = h('div');
+    return sectionCard('6', t('ana.actions'), 'pil',
+      !rootOptions().length ? h('p', { class: 'warnbox' }, t('ana.needWhy')) : null,
+      list,
+      edit ? button(t('ana.addAction'), () => { clear(addBox).appendChild(actionRow(null, true)); }, 'pil') : null,
+      addBox,
+      removed.length ? h('p', { class: 'small muted' }, t('ana.removed', { n: removed.length })) : null);
+  }
+
+  /** One action row (a = null for a new action). full = may change every field. */
+  function actionRow(a, canEdit) {
+    const full = D.can.analyze;
+    const v = a ? { text: a.text, root_step: a.root_step, pilot_email: a.pilot_email, planned: a.planned, done: a.done, evidence_url: a.evidence_url }
+      : { text: '', root_step: (rootOptions().find(o => o.value === 'O' + F.root.OCCURRENCE) || {}).value || '', pilot_email: '', planned: '', done: '', evidence_url: '' };
+    const box = errorBox();
+    const dis = el => { el.disabled = !canEdit || (!full && !!a); return el; };
+    const rootSel = a && a.root_step === 'STD' ? h('div', { class: 'fld-hint' }, t('ana.stdAction'))
+      : dis(selectEl(rootOptions(), v.root_step, x => { v.root_step = x; }));
+    const card = h('div', { class: 'ia-row' + (a && a.late ? ' late' : '') },
+      a ? h('div', { class: 'fld-label' }, t('ast.' + a.status), a.late ? h('span', { class: 'badge badge-safety' }, t('lbl.late')) : null,
+        a.planned_first && a.planned_first !== a.planned ? h('span', { class: 'small muted' }, ' · ' + t('ana.firstPlan') + ' ' + fmtD(a.planned_first)) : null) : h('div', { class: 'fld-label' }, t('ana.newAction')),
+      box,
+      field(t('f.action_text'), dis(textInput(v.text, x => { v.text = x; }, { max: 1000 })), { name: 'action_text', required: true }),
+      h('div', { class: 'row' },
+        field(t('f.root_step'), rootSel, { name: 'root_step', required: true }),
+        field(t('f.pilot'), dis(personSelect(v.pilot_email, x => { v.pilot_email = x; }, '', { byEmail: true })), { name: 'pilot_email', required: true })),
+      h('div', { class: 'row' },
+        field(t('f.planned'), dis(dateInput(v.planned, x => { v.planned = x; }, { min: a ? null : todayLocal() })), { name: 'planned', required: true }),
+        field(t('f.done'), dateInput(v.done, x => { v.done = x; }, { max: todayLocal() }), { name: 'done', hint: t('ana.doneHint') }),
+        field(t('f.evidence_url'), textInput(v.evidence_url, x => { v.evidence_url = x; }, { max: 500, placeholder: 'https://' }), { name: 'evidence_url' })),
+      canEdit ? h('div', { class: 'btn-row' },
+        button(t('btn.save'), async () => {
+          const res = await api('apiSaveDefAction', Object.assign({ id: a ? a.id : '', qrap_id: D.q.qrap_id }, v));
+          if (!res.ok) { showErrors(res, box, card); return; }
+          toast(t('msg.saved') + ' · ' + statusLabel(res.status), 'ok');
+          reload();
+        }, 'pil'),
+        a && full ? button(t('btn.remove'), async () => {
+          if (!(await confirmDlg(t('ana.removeConfirm'), t('btn.remove'), 'danger'))) return;
+          const res = await api('apiRemoveDefAction', { id: a.id });
+          if (!res.ok) { showErrors(res, box); return; }
+          reload();
+        }, 'ghost') : null) : null,
+      a ? notesEl(a) : null);
+    if (!canEdit) card.querySelectorAll('input, select, textarea').forEach(el => { el.disabled = true; });
+    return card;
+  }
+
+  /** Notes and review dates of an action. */
+  function notesEl(a) {
+    const nv = { note: '', review_date: '' };
+    return h('div', { class: 'small' },
+      a.notes.length ? table([t('f.note'), t('f.review_date'), t('f.author')], a.notes.map(n => [n.note,
+        n.review_date ? fmtD(n.review_date) + (n.review_done === true ? ' ✓' : '') : '', personName(n.author) + ' · ' + fmtDT(n.at)])) : null,
+      a.canNote ? h('div', { class: 'row' },
+        textInput('', x => { nv.note = x; }, { placeholder: t('f.note'), max: 1000 }),
+        dateInput('', x => { nv.review_date = x; }),
+        h('div', { style: { flex: '0 0 auto' } }, button(t('btn.addNote'), async () => {
+          const res = await api('apiAddActionNote', { action_id: a.id, note: nv.note, review_date: nv.review_date });
+          if (!res.ok) { showErrors(res); return; }
+          reload();
+        }, 'ghost'))) : null);
+  }
+
+  return { render: render };
+})();
+</script>
+
+  <script>
+'use strict';
+/*
+ * ViewActions – "Moje akce" (?page=actions): definitive actions of the signed-in pilot, or of the people
+ * whose N+1 the user is ("Můj tým"). Filters by status and due date; done date, notes and review dates.
+ */
+App.views.actions = (() => {
+  const F = { scope: 'mine', status: 'OPENED', due: 'all' };
+
+  function render(root) {
+    const list = h('div', null, loadingEl());
+    const reload = () => load(list);
+    addKids(root, [
+      h('h1', null, t('act.title')),
+      h('div', { class: 'card' },
+        field(t('act.scope'), segmented([{ value: 'mine', label: t('act.mine') }, { value: 'team', label: t('act.team') }], F.scope,
+          v => { F.scope = v; reload(); })),
+        h('div', { class: 'row' },
+          field(t('f.status'), segmented(['OPENED', 'CLOSED', 'REMOVED', 'ALL'].map(s => ({ value: s, label: t('ast.' + s) })), F.status,
+            v => { F.status = v; reload(); })),
+          field(t('act.due'), segmented(['all', 'late', 'week'].map(s => ({ value: s, label: t('act.due.' + s) })), F.due,
+            v => { F.due = v; reload(); })))),
+      list
+    ]);
+    reload();
+  }
+
+  async function load(list) {
+    clear(list).appendChild(loadingEl());
+    const res = await api('apiGetMyActions', F);
+    clear(list);
+    if (!res.ok) { showErrors(res); return; }
+    if (!res.actions.length) { list.appendChild(h('div', { class: 'empty' }, t('act.none'))); return; }
+    res.actions.forEach(a => list.appendChild(card(a, () => load(list))));
+  }
+
+  function card(a, reload) {
+    const box = errorBox();
+    let done = a.done || '';
+    const nv = { note: '', review_date: '' };
+    return h('div', { class: 'card sec sec-pil' + (a.late ? ' late' : '') },
+      h('div', { class: 'sec-head' }, h('div', { class: 'grow' },
+        h('b', null, qrapLink(a.qrap.id)), ' · ', a.qrap.area, ' · ', statusLabel(a.qrap.status),
+        h('div', { class: 'small muted' }, a.qrap.what))),
+      h('p', { style: { fontSize: '20px', fontWeight: '700' } }, a.text),
+      kvList([
+        [t('f.pilot'), a.pilot_name],
+        [t('f.planned'), fmtD(a.planned) + (a.late ? ' · ' + t('lbl.late') : '') +
+          (a.planned_first && a.planned_first !== a.planned ? ' (' + t('ana.firstPlan') + ' ' + fmtD(a.planned_first) + ')' : '')],
+        [t('f.done'), fmtD(a.done)],
+        [t('f.status'), t('ast.' + a.status)],
+        [t('f.evidence_url'), a.evidence_url ? h('a', { href: a.evidence_url, target: '_blank', rel: 'noopener' }, a.evidence_url) : '']
+      ]),
+      box,
+      a.canEdit && a.status === 'OPENED' ? h('div', { class: 'row' },
+        field(t('f.done'), dateInput(done, v => { done = v; }, { max: todayLocal() }), { name: 'done' }),
+        h('div', { style: { flex: '0 0 auto', alignSelf: 'center' } }, button(t('act.markDone'), async () => {
+          const res = await api('apiSaveDefAction', { id: a.id, done: done || todayLocal(), evidence_url: a.evidence_url || '' });
+          if (!res.ok) { showErrors(res, box); return; }
+          toast(t('msg.saved'), 'ok');
+          reload();
+        }, 'ok'))) : null,
+      a.notes.length ? table([t('f.note'), t('f.review_date'), t('f.author'), ''], a.notes.map(n => [n.note,
+        n.review_date ? fmtD(n.review_date) : '', personName(n.author) + ' · ' + fmtDT(n.at),
+        n.review_date && a.canNote ? checkbox(t('act.reviewDone'), n.review_done === true, async v => {
+          const res = await api('apiSetReviewDone', { note_id: n.id, done: v });
+          if (!res.ok) showErrors(res);
+        }) : ''])) : null,
+      a.canNote ? h('div', { class: 'row' },
+        textInput('', v => { nv.note = v; }, { placeholder: t('f.note'), max: 1000 }),
+        field(null, dateInput('', v => { nv.review_date = v; }), { hint: t('f.review_date') }),
+        h('div', { style: { flex: '0 0 auto' } }, button(t('btn.addNote'), async () => {
+          const res = await api('apiAddActionNote', { action_id: a.id, note: nv.note, review_date: nv.review_date });
+          if (!res.ok) { showErrors(res, box); return; }
+          reload();
+        }, 'ghost'))) : null,
+      h('div', { class: 'btn-row' }, button(t('qrap.analysis'), () => go('analysis', { id: a.qrap.id }), 'ghost')));
+  }
+
+  return { render: render };
+})();
+</script>
+
+  <script>
+'use strict';
+/*
+ * ViewEffect – "Efektivita zkontrolována na 5 směnách bez chyb" (?page=effect&id=…), for the TL or supervisor,
+ * also on the kiosk. 5 slots; each needs a different shift (date + shift). EFFECTIVE is final,
+ * NOT_VERIFIED can be changed later, NOT_EFFECTIVE sends the QRAP back to the analysis.
+ */
+App.views.effect = (() => {
+  async function render(root, params) {
+    root.appendChild(loadingEl());
+    const res = await api('apiGetQrap', params.id);
+    if (!root.isConnected) return;
+    clear(root);
+    if (!res.ok) { root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
+    const d = res.detail;
+    const q = d.q;
+    const cur = currentShift();
+    const old = d.eff.history.filter(r => Number(r.round) < d.eff.round);
+    addKids(root, [
+      h('h1', null, t('eff.title'), ' · ', q.qrap_id),
+      h('div', { class: 'card' }, h('p', null, statusBadge(q.status), ' ', q.what),
+        h('p', null, h('b', null, t('eff.round', { n: d.eff.round })), ' · ', t('eff.progress', { n: d.eff.distinctOk })),
+        h('p', { class: 'small muted' }, t('eff.hint'))),
+      !d.can.effect ? h('div', { class: 'warnbox' }, q.status !== 'VERIFY' ? t('eff.notVerify') : t('err.E_FORBIDDEN')) : null,
+      h('div', null, d.eff.slots.map((s, i) => slotCard(d, i + 1, s, cur))),
+      old.length ? h('div', { class: 'card' }, h('h3', null, t('eff.history')), table([t('eff.roundCol'), t('eff.slot'), t('f.shift_date'),
+        t('f.shift_code'), t('f.result'), t('f.checked_by')], old.map(r => [r.round, r.slot, fmtD(r.shift_date), shiftName(r.shift_code),
+        t('eff.' + r.result), r.checked_by]))) : null,
+      h('div', { class: 'btn-row' }, button(t('qrap.detail'), () => go('qrap', { id: q.qrap_id }), 'ghost'),
+        d.can.close ? button(t('qrap.close'), () => go('close', { id: q.qrap_id }), 'primary') : null)
+    ]);
+  }
+
+  function slotCard(d, n, s, cur) {
+    const q = d.q;
+    if (s && s.result === 'EFFECTIVE') {
+      return h('div', { class: 'card slot-EFFECTIVE' }, h('b', null, n + '. ' + t('eff.EFFECTIVE')), ' · ',
+        fmtD(s.shift_date) + ' · ' + shiftName(s.shift_code) + ' · ' + s.checked_by);
+    }
+    const v = { shift_date: cur ? cur.date : todayLocal(), shift_code: cur ? cur.code : '', checked_by: App.user.isKiosk ? '' : App.user.name };
+    const box = errorBox();
+    const save = async result => {
+      if (result === 'NOT_EFFECTIVE' && !(await confirmDlg(t('eff.notEffConfirm'), t('eff.NOT_EFFECTIVE'), 'danger'))) return;
+      const res = await api('apiSaveEffect', Object.assign({ id: q.qrap_id, slot: n, result: result }, v));
+      if (!res.ok) { showErrors(res, box, byId('app')); return; }
+      toast(result === 'NOT_EFFECTIVE' ? t('eff.reopened') : t('msg.saved'), result === 'NOT_EFFECTIVE' ? 'warn' : 'ok', 6000);
+      render(clear(byId('app')), App.params);
+    };
+    return h('div', { class: 'card' + (s ? ' slot-' + s.result : '') },
+      h('h3', null, n + '. ' + t('eff.slot'), s ? ' · ' + t('eff.' + s.result) + ' (' + fmtD(s.shift_date) + ' · ' + shiftName(s.shift_code) + ')' : ''),
+      d.can.effect ? [
+        box,
+        h('div', { class: 'row' },
+          field(t('f.shift_date'), dateInput(v.shift_date, x => { v.shift_date = x; }, { max: todayLocal() }), { name: 'shift_date' }),
+          field(t('f.shift_code'), segmented(App.set.shifts.map(sh => ({ value: sh.code, label: sh.name })), v.shift_code, x => { v.shift_code = x; }),
+            { name: 'shift_code' }),
+          App.user.isKiosk ? field(t('f.checked_by'), personSelect('', x => { v.checked_by = x; }, q.area_code, { roles: ['TL', 'SUPERVISOR'] }),
+            { name: 'checked_by', required: true }) : null),
+        h('div', { class: 'btn-row' },
+          button(t('eff.EFFECTIVE'), () => save('EFFECTIVE'), 'ok', { big: true }),
+          button(t('eff.NOT_VERIFIED'), () => save('NOT_VERIFIED'), 'ghost'),
+          button(t('eff.NOT_EFFECTIVE'), () => save('NOT_EFFECTIVE'), 'danger'))
+      ] : null);
+  }
+
+  return { render: render };
+})();
+</script>
+
+  <script>
+'use strict';
+/*
+ * ViewAssess – ⑦ Hodnocení QRQC (?page=assess&id=…), for the phone.
+ * 5 criteria OK / NOK / NA, "OJT s kým", feedback + type. Next to each criterion the page shows what the
+ * app knows (① complete, ③ state, photos, shifts informed, lesson) so the assessor does not tick blindly.
+ */
+App.views.assess = (() => {
+  async function render(root, params) {
+    root.appendChild(loadingEl());
+    const res = await api('apiGetQrap', params.id);
+    if (!root.isConnected) return;
+    clear(root);
+    if (!res.ok) { root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
+    const d = res.detail;
+    const q = d.q;
+    const f = { c1: '', c2: '', c3: '', c4: '', c5: '', ojt_with: q.finder_name || '', feedback: '', feedback_type: '' };
+    const box = errorBox();
+    const kinds = d.photos.map(p => p.kind);
+    const hints = {
+      c1: (q.s1_done_at ? '✓ ' : '✗ ') + t('assess.h1'),
+      c2: (d.s3.complete ? '✓ ' : '✗ ') + t('assess.h2') + (d.ia.length ? ' · ' + t('assess.hActions', { n: d.ia.length }) : ''),
+      c3: (kinds.indexOf('WRONG') >= 0 && kinds.indexOf('CORRECT') >= 0 ? '✓ ' : '✗ ') + t('assess.h3'),
+      c4: t('assess.h4', { n: d.shiftInfo.length, all: App.set.shifts.length }) + (q.learned ? ' · ✓ ' + t('f.learned') : ''),
+      c5: t('assess.h5')
+    };
+    const photos = h('div', { class: 'thumbs' }, d.photos.filter(p => p.kind !== 'DOC').map(p => {
+      const img = h('img', { alt: '' });
+      loadPhoto(p.thumb_file_id, img);
+      return h('div', { class: 'thumb thumb-' + p.kind.toLowerCase(), style: { width: '46%' } }, h('b', null, t('wiz.photo' + p.kind)), img);
+    }));
+    const criteria = [1, 2, 3, 4, 5].map(n => field(t('assess.c' + n), [
+      h('div', { class: 'fld-hint' }, t('assess.sub' + n) + ' — ' + hints['c' + n]),
+      n === 3 ? photos : null,
+      segmented([{ value: 'OK', label: 'OK', kind: 'ok' }, { value: 'NOK', label: 'NOK', kind: 'danger' }, { value: 'NA', label: 'N/A' }],
+        f['c' + n], v => { f['c' + n] = v; }, 'seg-big')
+    ], { name: 'c' + n, required: true }));
+    addKids(root, [
+      h('h1', null, t('assess.title'), ' · ', q.qrap_id),
+      h('div', { class: 'card' }, h('p', null, statusBadge(q.status), ' ', q.what)),
+      d.can.assess ? h('div', { class: 'card sec sec-mgr' }, box, criteria,
+        field(t('f.ojt_with'), personSelect(f.ojt_with, v => { f.ojt_with = v; }, q.area_code), { name: 'ojt_with' }),
+        field(t('f.feedback'), textArea('', v => { f.feedback = v; }, 3, 2000), { name: 'feedback', required: true }),
+        field(t('f.feedback_type'), segmented(['PRAISE', 'STRENGTH', 'IMPROVE'].map(x => ({ value: x, label: t('fb.' + x) })), '',
+          v => { f.feedback_type = v; }), { name: 'feedback_type' }),
+        h('p', { class: 'small muted' }, t('assess.auto', { user: App.user.name })),
+        button(t('assess.save'), async () => {
+          const errs = [];
+          ['c1', 'c2', 'c3', 'c4', 'c5'].forEach(c => { if (!f[c]) errs.push({ code: 'E_CRITERIA', field: c }); });
+          if (!f.feedback.trim()) errs.push({ code: 'E_REQUIRED', field: 'feedback' });
+          if (!setErrors(box, errs, root)) return;
+          const res2 = await api('apiSaveAssessment', Object.assign({ id: q.qrap_id }, f));
+          if (!res2.ok) { showErrors(res2, box, root); return; }
+          toast(t('assess.saved'), 'ok');
+          go('qrap', { id: q.qrap_id });
+        }, 'mgr', { big: true }))
+        : h('div', { class: 'warnbox' }, q.status === 'DRAFT' ? t('assess.draft') : t('err.E_FORBIDDEN')),
+      d.assess.length ? h('div', { class: 'card' }, h('h3', null, t('assess.history')),
+        table([t('f.at'), t('f.assessor'), '1', '2', '3', '4', '5', t('f.feedback')], d.assess.map(a => [fmtDT(a.at), personName(a.assessor),
+          a.c1, a.c2, a.c3, a.c4, a.c5, a.feedback + (a.feedback_type ? ' (' + t('fb.' + a.feedback_type) + ')' : '')]))) : null,
+      h('div', { class: 'btn-row' }, button(t('qrap.detail'), () => go('qrap', { id: q.qrap_id }), 'ghost'))
+    ]);
+  }
+  return { render: render };
+})();
+</script>
+
+  <script>
+'use strict';
+/*
+ * ViewManager – manager page (?page=manager): tiles, "Hodnocení dnes" per supervisor, "Potřebuje vás"
+ * (most urgent first), filters (area / date / status) and search (number, text, material number).
+ */
+App.views.manager = (() => {
+  const F = { area: '', from: '', to: '', status: 'open' };
+
+  function render(root) {
+    const out = h('div', null, loadingEl());
+    const results = h('div');
+    let term = '';
+    const doSearch = async () => {
+      if (term.trim().length < 2) { clear(results); return; }
+      const res = await api('apiSearch', term.trim());
+      clear(results);
+      if (!res.ok) { showErrors(res); return; }
+      addKids(results, [h('h3', null, t('mgr.searchResults', { n: res.total })), rowsTable(res.rows)]);
+    };
+    const statuses = [{ value: 'open', label: t('mgr.st.open') }, { value: 'closed', label: t('mgr.st.closed') }, { value: 'all', label: t('mgr.st.all') }]
+      .concat(['DRAFT', 'QR_OPEN', 'WAIT_DECISION', 'ANALYSIS', 'ACTIONS_OPEN', 'VERIFY', 'CLOSED_SOLVED', 'ESCALATED', 'CLOSED']
+        .map(s => ({ value: s, label: statusLabel(s) })));
+    const search = h('input', { type: 'search', placeholder: t('mgr.searchHint'), oninput: e => { term = e.target.value; },
+      onkeydown: e => { if (e.key === 'Enter') doSearch(); } });
+    addKids(root, [
+      h('h1', null, t('mgr.title')),
+      h('div', { class: 'card' },
+        h('div', { class: 'row' }, search, h('div', { style: { flex: '0 0 auto' } }, button(t('btn.search'), doSearch, 'mgr'))), results),
+      h('div', { class: 'card' }, h('div', { class: 'row' },
+        field(t('f.area'), selectEl(App.set.areas.map(a => ({ value: a.code, label: a.code + ' · ' + a.name })), F.area, v => { F.area = v; }, t('mgr.allAreas'))),
+        field(t('mgr.from'), dateInput(F.from, v => { F.from = v; })),
+        field(t('mgr.to'), dateInput(F.to, v => { F.to = v; })),
+        field(t('f.status'), selectEl(statuses, F.status, v => { F.status = v; }, false))),
+      button(t('btn.apply'), () => load(out), 'mgr')),
+      out
+    ]);
+    load(out);
+  }
+
+  async function load(out) {
+    clear(out).appendChild(loadingEl());
+    const res = await api('apiGetManager', F);
+    clear(out);
+    if (!res.ok) { out.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
+    const tile = (key, alert) => h('div', { class: 'tile' + (alert && res.tiles[key] ? ' alert' : '') },
+      h('div', { class: 'tile-n' }, String(res.tiles[key])), h('div', { class: 'tile-l' }, t('mgr.tile.' + key)));
+    const zero = res.assessToday.filter(a => a.supervisor && a.count === 0).length;
+    addKids(out, [
+      h('div', { class: 'tiles' }, tile('newToday'), tile('waitDecision', true), tile('s3Late', true), tile('actionsLate', true),
+        tile('safetyWeek', true), tile('repeat7', true),
+        h('div', { class: 'tile' + (zero ? ' alert' : '') }, h('div', { class: 'tile-n' }, String(res.assessToday.reduce((s, a) => s + a.count, 0))),
+          h('div', { class: 'tile-l' }, t('mgr.tile.assessToday')))),
+      h('div', { class: 'card' }, h('h2', null, t('mgr.assessToday')),
+        res.assessToday.length ? table([t('f.assessor'), t('mgr.count')], res.assessToday.map(a => [a.name + (a.supervisor ? '' : ' *'),
+          h('span', { class: a.count ? 'pill-ok' : 'pill-bad' }, String(a.count))])) : h('p', { class: 'muted' }, '–')),
+      h('div', { class: 'card' }, h('h2', null, t('mgr.needs'), ' (', String(res.needs.length), ')'),
+        res.needs.length ? res.needs.map(n => h('div', { class: 'need' + (n.urgency >= 80 ? ' u-high' : ''), onclick: () => go('qrap', { id: n.id }) },
+          h('div', { class: 'need-bar' }),
+          h('div', null, h('b', null, n.id), n.safety ? h('span', { class: 'badge badge-safety' }, 'SAFETY') : null, ' · ', t('need.' + n.reason),
+            h('div', { class: 'small muted' }, n.what + (n.extra ? ' · ' + n.extra : ''))),
+          h('div', { class: 'small nowrap' }, n.area, h('br'), fmtDT(n.since)))) : h('p', { class: 'muted' }, t('mgr.nothing'))),
+      h('div', { class: 'card' }, h('h2', null, t('mgr.list', { n: res.total })), rowsTable(res.rows))
+    ]);
+  }
+
+  /** Compact QRAP table (area, number, what, chips, status). */
+  function rowsTable(rows) {
+    if (!rows.length) return h('p', { class: 'muted' }, t('board.empty'));
+    return table([t('f.area'), t('board.col.id'), t('board.col.what'), '1 – 7', t('f.status')], rows.map(r => [
+      r.area, h('span', null, qrapLink(r.id), r.safety ? h('span', { class: 'badge badge-safety' }, 'S') : null,
+        r.archived ? h('span', { class: 'badge badge-archived' }, t('lbl.archived')) : null),
+      h('span', null, r.what, h('div', { class: 'small muted' }, fmtDT(r.det))), chipsEl(r.chips),
+      h('span', { class: r.late ? 'pill-bad' : '' }, statusLabel(r.st))]), i => (rows[i].late ? 'late' : ''));
+  }
+
+  return { render: render };
+})();
+</script>
+
+  <script>
+'use strict';
+/*
+ * ViewEscalation – "Eskalace" (?page=escalation): QRAPs on APU and PLANT level, and the line QRAPs that
+ * were escalated (with the link to their copy, "Assign Sheet #").
+ */
+App.views.escalation = (() => {
+  async function render(root) {
+    root.appendChild(loadingEl());
+    const res = await api('apiGetEscalations');
+    if (!root.isConnected) return;
+    clear(root);
+    if (!res.ok) { root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
+    addKids(root, [
+      h('h1', null, t('esc.title')),
+      block(t('esc.apu'), res.apu, true),
+      block(t('esc.plant'), res.plant, true),
+      block(t('esc.escalated'), res.escalated, false)
+    ]);
+  }
+
+  function block(title, rows, showParent) {
+    return h('div', { class: 'card' }, h('h2', null, title, ' (', String(rows.length), ')'),
+      rows.length ? table([t('board.col.id'), t('board.col.what'), '1 – 7', t('f.status'), showParent ? t('f.parent_id') : t('f.assign_ref')],
+        rows.slice().reverse().map(r => [
+          h('span', null, qrapLink(r.id), r.safety ? h('span', { class: 'badge badge-safety' }, 'S') : null),
+          h('span', null, r.what, h('div', { class: 'small muted' }, r.area + ' · ' + fmtDT(r.det))),
+          chipsEl(r.chips),
+          h('span', { class: r.late ? 'pill-bad' : '' }, statusLabel(r.st) + (r.wait ? ' · ' + t('wait.' + r.wait) : '')),
+          qrapLink(showParent ? r.parent : r.copy)
+        ]), i => (rows[rows.length - 1 - i].late ? 'late' : '')) : h('p', { class: 'muted' }, '–'));
+  }
+
+  return { render: render };
+})();
+</script>
+
+  <script>App.start();</script>
+</body>
+</html>
