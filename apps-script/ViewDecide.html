@@ -1,0 +1,188 @@
+<script>
+'use strict';
+/*
+ * ViewDecide – supervisor pages for the phone.
+ *   ?page=decide&id=…  ④ Rozhodnutí OJT: shift ticks, one decision, pilots, comment, signature.
+ *   ?page=close&id=…   Uzavření: closure checklist + signature.
+ * The server checks every guard again; the page only shows them early.
+ */
+App.views.decide = (() => {
+  let D = null;       // detail from the server
+  let form = null;    // {decision, comment, pilots[]}
+
+  async function render(root, params) {
+    root.appendChild(loadingEl());
+    const res = await api('apiGetQrap', params.id);
+    if (!root.isConnected) return;
+    clear(root);
+    if (!res.ok) { root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
+    D = res.detail;
+    form = { decision: '', comment: '', pilots: [] };
+    draw(root);
+  }
+
+  function draw(root) {
+    const q = D.q;
+    clear(root);
+    addKids(root, [
+      h('h1', null, t('dec.title'), ' · ', q.qrap_id),
+      summary(),
+      shiftsCard(),
+      q.decision ? decidedCard() : decisionCard(),
+      h('div', { class: 'btn-row' },
+        button(t('qrap.detail'), () => go('qrap', { id: q.qrap_id }), 'ghost'),
+        D.can.assess ? button(t('qrap.assess'), () => go('assess', { id: q.qrap_id }), 'mgr') : null,
+        D.can.close ? button(t('qrap.close'), () => go('close', { id: q.qrap_id }), 'primary') : null,
+        D.can.analyze ? button(t('qrap.analysis'), () => go('analysis', { id: q.qrap_id }), 'pil') : null)
+    ]);
+  }
+
+  /** Short facts of ①–③ so the supervisor can decide at the board. */
+  function summary() {
+    const q = D.q;
+    const photos = h('div', { class: 'thumbs' }, D.photos.filter(p => p.kind !== 'DOC').map(p => {
+      const img = h('img', { alt: '' });
+      loadPhoto(p.thumb_file_id, img);
+      return h('div', { class: 'thumb thumb-' + p.kind.toLowerCase(), style: { width: '46%' }, onclick: () => showPhoto(p.file_id) },
+        h('b', null, t('wiz.photo' + p.kind)), img);
+    }));
+    return h('div', { class: 'card sec sec-op' },
+      h('p', null, statusBadge(q.status), q.safety === 'ANO' ? h('span', { class: 'badge badge-safety' }, 'SAFETY') : null,
+        q.repeat_7d === 'ANO' ? h('span', { class: 'badge badge-rep' }, t('board.repeat')) : null),
+      h('p', { style: { fontSize: '20px', fontWeight: '700' } }, q.what),
+      kvList([
+        [t('f.detected_at'), fmtDT(q.detected_at)],
+        [t('f.where'), [q.zone, q.location_code].filter(Boolean).join(' / ')],
+        [t('f.qty'), q.qty === '' ? '' : q.qty + ' ' + listLabel('UNIT', q.unit)],
+        [t('f.repeat_7d'), q.repeat_7d === 'ANO' ? h('span', null, t('lbl.yes') + ' → ', qrapLink(q.repeat_ref)) : yn(q.repeat_7d)],
+        [t('f.risk_stock_shipped'), yn(q.risk_stock_shipped)],
+        [t('f.wrong_found_qty'), q.wrong_found_qty === '' ? '' : String(q.wrong_found_qty)],
+        [t('f.finder_name'), q.finder_name]
+      ]),
+      photos,
+      D.s3.complete ? h('div', { class: 'okbox' }, t('wiz.s3Complete'))
+        : h('div', { class: 'warnbox' }, t('dec.s3Missing') + ' ' + D.s3.missing.map(m => t('s3.' + m)).join(', ')));
+  }
+
+  /** "Informace všem směnám během 5' meetingu" – one tick per shift. */
+  function shiftsCard() {
+    const q = D.q;
+    const btns = App.set.shifts.map(s => {
+      const r = D.shiftInfo.find(x => x.shift_code === s.code);
+      const label = r ? '✓ ' + s.name + ' · ' + personName(r.informed_by) + ' ' + fmtDT(r.informed_at) : s.name;
+      return button(label, async () => {
+        const res = await api('apiSaveShiftInfo', { id: q.qrap_id, shift_code: s.code });
+        if (!res.ok) { showErrors(res); return; }
+        D.shiftInfo = res.shiftInfo;
+        draw(byId('app'));
+      }, 'ghost shift-btn' + (r ? ' on' : ''), { disabled: !!r || !D.can.shiftInfo });
+    });
+    return h('div', { class: 'card sec sec-sup' }, h('h2', null, t('f.shiftInfo')), h('div', { class: 'btn-row' }, btns),
+      !D.can.shiftInfo && !q.decision ? h('p', { class: 'small muted' }, t('dec.shiftNoRight')) : null);
+  }
+
+  function decisionCard() {
+    const q = D.q;
+    const box = errorBox();
+    if (!D.can.decide) {
+      const why = App.user.isKiosk ? t('err.E_KIOSK_SIGN') : q.status !== 'WAIT_DECISION' ? t('dec.notReady') : t('dec.noRight');
+      return h('div', { class: 'card sec sec-sup' }, h('h2', null, t('f.decision')), h('p', { class: 'warnbox' }, why));
+    }
+    const guards = h('div');
+    const pilotBox = h('div');
+    const opt = (value, sub, disabled) => h('button', {
+      type: 'button', class: 'dec-opt' + (form.decision === value ? ' on' : ''), disabled: disabled,
+      onclick: () => { form.decision = value; draw(byId('app')); }
+    }, t('dec.' + value), h('small', null, sub));
+    const parent = D.parentArea;
+    const existing = D.pilots.map(p => p.email);
+    if (form.decision === 'CONTINUE') {
+      addKids(pilotBox, [
+        existing.length ? h('p', null, t('f.pilots') + ': ' + D.pilots.map(p => p.name).join(', ')) : null,
+        field(t('dec.addPilot'), multiToggle(App.set.people.filter(p => p.email && p.roles.indexOf('KIOSK') < 0 && existing.indexOf(p.email) < 0)
+          .sort((a, b) => (b.roles.indexOf('PILOT') >= 0) - (a.roles.indexOf('PILOT') >= 0)) // people with the PILOT role first
+          .map(p => ({ value: p.email, label: p.name })), form.pilots, v => { form.pilots = v; }), { name: 'pilots', required: !existing.length })
+      ]);
+    }
+    const warn = [];
+    if (form.decision === 'SOLVED' && q.repeat_7d === 'ANO') warn.push(t('warn.W_SOLVED_REPEAT'));
+    if (form.decision === 'SOLVED' && Number(q.wrong_found_qty) > 0) warn.push(t('warn.W_SOLVED_WRONG', { n: q.wrong_found_qty }));
+    if (warn.length) guards.appendChild(h('div', { class: 'warnbox' }, h('ul', null, warn.map(w => h('li', null, w)))));
+    return h('div', { class: 'card sec sec-sup' },
+      h('h2', null, t('f.decision')), box,
+      opt('CONTINUE', t('dec.CONTINUE_sub')),
+      opt('SOLVED', q.safety === 'ANO' ? t('err.E_SOLVED_SAFETY') : t('dec.SOLVED_sub'), q.safety === 'ANO'),
+      opt('ESCALATE', parent ? t('dec.ESCALATE_sub', { area: parent }) : t('err.E_NO_PARENT'), !parent),
+      pilotBox, guards,
+      field(t('f.decision_comment'), textArea(form.comment, v => { form.comment = v; }, 3, 2000),
+        { name: 'decision_comment', required: form.decision === 'SOLVED' || form.decision === 'ESCALATE' }),
+      button(t('dec.sign'), () => sign(box), 'primary', { big: true }),
+      h('p', { class: 'small muted' }, t('dec.signHint', { user: App.user.email })));
+  }
+
+  async function sign(box, confirmed) {
+    const q = D.q;
+    const errs = [];
+    if (!form.decision) errs.push({ code: 'E_REQUIRED', field: 'decision' });
+    if ((form.decision === 'SOLVED' || form.decision === 'ESCALATE') && !form.comment.trim()) errs.push({ code: 'E_REQUIRED', field: 'decision_comment' });
+    if (form.decision === 'CONTINUE' && !D.pilots.length && !form.pilots.length) errs.push({ code: 'E_PILOT_REQUIRED', field: 'pilots' });
+    if (!setErrors(box, errs, byId('app'))) return;
+    const res = await api('apiSignDecision', { id: q.qrap_id, decision: form.decision, comment: form.comment, pilots: form.pilots,
+      confirmWarnings: !!confirmed });
+    if (!res.ok && res.needConfirm) {
+      if (await warnConfirm(res.warnings)) return sign(box, true);
+      return;
+    }
+    if (!res.ok) { showErrors(res, box, byId('app')); return; }
+    toast(res.copyId ? t('dec.escalated', { id: res.copyId }) : t('dec.signed'), 'ok', 6000);
+    render(clear(byId('app')), { id: q.qrap_id });
+  }
+
+  function decidedCard() {
+    const q = D.q;
+    return h('div', { class: 'card sec sec-sup' }, h('h2', null, t('f.decision')), kvList([
+      [t('f.decision'), t('dec.' + q.decision)],
+      [t('f.decision_comment'), q.decision_comment],
+      [t('f.pilots'), D.pilots.map(p => p.name).join(', ')],
+      [t('f.assign_ref'), q.assign_ref ? qrapLink(q.assign_ref) : ''],
+      [t('f.signed'), personName(q.decided_by) + ' · ' + fmtDT(q.decided_at)]
+    ]), h('p', { class: 'okbox' }, t('dec.locked')));
+  }
+
+  return { render: render };
+})();
+
+App.views.close = (() => {
+  async function render(root, params) {
+    root.appendChild(loadingEl());
+    const res = await api('apiGetQrap', params.id);
+    if (!root.isConnected) return;
+    clear(root);
+    if (!res.ok) { root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
+    const d = res.detail;
+    const q = d.q;
+    const box = errorBox();
+    addKids(root, [
+      h('h1', null, t('close.title'), ' · ', q.qrap_id),
+      h('div', { class: 'card sec sec-pil' },
+        h('p', null, statusBadge(q.status), ' ', q.what),
+        h('ul', { class: 'check-list' }, d.closure.items.map(i => h('li', { class: i.ok ? 'pill-ok' : 'pill-bad' },
+          (i.ok ? '✓ ' : '✗ ') + t('close.' + i.code)))),
+        h('div', { class: 'slots' }, d.eff.slots.map((s, i) => h('div', { class: 'slot' + (s ? ' slot-' + s.result : '') },
+          h('b', null, (i + 1) + '. '), s ? [t('eff.' + s.result), h('br'), fmtD(s.shift_date) + ' · ' + shiftName(s.shift_code)] : '–')))),
+      box,
+      q.status === 'CLOSED' ? h('div', { class: 'okbox' }, t('close.done', { who: personName(q.closed_by), at: fmtDT(q.closed_at) }))
+        : d.can.close ? button(t('close.sign'), async () => {
+          const r = await api('apiSignClosure', { id: q.qrap_id });
+          if (!r.ok) { showErrors(r, box); return; }
+          toast(t('close.signed'), 'ok', 6000);
+          render(clear(byId('app')), params);
+        }, 'primary', { big: true, disabled: !d.closure.ok })
+          : h('div', { class: 'warnbox' }, App.user.isKiosk ? t('err.E_KIOSK_SIGN') : t('close.noRight')),
+      h('div', { class: 'btn-row' }, button(t('qrap.detail'), () => go('qrap', { id: q.qrap_id }), 'ghost'),
+        d.can.effect ? button(t('qrap.effect'), () => go('effect', { id: q.qrap_id }), 'ok') : null)
+    ]);
+  }
+  return { render: render };
+})();
+</script>

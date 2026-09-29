@@ -1,0 +1,261 @@
+<script>
+'use strict';
+/*
+ * ViewWizardSteps – wizard steps 3 (② upozornění), 4 (③ okamžitá opatření), 5 (kontrola a odeslání)
+ * and the browser-side checks of every step. The server repeats every check (never trust the browser).
+ */
+
+// ---------------------------------------------------------------- step 3: ② kdo byl upozorněn?
+
+Wiz.steps[3] = function (body) {
+  const S = Wiz.S;
+  const riskAno = S.q.risk_stock_shipped === 'ANO';
+  if (riskAno && S.roles.indexOf('QUALITY') < 0) S.roles.push('QUALITY');
+  const other = field(t('f.alert_other'), textInput(S.other_text, v => { S.other_text = v; S.dirty = true; }, { max: 200 }),
+    { name: 'alert_other', required: true });
+  other.hidden = S.roles.indexOf('OTHER') < 0;
+  const options = listItems('ALERT_ROLE').map(o => Object.assign(o, { locked: riskAno && o.value === 'QUALITY' }));
+  addKids(body, [
+    h('h2', null, t('sec.2')),
+    h('p', { class: 'muted' }, t('wiz.alertHint')),
+    field(null, multiToggle(options, S.roles, v => { S.roles = v; S.dirty = true; other.hidden = v.indexOf('OTHER') < 0; }, 'seg-grid'),
+      { name: 'roles' }),
+    riskAno ? h('p', { class: 'warnbox' }, t('wiz.qualityAuto')) : null,
+    other
+  ]);
+};
+
+// ---------------------------------------------------------------- step 4: ③ okamžitá opatření <24h
+
+Wiz.steps[4] = function (body) {
+  const S = Wiz.S;
+  const q = S.q;
+  const set = k => v => { q[k] = v; S.dirty = true; };
+  if (!S.ia.some(a => !a.remove)) S.ia.push({ id: '', type: '', text: '', owner_name: '', done_at: '', remove: false });
+
+  const checkBox = h('div');
+  const drawCheck = () => {
+    clear(checkBox);
+    if (q.risk_stock_shipped !== 'ANO') return;
+    addKids(checkBox, [
+      h('div', { class: 'warnbox' }, t('wiz.riskAno')),
+      h('div', { class: 'row' },
+        field(t('f.checked_qty'), numInput(q.checked_qty, set('checked_qty')), { name: 'checked_qty' }),
+        field(t('f.wrong_found_qty'), numInput(q.wrong_found_qty, set('wrong_found_qty')), { name: 'wrong_found_qty' })),
+      checkbox(t('f.check_in_progress'), q.check_in_progress, set('check_in_progress'))
+    ]);
+  };
+  drawCheck();
+
+  const iaBox = h('div');
+  const drawIa = () => {
+    clear(iaBox);
+    S.ia.filter(a => !a.remove).forEach((a, i) => iaBox.appendChild(iaRow(a, i + 1)));
+    iaBox.appendChild(button(t('wiz.addAction'), () => {
+      S.ia.push({ id: '', type: '', text: '', owner_name: '', done_at: '', remove: false });
+      S.dirty = true;
+      drawIa();
+    }, 'ghost'));
+  };
+  function iaRow(a, n) {
+    const upd = k => v => { a[k] = v; S.dirty = true; };
+    const doneIn = dtInput(a.done_at, upd('done_at'), nowLocalInput());
+    return h('div', { class: 'ia-row' },
+      h('div', { class: 'fld-label' }, t('wiz.actionN', { n: n })),
+      h('div', { class: 'row' },
+        field(t('f.ia_type'), selectEl(listItems('ACTION_TYPE'), a.type, upd('type')), { name: 'ia' + n + '_type' }),
+        field(t('f.ia_owner'), personSelect(a.owner_name, upd('owner_name'), S.area), { name: 'ia' + n + '_owner_name' })),
+      field(t('f.ia_text'), textInput(a.text, upd('text'), { max: 500, placeholder: t('wiz.actionTextHint') }), { name: 'ia' + n + '_text' }),
+      h('div', { class: 'row' },
+        field(t('f.ia_done'), h('div', { class: 'row' }, doneIn, h('div', { style: { flex: '0 0 auto' } },
+          button(t('btn.doneNow'), () => { a.done_at = nowLocalInput(); doneIn.value = a.done_at; S.dirty = true; }, 'ok'))),
+        { name: 'ia' + n + '_done' }),
+        h('div', { style: { flex: '0 0 auto', alignSelf: 'center' } }, button(t('btn.remove'), () => {
+          if (a.id) a.remove = true; else S.ia.splice(S.ia.indexOf(a), 1);
+          S.dirty = true;
+          drawIa();
+        }, 'ghost'))));
+  }
+  drawIa();
+
+  const restored = field(t('f.restored_at'), h('div', { class: 'row' }, dtInput(q.restored_at, set('restored_at'), nowLocalInput()),
+    h('div', { style: { flex: '0 0 auto' } }, button(t('btn.now'), () => { q.restored_at = nowLocalInput(); S.dirty = true; Wiz.draw(); }))),
+  { name: 'restored_at', hint: t('wiz.restoredHint') });
+  restored.hidden = q.process_stopped !== 'ANO';
+
+  addKids(body, [
+    h('h2', null, t('sec.3')),
+    field(t('f.risk_stock_shipped'), yesNo(q.risk_stock_shipped, v => {
+      q.risk_stock_shipped = v; S.dirty = true; drawCheck();
+      if (Wiz.laterBtn) Wiz.laterBtn.disabled = false;
+    }), { name: 'risk_stock_shipped', required: true, hint: t('wiz.riskHint') }),
+    checkBox,
+    h('h3', null, t('f.ia'), h('span', { class: 'req' }, ' *')),
+    iaBox,
+    field(t('f.process_stopped'), yesNo(q.process_stopped, v => { q.process_stopped = v; S.dirty = true; restored.hidden = v !== 'ANO'; },
+      { lower: true, yesKind: 'warn' }), { name: 'process_stopped', required: true }),
+    restored,
+    h('p', { class: 'muted' }, t('wiz.laterHint'))
+  ]);
+};
+
+/** Which ③ rules are not met yet (same codes as section3State_ on the server). */
+Wiz.s3Missing = function () {
+  const q = Wiz.S.q;
+  const ia = Wiz.S.ia.filter(a => !a.remove);
+  const m = [];
+  const blank = v => v === '' || v === undefined || v === null;
+  if (!q.risk_stock_shipped) m.push('RISK');
+  if (q.risk_stock_shipped === 'ANO') {
+    if (q.check_in_progress) m.push('CHECK_IN_PROGRESS');
+    else if (blank(q.checked_qty) || blank(q.wrong_found_qty)) m.push('CHECK_DATA');
+  }
+  if (!ia.length) m.push('NO_ACTION');
+  else if (ia.some(a => !a.done_at)) m.push('ACTION_OPEN');
+  if (!q.process_stopped) m.push('PROCESS');
+  else if (q.process_stopped === 'ANO' && !q.restored_at) m.push('NOT_RESTORED');
+  return m;
+};
+
+// ---------------------------------------------------------------- step 5: kontrola a odeslání
+
+Wiz.steps[5] = function (body) {
+  const S = Wiz.S;
+  const q = S.q;
+  const edit = n => h('div', { class: 'btn-row' }, button(t('btn.edit'), () => Wiz.goStep(n), 'ghost'));
+  const miss = Wiz.s3Missing();
+  const thumbs = h('div', { class: 'thumbs' }, ['WRONG', 'CORRECT'].map(k => {
+    const p = S.photos[k];
+    if (!p) return null;
+    const img = h('img', { alt: t('wiz.photo' + k) });
+    loadPhoto(p.thumb_file_id, img);
+    return h('div', { class: 'thumb thumb-' + k.toLowerCase() }, h('b', null, t('wiz.photo' + k)), img);
+  }));
+  addKids(body, [
+    h('h2', null, t('wiz.s5')),
+    sectionCard('1', t('sec.1'), 'op', kvList([
+      [t('f.safety'), yn(q.safety, true)],
+      [t('f.what'), q.what],
+      [t('f.how_found'), q.how_found === 'OTHER' ? t('lbl.other') + ': ' + (q.how_found_other || '') : listLabel('HOW_FOUND', q.how_found)],
+      [t('f.detected_at'), fmtDT(localToMs(q.detected_at))],
+      [t('f.where'), [q.zone, q.location_code].filter(Boolean).join(' / ')],
+      [t('f.qty'), q.qty === '' || q.qty === undefined ? '' : q.qty + ' ' + listLabel('UNIT', q.unit) + (q.nok_situation ? ' · ' + t('f.nok_situation') : '')],
+      [t('f.repeat_7d'), q.repeat_7d === 'ANO' ? t('lbl.yes') + ' → ' + (q.repeat_ref || '?') : yn(q.repeat_7d)],
+      [t('f.finder_name'), [q.finder_name, q.finder_badge].filter(Boolean).join(' · ')],
+      [t('f.material_no'), q.material_no], [t('f.hu_or_delivery_no'), q.hu_or_delivery_no], [t('f.supplier'), q.supplier]
+    ]), thumbs, q.photoExc ? h('p', null, h('b', null, t('f.photo_exception') + ': '), q.photo_exception) : null, edit(1)),
+    sectionCard('2', t('sec.2'), 'op', h('p', null, S.roles.map(r => listLabel('ALERT_ROLE', r)).join(', ') || '–',
+      S.other_text && S.roles.indexOf('OTHER') >= 0 ? ' (' + S.other_text + ')' : ''), edit(3)),
+    sectionCard('3', t('sec.3'), 'op', kvList([
+      [t('f.risk_stock_shipped'), yn(q.risk_stock_shipped)],
+      [t('f.check'), q.risk_stock_shipped === 'ANO' ? (q.check_in_progress ? t('f.check_in_progress') :
+        (q.checked_qty || 0) + ' / ' + (q.wrong_found_qty || 0) + ' ' + t('lbl.pcs')) : ''],
+      [t('f.process_stopped'), yn(q.process_stopped, true) + (q.restored_at ? ' → ' + fmtDT(localToMs(q.restored_at)) : '')]
+    ]), table([t('f.ia_type'), t('f.ia_text'), t('f.ia_owner'), t('f.ia_done')], S.ia.filter(a => !a.remove).map(a =>
+      [listLabel('ACTION_TYPE', a.type), a.text, a.owner_name, a.done_at ? fmtDT(localToMs(a.done_at)) : t('lbl.open')])),
+    miss.length ? h('div', { class: 'warnbox' }, t('wiz.s3Later') + ' ' + miss.map(m => t('s3.' + m)).join(', '))
+      : h('div', { class: 'okbox' }, t('wiz.s3Complete')), edit(4)),
+    S.status === 'DRAFT' ? h('p', { class: 'muted' }, t('wiz.sendHint')) : null
+  ]);
+};
+
+// ---------------------------------------------------------------- checks (mirror of the server rules)
+
+Wiz.validate[1] = function () {
+  const q = Wiz.S.q;
+  const e = [];
+  const w = [];
+  const req = f => e.push({ code: 'E_REQUIRED', field: f });
+  if (!q.safety) req('safety');
+  const what = String(q.what || '').trim();
+  if (!what) req('what'); else if (what.length < 10) w.push({ code: 'W_WHAT_SHORT' });
+  if (!q.how_found) req('how_found');
+  else if (q.how_found === 'OTHER' && !String(q.how_found_other || '').trim()) req('how_found_other');
+  const det = localToMs(q.detected_at);
+  if (!q.detected_at || isNaN(det)) req('detected_at');
+  else if (det > Date.now() + 5 * 60000) e.push({ code: 'E_FUTURE', field: 'detected_at' });
+  else if (det < Date.now() - 24 * 3600000) w.push({ code: 'W_OLD_DETECTION' });
+  if (!q.zone) req('zone');
+  if (!q.location_code) req('location_code');
+  if (q.qty === '' || q.qty === undefined) req('qty');
+  else if (!Number.isInteger(q.qty) || q.qty < 0) e.push({ code: 'E_INVALID', field: 'qty' });
+  else if (q.qty === 0 && !q.nok_situation) e.push({ code: 'E_QTY_ZERO', field: 'qty' });
+  else if (q.qty > 0 && !q.unit) req('unit');
+  if (!q.repeat_7d) req('repeat_7d');
+  else if (q.repeat_7d === 'ANO' && !q.repeat_ref) e.push({ code: 'E_REPEAT_REF', field: 'repeat_ref' });
+  if (!q.finder_name && !String(q.finder_badge || '').trim()) req('finder_name');
+  return { errors: e, warnings: w };
+};
+
+Wiz.validate[2] = function () {
+  const S = Wiz.S;
+  const e = [];
+  const photos = S.photos.WRONG && S.photos.CORRECT;
+  if (!photos) {
+    if (!S.q.photoExc) e.push({ code: 'E_PHOTOS' });
+    else if (String(S.q.photo_exception || '').trim().length < 3) e.push({ code: 'E_REQUIRED', field: 'photo_exception' });
+  }
+  return { errors: e, warnings: [] };
+};
+
+Wiz.validate[3] = function () {
+  const S = Wiz.S;
+  const e = [];
+  if (!S.roles.length) e.push({ code: 'E_ALERT_NONE' });
+  if (S.roles.indexOf('OTHER') >= 0 && !String(S.other_text || '').trim()) e.push({ code: 'E_REQUIRED', field: 'alert_other' });
+  return { errors: e, warnings: [] };
+};
+
+Wiz.validate[4] = function (mode) {
+  const q = Wiz.S.q;
+  const e = [];
+  const num = v => v !== '' && v !== undefined && v !== null;
+  if (!q.risk_stock_shipped) e.push({ code: 'E_REQUIRED', field: 'risk_stock_shipped' });
+  if (num(q.checked_qty) && num(q.wrong_found_qty) && q.wrong_found_qty > q.checked_qty) {
+    e.push({ code: 'E_WRONG_GT_CHECKED', field: 'wrong_found_qty' });
+  }
+  const det = localToMs(q.detected_at);
+  if (q.process_stopped === 'ANO' && q.restored_at && localToMs(q.restored_at) < det) {
+    e.push({ code: 'E_RESTORED_BEFORE', field: 'restored_at' });
+  }
+  Wiz.S.ia.filter(a => !a.remove).forEach((a, i) => {
+    const n = i + 1;
+    if (!a.type) e.push({ code: 'E_IA_ROW', row: n, field: 'ia' + n + '_type' });
+    if (!String(a.text || '').trim()) e.push({ code: 'E_IA_ROW', row: n, field: 'ia' + n + '_text' });
+    if (!a.owner_name) e.push({ code: 'E_IA_ROW', row: n, field: 'ia' + n + '_owner_name' });
+    if (a.done_at) {
+      const d = localToMs(a.done_at);
+      if (d > Date.now() + 5 * 60000) e.push({ code: 'E_IA_DONE_FUTURE', row: n, field: 'ia' + n + '_done' });
+      else if (d < det) e.push({ code: 'E_IA_DONE_BEFORE', row: n, field: 'ia' + n + '_done' });
+    }
+  });
+  if (mode === 'next' && !e.length) {
+    const miss = Wiz.s3Missing();
+    if (miss.length) e.push({ code: 'E_S3_INCOMPLETE', missing: miss });
+  }
+  return { errors: e, warnings: [] };
+};
+
+/** Before "Odeslat". Returns a list of errors. */
+Wiz.validate[5] = function () {
+  const S = Wiz.S;
+  const e = [];
+  if (!S.q.s1_done_at) e.push({ code: 'E_S1_INCOMPLETE' });
+  e.push.apply(e, Wiz.validate[2]().errors);
+  e.push.apply(e, Wiz.validate[3]().errors);
+  if (!S.q.risk_stock_shipped) e.push({ code: 'E_REQUIRED', field: 'risk_stock_shipped' });
+  return e;
+};
+
+Wiz.data[3] = () => ({ roles: Wiz.S.roles.slice(), other_text: Wiz.S.other_text || '' });
+Wiz.data[4] = () => {
+  const q = Wiz.S.q;
+  const val = v => (v === undefined || v === null ? '' : v);
+  return {
+    risk_stock_shipped: val(q.risk_stock_shipped), checked_qty: val(q.checked_qty), wrong_found_qty: val(q.wrong_found_qty),
+    check_in_progress: !!q.check_in_progress, process_stopped: val(q.process_stopped), restored_at: val(q.restored_at),
+    actions: Wiz.S.ia.filter(a => a.id || a.type || a.text || a.owner_name).map(a => ({ id: a.id, type: a.type, text: a.text,
+      owner_name: a.owner_name, done_at: a.done_at, remove: a.remove }))
+  };
+};
+</script>

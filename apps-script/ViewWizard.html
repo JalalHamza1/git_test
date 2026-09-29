@@ -1,0 +1,316 @@
+<script>
+'use strict';
+/*
+ * ViewWizard – the kiosk wizard (?page=new&area=WH1 or ?page=wizard&id=…&step=…).
+ * Steps: 1 Popis · 2 Fotky · 3 Upozornění · 4 Opatření · 5 Kontrola a odeslání.
+ * This file: state, navigation, saving, step 1 and step 2. Steps 3–5 and the checks are in ViewWizardSteps.
+ * Every "Další" validates in the browser, then saves on the server (which validates again).
+ */
+const Wiz = { S: null, root: null, body: null, errBox: null, laterBtn: null, steps: {}, validate: {}, data: {} };
+
+App.views.wizard = App.views.new = (() => {
+  /** Empty state for a new QRAP. */
+  function blank(area) {
+    return {
+      id: '', area: area, status: '', step: 1, dirty: false,
+      q: { detected_at: nowLocalInput(), nok_situation: false, check_in_progress: false, photo_exception: '', photoExc: false },
+      roles: [], other_text: '', ia: [], photos: { WRONG: null, CORRECT: null }, s3: null, can: { editQr: true }
+    };
+  }
+
+  /** Server state → wizard state (dates to local input format, "OTHER:text" split). */
+  function fromServer(st, step) {
+    const q = st.q;
+    const how = String(q.how_found || '');
+    Wiz.S = {
+      id: q.qrap_id, area: q.area_code, status: q.status, step: step || 1, dirty: false,
+      q: Object.assign({}, q, {
+        detected_at: toLocalInput(q.detected_at), restored_at: toLocalInput(q.restored_at),
+        how_found: how.indexOf('OTHER:') === 0 ? 'OTHER' : how,
+        how_found_other: how.indexOf('OTHER:') === 0 ? how.slice(6) : '',
+        nok_situation: q.nok_situation === true, check_in_progress: q.check_in_progress === true,
+        photoExc: !!q.photo_exception
+      }),
+      roles: st.alerts.map(a => a.role_code),
+      other_text: (st.alerts.find(a => a.role_code === 'OTHER') || {}).other_text || '',
+      ia: iaFromServer(st.ia),
+      photos: { WRONG: st.photos.find(p => p.kind === 'WRONG') || null, CORRECT: st.photos.find(p => p.kind === 'CORRECT') || null },
+      s3: st.s3, can: st.can
+    };
+  }
+  function iaFromServer(rows) {
+    return rows.map(a => ({ id: a.id, type: a.type, text: a.text, owner_name: a.owner_name, done_at: toLocalInput(a.done_at), remove: false }));
+  }
+
+  /** After a save: take the server's truth for ids, status and system fields; keep what is typed elsewhere. */
+  function mergeServer(st, step) {
+    const S = Wiz.S;
+    S.id = st.q.qrap_id;
+    S.status = st.q.status;
+    S.s3 = st.s3;
+    S.can = st.can;
+    ['qrap_id', 'status', 'area_code', 's1_done_at', 's2_done_at', 's3_done_at', 'sent_at', 'containment_done_at', 'finder_name']
+      .forEach(k => { S.q[k] = st.q[k]; });
+    S.roles = st.alerts.map(a => a.role_code);
+    S.photos = { WRONG: st.photos.find(p => p.kind === 'WRONG') || null, CORRECT: st.photos.find(p => p.kind === 'CORRECT') || null };
+    if (step === 4) S.ia = iaFromServer(st.ia);
+  }
+
+  async function render(root, params) {
+    Wiz.root = root;
+    if (params.id) {
+      root.appendChild(loadingEl());
+      const res = await api('apiGetWizard', params.id);
+      if (!root.isConnected) return;
+      clear(root);
+      if (!res.ok) { showErrors(res); root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
+      fromServer(res.state, Math.min(5, Math.max(1, Number(params.step) || 1)));
+      if (!Wiz.S.can.editQr) { root.appendChild(h('div', { class: 'empty' }, t('err.E_LOCKED'))); return; }
+    } else {
+      Wiz.S = blank(String(params.area || defaultArea()).toUpperCase());
+      if (!canCreateIn(Wiz.S.area)) { root.appendChild(h('div', { class: 'empty' }, t('err.E_FORBIDDEN'))); return; }
+    }
+    draw();
+  }
+
+  /** Draws the whole wizard page for the current step. */
+  function draw() {
+    const S = Wiz.S;
+    const root = clear(Wiz.root);
+    root.appendChild(h('div', { class: 'progress' }, [1, 2, 3, 4, 5].map(n => h('div', {
+      class: n === S.step ? 'cur' : n < S.step ? 'done' : '',
+      onclick: n < S.step ? () => goStep(n) : null
+    }, n + ' ' + t('wiz.s' + n)))));
+    root.appendChild(h('h1', null, S.id ? S.id : t('wiz.newTitle'), S.status ? statusBadge(S.status) : null));
+    Wiz.errBox = errorBox();
+    root.appendChild(Wiz.errBox);
+    Wiz.body = h('div', { class: 'card' });
+    root.appendChild(Wiz.body);
+    Wiz.steps[S.step](Wiz.body);
+    root.appendChild(navBar());
+  }
+  Wiz.draw = draw;
+
+  function navBar() {
+    const S = Wiz.S;
+    const nav = h('div', { class: 'wiz-nav' });
+    nav.appendChild(S.step > 1 ? button(t('btn.back'), () => goStep(S.step - 1), 'ghost', { big: true })
+      : button(t('btn.cancel'), cancel, 'ghost', { big: true }));
+    Wiz.laterBtn = null;
+    if (S.step === 4) {
+      Wiz.laterBtn = button(t('wiz.later'), later, 'ghost', { big: true });
+      Wiz.laterBtn.disabled = !S.q.risk_stock_shipped;
+      nav.appendChild(Wiz.laterBtn);
+    }
+    if (S.step < 5) nav.appendChild(button(t('btn.next'), next, 'op', { big: true }));
+    else if (S.status === 'DRAFT') nav.appendChild(button(t('wiz.send'), submit, 'op', { big: true }));
+    else nav.appendChild(button(t('wiz.saveClose'), () => go('qrap', { id: S.id }), 'primary', { big: true }));
+    return nav;
+  }
+
+  function goStep(n) {
+    const S = Wiz.S;
+    S.step = n;
+    if (S.id) setUrl({ page: 'wizard', id: S.id, step: n });
+    draw();
+    window.scrollTo(0, 0);
+  }
+  Wiz.goStep = goStep;
+
+  /** Saves one step on the server. mode: next | later | draft. */
+  async function save(step, mode) {
+    const S = Wiz.S;
+    const res = await api('apiSaveStep', { id: S.id, area: S.area, step: step, mode: mode, data: Wiz.data[step]() });
+    if (res.ok) { mergeServer(res.state, step); S.dirty = false; }
+    return res;
+  }
+
+  async function next() {
+    const S = Wiz.S;
+    const step = S.step;
+    const v = Wiz.validate[step]('next');
+    if (!setErrors(Wiz.errBox, v.errors, Wiz.body)) return;
+    if (!(await warnConfirm(v.warnings))) return;
+    const res = await save(step, 'next');
+    if (!res.ok) { showErrors(res, Wiz.errBox, Wiz.body); return; }
+    goStep(step + 1);
+  }
+
+  /** "Dokončí TL později": needs only the risk answer; ③ can be completed later. */
+  async function later() {
+    const v = Wiz.validate[4]('later');
+    if (!setErrors(Wiz.errBox, v.errors, Wiz.body)) return;
+    const res = await save(4, 'later');
+    if (!res.ok) { showErrors(res, Wiz.errBox, Wiz.body); return; }
+    goStep(5);
+  }
+
+  async function submit() {
+    const S = Wiz.S;
+    const errs = Wiz.validate[5]();
+    if (!setErrors(Wiz.errBox, errs)) return;
+    const res = await api('apiSubmitQrap', S.id);
+    if (!res.ok) { showErrors(res, Wiz.errBox); return; }
+    go('board', { area: S.area }, { extra: { toast: t('wiz.sent', { id: S.id }) } });
+  }
+
+  async function cancel() {
+    const S = Wiz.S;
+    if (S.dirty && !(await confirmDlg(t('wiz.leaveUnsaved'), t('btn.leave'), 'danger'))) return;
+    go(S.id ? 'qrap' : 'board', S.id ? { id: S.id } : { area: S.area });
+  }
+
+  /** Kiosk idle timeout: save what was typed as a draft, then back to the board. */
+  async function onIdle() {
+    const S = Wiz.S;
+    const step = S ? S.step : 0;
+    const hasText = S && (S.id || S.q.what || S.q.safety);
+    if (S && S.dirty && hasText && step >= 1 && step <= 4) {
+      const res = await save(step, 'draft');
+      toast(res.ok ? t('wiz.idleSaved', { id: S.id }) : t('wiz.idleNotSaved'), res.ok ? 'ok' : 'warn', 7000);
+    }
+    go('board', { area: S ? S.area : defaultArea() });
+  }
+
+  return { render: render, onIdle: onIdle, leave: () => {} };
+})();
+
+// ---------------------------------------------------------------- step 1: ① popis problému
+
+Wiz.steps[1] = function (body) {
+  const S = Wiz.S;
+  const q = S.q;
+  const set = k => v => { q[k] = v; S.dirty = true; };
+  const otherBox = field(t('f.how_found_other'), textInput(q.how_found_other, set('how_found_other')), { name: 'how_found_other', required: true });
+  otherBox.hidden = q.how_found !== 'OTHER';
+  const whatHint = h('div', { class: 'fld-hint' });
+  const updWhat = () => { whatHint.textContent = (q.what || '').trim().length < 10 ? t('wiz.whatShort') : ''; };
+  updWhat();
+  const locBox = h('div');
+  const drawLoc = () => {
+    clear(locBox);
+    const codes = locationsOf(S.area, q.zone);
+    if (codes.length) locBox.appendChild(segmented(codes.map(c => ({ value: c, label: c })), q.location_code, v => { q.location_code = v; S.dirty = true; drawLoc(); }));
+    locBox.appendChild(h('div', { style: { marginTop: '8px' } },
+      textInput(codes.indexOf(q.location_code) >= 0 ? '' : q.location_code, v => { q.location_code = v.trim(); S.dirty = true; },
+        { placeholder: t('wiz.locOther'), max: 100 })));
+  };
+  drawLoc();
+  const repBox = h('div');
+  const drawRep = () => { clear(repBox); if (q.repeat_7d === 'ANO') Wiz.repeatPicker(repBox); };
+  drawRep();
+  addKids(body, [
+    h('h2', null, t('sec.1')),
+    field(t('f.safety'), yesNo(q.safety, set('safety'), { lower: true }), { name: 'safety', required: true, hint: t('wiz.safetyHint') }),
+    field(t('f.what'), [textArea(q.what, v => { q.what = v; S.dirty = true; updWhat(); }, 3, 2000), whatHint], { name: 'what', required: true, hint: t('wiz.whatHint') }),
+    field(t('f.how_found'), segmented(listItems('HOW_FOUND'), q.how_found, v => { q.how_found = v; S.dirty = true; otherBox.hidden = v !== 'OTHER'; }, 'seg-grid'),
+      { name: 'how_found', required: true }),
+    otherBox,
+    field(t('f.detected_at'), h('div', { class: 'row' }, dtInput(q.detected_at, set('detected_at'), nowLocalInput()),
+      h('div', { style: { flex: '0 0 auto' } }, button(t('btn.now'), () => { q.detected_at = nowLocalInput(); S.dirty = true; Wiz.draw(); }))),
+    { name: 'detected_at', required: true, hint: t('wiz.whenHint') }),
+    field(t('f.zone'), segmented(zonesOf(S.area).map(z => ({ value: z, label: z })), q.zone, v => { q.zone = v; q.location_code = ''; S.dirty = true; drawLoc(); }, 'seg-grid'),
+      { name: 'zone', required: true }),
+    field(t('f.location_code'), locBox, { name: 'location_code', required: true }),
+    field(t('f.origin_zone'), selectEl(zonesOf(S.area), q.origin_zone, set('origin_zone'), t('lbl.unknown')), { name: 'origin_zone' }),
+    field(t('f.qty'), [h('div', { class: 'row' }, numInput(q.qty, set('qty')), segmented(listItems('UNIT'), q.unit, set('unit'))),
+      checkbox(t('f.nok_situation'), q.nok_situation, set('nok_situation'))], { name: 'qty', required: true }),
+    field(t('f.repeat_7d'), yesNo(q.repeat_7d, v => { q.repeat_7d = v; S.dirty = true; drawRep(); }, { yesKind: 'warn' }), { name: 'repeat_7d', required: true }),
+    field(null, repBox, { name: 'repeat_ref' }),
+    field(t('f.finder_name'), h('div', { class: 'row' },
+      personSelect(q.finder_name, set('finder_name'), S.area, { roles: ['OPERATOR', 'TL', 'SUPERVISOR'] }),
+      textInput(q.finder_badge, set('finder_badge'), { placeholder: t('wiz.badge'), inputmode: 'numeric', max: 40 })),
+    { name: 'finder_name', required: true }),
+    h('h3', null, t('wiz.optional')),
+    h('div', { class: 'row' },
+      field(t('f.material_no'), textInput(q.material_no, set('material_no'), { max: 60 }), { name: 'material_no' }),
+      field(t('f.hu_or_delivery_no'), textInput(q.hu_or_delivery_no, set('hu_or_delivery_no'), { max: 60 }), { name: 'hu_or_delivery_no' }),
+      field(t('f.supplier'), textInput(q.supplier, set('supplier'), { max: 100 }), { name: 'supplier' }))
+  ]);
+};
+
+/** "Stejný problém v posledních 7 dnech? = ANO": suggestions + manual number. */
+Wiz.repeatPicker = async function (box) {
+  const S = Wiz.S;
+  const q = S.q;
+  const list = h('div', null, loadingEl());
+  const manual = textInput(q.repeat_ref, v => { q.repeat_ref = v.trim().toUpperCase(); S.dirty = true; }, { placeholder: t('wiz.repeatManual'), max: 60 });
+  addKids(box, [h('div', { class: 'fld-label' }, t('wiz.repeatPick')), list, manual]);
+  const res = await api('apiSuggestRepeats', { area: S.area, id: S.id, material_no: q.material_no, zone: q.zone, what: q.what,
+    detected_at: q.detected_at });
+  clear(list);
+  if (!res.ok || !res.items.length) { list.appendChild(h('p', { class: 'muted' }, t('wiz.repeatNone'))); return; }
+  res.items.forEach(it => list.appendChild(h('button', {
+    type: 'button', class: 'sugg' + (q.repeat_ref === it.id ? ' on' : ''),
+    onclick: () => { q.repeat_ref = it.id; S.dirty = true; manual.value = it.id; list.querySelectorAll('.sugg').forEach(b => b.classList.remove('on')); }
+  }, h('b', null, it.id), ' · ', fmtDT(it.detected_at), ' · ', it.zone || '', h('br'), it.what)));
+  list.querySelectorAll('.sugg').forEach(b => b.addEventListener('click', () => b.classList.add('on')));
+};
+
+// ---------------------------------------------------------------- step 2: fotky
+
+Wiz.steps[2] = function (body) {
+  const S = Wiz.S;
+  const exc = field(t('f.photo_exception'), textArea(S.q.photo_exception, v => { S.q.photo_exception = v; S.dirty = true; }, 3, 500),
+    { name: 'photo_exception', required: true });
+  exc.hidden = !S.q.photoExc;
+  addKids(body, [
+    h('h2', null, t('wiz.s2')),
+    h('p', { class: 'muted' }, t('wiz.photoHint')),
+    h('div', { class: 'photo-slots' }, photoSlot('WRONG'), photoSlot('CORRECT')),
+    h('div', { style: { marginTop: '16px' } }, checkbox(t('wiz.photoExc'), S.q.photoExc, v => {
+      S.q.photoExc = v; S.dirty = true; exc.hidden = !v; if (!v) S.q.photo_exception = '';
+    })),
+    exc
+  ]);
+
+  function photoSlot(kind) {
+    const cur = S.photos[kind];
+    const frame = h('div', { class: 'ph-frame' });
+    if (cur) {
+      const img = h('img', { alt: t('wiz.photo' + kind) });
+      loadPhoto(cur.thumb_file_id, img);
+      frame.appendChild(img);
+    } else {
+      frame.appendChild(h('div', { class: 'ph-empty' }, t('wiz.noPhoto')));
+    }
+    const input = h('input', { type: 'file', accept: 'image/*', capture: 'environment', class: 'visually-hidden',
+      onchange: e => upload(kind, e.target.files && e.target.files[0]) });
+    return h('div', { class: 'photo-slot ph-' + kind.toLowerCase() },
+      h('div', { class: 'ph-title' }, t('wiz.photo' + kind)),
+      frame,
+      h('label', { class: 'btn btn-big ' + (kind === 'WRONG' ? 'btn-danger' : 'btn-ok') }, input,
+        cur ? t('wiz.retake') : t('wiz.takePhoto')));
+  }
+
+  async function upload(kind, file) {
+    if (!file) return;
+    let full;
+    let thumb;
+    try {
+      full = await resizeImage(file, 1600, 0.8);
+      thumb = await resizeImage(file, 400, 0.7);
+    } catch (e) {
+      toast(t('err.E_PHOTO_READ'), 'err');
+      return;
+    }
+    toast(t('wiz.uploading'), '', 30000);
+    const res = await api('apiUploadPhoto', { qrapId: S.id, kind: kind, full: full, thumb: thumb });
+    if (!res.ok) { showErrors(res); return; }
+    photoCache[res.photo.thumb_file_id] = 'data:image/jpeg;base64,' + thumb;
+    S.photos[kind] = res.photo;
+    toast(t('wiz.photoSaved'), 'ok');
+    Wiz.draw();
+  }
+};
+
+Wiz.data[1] = () => {
+  const q = Wiz.S.q;
+  const out = {};
+  ['safety', 'what', 'how_found', 'how_found_other', 'detected_at', 'zone', 'location_code', 'origin_zone', 'qty', 'unit',
+    'nok_situation', 'repeat_7d', 'repeat_ref', 'finder_name', 'finder_badge', 'material_no', 'hu_or_delivery_no', 'supplier']
+    .forEach(k => { out[k] = q[k] === undefined ? '' : q[k]; });
+  return out;
+};
+Wiz.data[2] = () => ({ photo_exception: Wiz.S.q.photoExc ? Wiz.S.q.photo_exception : '' });
+</script>

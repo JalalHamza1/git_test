@@ -1,0 +1,451 @@
+<script>
+'use strict';
+/*
+ * ClientCore – shared browser code:
+ *   App state · h() DOM builder · api() server calls with offline handling · router ·
+ *   toast / dialogs · date formatting (Europe/Prague) · lists and people · photos · QR code · idle timer · header.
+ * Security: user text is always inserted with textContent (h() does that), never with innerHTML.
+ */
+
+const App = {
+  boot: window.BOOT || {},
+  views: {},
+  params: {},
+  view: null,
+  get user() { return this.boot.user || {}; },
+  get set() { return this.boot.settings || { lists: {}, people: [], areas: [], shifts: [], locations: [], config: {} }; }
+};
+const PRAGUE = 'Europe/Prague';
+const FINAL_ST = ['CLOSED_SOLVED', 'ESCALATED', 'CLOSED'];
+
+/* ---------------------------------------------------------------- DOM builder */
+
+/**
+ * Creates an element. attrs: class, text, value, checked, disabled, hidden, style{}, dataset{}, on<event>, other attributes.
+ * Children: nodes, strings (become text nodes → safe), arrays, null/false (skipped).
+ */
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  Object.keys(attrs || {}).forEach(k => {
+    const v = attrs[k];
+    if (v === null || v === undefined || v === false) return;
+    if (k === 'class') el.className = v;
+    else if (k === 'text') el.textContent = v;
+    else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    else if (k === 'dataset') Object.assign(el.dataset, v);
+    else if (k.indexOf('on') === 0 && typeof v === 'function') el.addEventListener(k.slice(2), v);
+    else if (['value', 'checked', 'disabled', 'hidden', 'selected', 'multiple'].indexOf(k) >= 0) el[k] = v;
+    else el.setAttribute(k, v === true ? '' : String(v));
+  });
+  addKids(el, kids);
+  return el;
+}
+function addKids(el, kids) {
+  (kids || []).forEach(k => {
+    if (Array.isArray(k)) return addKids(el, k);
+    if (k === null || k === undefined || k === false) return;
+    el.appendChild(k instanceof Node ? k : document.createTextNode(String(k)));
+  });
+  return el;
+}
+function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
+function byId(id) { return document.getElementById(id); }
+
+/* ---------------------------------------------------------------- roles */
+
+function hasRole(r) { return (App.user.roles || []).indexOf(r) >= 0; }
+function hasAnyRole(list) { return list.some(hasRole); }
+function inArea(area) { const a = App.user.areas || []; return a.indexOf('*') >= 0 || a.indexOf(area) >= 0; }
+function canCreateIn(area) {
+  const a = App.set.areas.find(x => x.code === area);
+  return !!a && a.level === 'AREA' && inArea(area) && hasAnyRole(['KIOSK', 'OPERATOR', 'TL', 'SUPERVISOR', 'ADMIN']);
+}
+function defaultArea() {
+  const own = (App.user.areas || []).filter(a => a !== '*' && App.set.areas.some(x => x.code === a));
+  const lineAreas = App.set.areas.filter(a => a.level === 'AREA').map(a => a.code);
+  return own.find(a => lineAreas.indexOf(a) >= 0) || own[0] || lineAreas[0] || (App.set.areas[0] || {}).code || '';
+}
+
+/* ---------------------------------------------------------------- server calls */
+
+let busyCount = 0;
+const retryQueue = [];
+
+/**
+ * Calls a server function. Always resolves with the server object ({ok, …}).
+ * Network problems: shows the offline banner and keeps the call pending until it succeeds,
+ * so the page (and everything typed) stays as it is.
+ */
+function api(fn, ...args) {
+  return new Promise(resolve => {
+    const attempt = () => {
+      busy(1);
+      google.script.run
+        .withSuccessHandler(res => { busy(-1); setOffline(false); resolve(res || { ok: false, errors: [{ code: 'E_INTERNAL' }] }); })
+        .withFailureHandler(err => {
+          busy(-1);
+          const msg = String((err && err.message) || err);
+          if (/network|HTTP 0|Failed to fetch|connection|offline|timed? ?out/i.test(msg)) {
+            retryQueue.push(attempt);
+            setOffline(true);
+          } else {
+            resolve({ ok: false, errors: [{ code: 'E_SERVER', detail: msg }] });
+          }
+        })[fn](...args);
+    };
+    attempt();
+  });
+}
+function busy(delta) {
+  busyCount = Math.max(0, busyCount + delta);
+  const bar = byId('busy');
+  if (bar) bar.hidden = busyCount === 0;
+}
+function setOffline(on) {
+  const bar = byId('offline');
+  if (!on) { bar.hidden = true; return; }
+  clear(bar).hidden = false;
+  addKids(bar, [t('msg.offline'), h('button', { class: 'btn btn-ghost', onclick: retryNow }, t('btn.retry'))]);
+}
+function retryNow() {
+  const list = retryQueue.splice(0, retryQueue.length);
+  list.forEach(fn => fn());
+}
+window.addEventListener('online', retryNow);
+setInterval(() => { if (retryQueue.length && navigator.onLine !== false) retryNow(); }, 15000);
+
+/* ---------------------------------------------------------------- messages and dialogs */
+
+/** Text of one server error or warning ({code, field, …}). */
+function errText(e, prefix) {
+  const p = Object.assign({}, e);
+  if (e.field) p.fieldLabel = t('f.' + e.field);
+  if (e.code === 'E_IA_ROW') p.fieldLabel = t('f.ia_' + String(e.field).replace(/^ia\d+_/, ''));
+  if (e.missing) p.missing = e.missing.map(m => t('s3.' + m)).join(', ');
+  if (e.items) p.items = e.items.map(i => t('close.' + i)).join(', ');
+  if (e.chain) p.chainLabel = t('why.' + e.chain);
+  const key = (prefix || (String(e.code).indexOf('W_') === 0 ? 'warn.' : 'err.')) + e.code;
+  const txt = t(key, p);
+  return txt === key ? e.code + (e.detail ? ': ' + e.detail : '') : txt + (e.detail && (e.code === 'E_INTERNAL' || e.code === 'E_SERVER') ? ' (' + e.detail + ')' : '');
+}
+
+/** Shows server errors in a box (if given) or as a toast, and marks fields with data-field. */
+function showErrors(res, box, root) {
+  const errs = (res && res.errors) || [];
+  if (root) markFields(root, errs);
+  if (box) {
+    clear(box).hidden = !errs.length;
+    if (errs.length) addKids(box, [h('b', null, t('msg.fix')), h('ul', null, errs.map(e => h('li', null, errText(e))))]);
+    if (errs.length) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } else if (errs.length) {
+    toast(errs.map(e => errText(e)).join(' · '), 'err', 7000);
+  }
+}
+function markFields(root, errs) {
+  root.querySelectorAll('.fld.has-err').forEach(f => { f.classList.remove('has-err'); const m = f.querySelector('.fld-err'); if (m) m.textContent = ''; });
+  errs.forEach(e => {
+    if (!e.field) return;
+    const f = root.querySelector('.fld[data-field="' + e.field + '"]');
+    if (!f) return;
+    f.classList.add('has-err');
+    const m = f.querySelector('.fld-err');
+    if (m) m.textContent = errText(e);
+  });
+}
+
+let toastTimer = null;
+function toast(text, kind, ms) {
+  const el = byId('toast');
+  el.textContent = text;
+  el.className = 'toast ' + (kind || '');
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, ms || 3500);
+}
+
+/**
+ * Modal dialog. buttons: [{label, value, kind}]. Resolves with the value of the pressed button.
+ * onOk(value) may return false to keep the dialog open (e.g. empty input).
+ */
+function modal(opts) {
+  return new Promise(resolve => {
+    const wrap = clear(byId('modal'));
+    wrap.hidden = false;
+    const close = v => {
+      if (opts.onOk && v !== false && v !== null && opts.onOk(v) === false) return;
+      wrap.hidden = true;
+      clear(wrap);
+      resolve(v);
+    };
+    const buttons = opts.buttons || [{ label: t('btn.ok'), value: true, kind: 'primary' }];
+    wrap.appendChild(h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true' },
+      opts.title ? h('h2', null, opts.title) : null,
+      opts.body instanceof Node ? opts.body : h('p', null, opts.body || ''),
+      h('div', { class: 'modal-btns' }, buttons.map(b => h('button', { class: 'btn btn-' + (b.kind || 'ghost'), onclick: () => close(b.value) }, b.label)))));
+    const first = wrap.querySelector('input, textarea, select');
+    if (first) first.focus();
+  });
+}
+function confirmDlg(text, okLabel, kind) {
+  return modal({ body: text, buttons: [{ label: t('btn.cancel'), value: false }, { label: okLabel || t('btn.ok'), value: true, kind: kind || 'primary' }] })
+    .then(v => v === true);
+}
+/** Asks for a text (e.g. an admin reason). Resolves with the text or null. */
+function promptDlg(title, label, minLen) {
+  const input = h('textarea', { rows: 3 });
+  const err = h('div', { class: 'fld-err' });
+  return modal({
+    title: title,
+    body: h('div', { class: 'fld' }, h('label', { class: 'fld-label' }, label), input, err),
+    buttons: [{ label: t('btn.cancel'), value: null }, { label: t('btn.ok'), value: 'ok', kind: 'primary' }],
+    onOk: () => { if (input.value.trim().length < (minLen || 1)) { err.textContent = t('err.E_REASON'); return false; } return true; }
+  }).then(v => (v === 'ok' ? input.value.trim() : null));
+}
+/** Shows warnings and asks whether to continue. */
+function warnConfirm(warnings) {
+  if (!warnings || !warnings.length) return Promise.resolve(true);
+  return modal({
+    title: t('msg.warnTitle'),
+    body: h('div', { class: 'warnbox' }, h('ul', null, warnings.map(w => h('li', null, errText(w))))),
+    buttons: [{ label: t('btn.fix'), value: false }, { label: t('btn.continue'), value: true, kind: 'primary' }]
+  }).then(v => v === true);
+}
+
+/* ---------------------------------------------------------------- router */
+
+/** Shows a page. params become URL parameters (?page=…&id=…). opts.replace, opts.extra. */
+function go(page, params, opts) {
+  const p = Object.assign({}, params || {}, { page: page });
+  Object.keys(p).forEach(k => { if (p[k] === undefined || p[k] === null || p[k] === '') delete p[k]; else p[k] = String(p[k]); });
+  App.params = p;
+  try {
+    if (opts && opts.replace) google.script.history.replace(p, p);
+    else google.script.history.push(p, p);
+  } catch (e) { /* history is not available outside Apps Script */ }
+  render(opts && opts.extra);
+}
+/** Changes the URL without drawing again (e.g. the wizard step). */
+function setUrl(params) {
+  App.params = Object.assign({}, params);
+  try { google.script.history.replace(App.params, App.params); } catch (e) { /* ignore */ }
+}
+function defaultPage() {
+  if (App.user.isKiosk) return 'board';
+  if (hasAnyRole(['MANAGER', 'APU_MANAGER'])) return 'manager';
+  if (hasRole('PILOT') && !hasAnyRole(['SUPERVISOR', 'TL', 'OPERATOR'])) return 'actions';
+  return 'board';
+}
+function render(extra) {
+  if (App.view && App.view.leave) App.view.leave();
+  Idle.stop();
+  const page = App.params.page || defaultPage();
+  const view = App.views[page];
+  const root = clear(byId('app'));
+  byId('modal').hidden = true;
+  App.view = view || null;
+  renderHeader();
+  if (!view) { root.appendChild(h('div', { class: 'empty' }, t('msg.unknownPage'))); return; }
+  view.render(root, Object.assign({ page: page }, App.params), extra || {});
+  window.scrollTo(0, 0);
+  if (App.user.isKiosk && page !== 'board') {
+    Idle.start(App.set.config.IDLE_MINUTES || 3, () => (view.onIdle ? view.onIdle() : go('board', { area: defaultArea() })));
+  }
+}
+
+/* ---------------------------------------------------------------- dates (always Europe/Prague) */
+
+const partsFmt = new Intl.DateTimeFormat('en-GB', { timeZone: PRAGUE, year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'short' });
+function pragueParts(d) {
+  const o = {};
+  partsFmt.formatToParts(d).forEach(p => { o[p.type] = p.value; });
+  const dow = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 }[o.weekday];
+  return { y: o.year, m: o.month, d: o.day, H: o.hour === '24' ? '00' : o.hour, M: o.minute, dow: dow };
+}
+/** ISO → 'YYYY-MM-DDTHH:mm' (Prague) for datetime-local inputs. */
+function toLocalInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const p = pragueParts(d);
+  return p.y + '-' + p.m + '-' + p.d + 'T' + p.H + ':' + p.M;
+}
+function nowLocalInput() { return toLocalInput(new Date().toISOString()); }
+/** 'YYYY-MM-DDTHH:mm' (Prague wall clock) → milliseconds, whatever the time zone of this device. */
+function localToMs(s) {
+  const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+  if (!m) return NaN;
+  const guess = Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0));
+  const p = pragueParts(new Date(guess));
+  const shown = Date.UTC(+p.y, +p.m - 1, +p.d, +p.H, +p.M);
+  return guess - (shown - guess);
+}
+function todayLocal(offsetDays) { return toLocalInput(new Date(Date.now() + (offsetDays || 0) * 86400000).toISOString()).slice(0, 10); }
+function fmtDT(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return String(iso);
+  const p = pragueParts(d);
+  return (+p.d) + '.' + (+p.m) + '.' + p.y + ' ' + p.H + ':' + p.M;
+}
+function fmtD(day) {
+  const m = String(day || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? (+m[3]) + '.' + (+m[2]) + '.' + m[1] : String(day || '');
+}
+/** The shift running now: {code, date} (date = day the shift started). */
+function currentShift() {
+  const p = pragueParts(new Date());
+  const mins = +p.H * 60 + +p.M;
+  const yDow = p.dow === 1 ? 7 : p.dow - 1;
+  for (const s of App.set.shifts) {
+    const st = s.start.h * 60 + s.start.m;
+    const en = s.end.h * 60 + s.end.m;
+    if (en > st && mins >= st && mins < en && s.days.indexOf(p.dow) >= 0) return { code: s.code, date: todayLocal() };
+    if (en <= st && mins >= st && s.days.indexOf(p.dow) >= 0) return { code: s.code, date: todayLocal() };
+    if (en <= st && mins < en && s.days.indexOf(yDow) >= 0) return { code: s.code, date: todayLocal(-1) };
+  }
+  return null;
+}
+
+/* ---------------------------------------------------------------- lists, people, labels */
+
+function lang() { return I18N_LANG; }
+function listItems(list) {
+  return (App.set.lists[list] || []).map(x => ({ value: x.code, label: lang() === 'en' ? x.en : x.cz }));
+}
+function listLabel(list, code) {
+  const s = String(code || '');
+  if (s.indexOf('OTHER:') === 0) return t('lbl.other') + ': ' + s.slice(6);
+  const it = (App.set.lists[list] || []).find(x => x.code === s);
+  return it ? (lang() === 'en' ? it.en : it.cz) : s;
+}
+function peopleOf(area, roles) {
+  return App.set.people.filter(p => (!area || p.areas.indexOf('*') >= 0 || p.areas.indexOf(area) >= 0) &&
+    (!roles || roles.some(r => p.roles.indexOf(r) >= 0)) && p.roles.indexOf('KIOSK') < 0);
+}
+function personName(email) {
+  const p = App.set.people.find(x => x.email && x.email === String(email || '').toLowerCase());
+  return p ? p.name : String(email || '');
+}
+function areaName(code) { const a = App.set.areas.find(x => x.code === code); return a ? a.name : code; }
+function zonesOf(area) {
+  const out = [];
+  App.set.locations.forEach(l => { if (l.area === area && out.indexOf(l.zone) < 0) out.push(l.zone); });
+  return out;
+}
+function locationsOf(area, zone) { return App.set.locations.filter(l => l.area === area && l.zone === zone).map(l => l.code); }
+function statusLabel(st) { return t('st.' + st); }
+function shiftName(code) { const s = App.set.shifts.find(x => x.code === code); return s ? s.name : code; }
+
+/* ---------------------------------------------------------------- photos and QR */
+
+/** Resizes a camera picture in the browser. Resolves with base64 JPEG (no data: prefix). */
+function resizeImage(file, maxPx, quality) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * scale);
+      c.height = Math.round(img.naturalHeight * scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', quality).split(',')[1]);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image')); };
+    img.src = url;
+  });
+}
+const photoCache = {};
+/** Loads a photo through the server (users need no Drive access). */
+function loadPhoto(fileId, img) {
+  if (!fileId) return;
+  if (photoCache[fileId]) { img.src = photoCache[fileId]; return; }
+  api('apiGetPhoto', { fileId: fileId }).then(res => {
+    if (res.ok) { photoCache[fileId] = 'data:' + res.mime + ';base64,' + res.data; img.src = photoCache[fileId]; }
+  });
+}
+function showPhoto(fileId, title) {
+  const img = h('img', { class: 'full', alt: title || '' });
+  loadPhoto(fileId, img);
+  modal({ title: title, body: img, buttons: [{ label: t('btn.close'), value: true, kind: 'primary' }] });
+}
+/** QR code element (falls back to the plain link if the library did not load). */
+function qrCode(text) {
+  const box = h('div', { class: 'qr' });
+  try {
+    new QRCode(box, { text: text, width: 170, height: 170, correctLevel: QRCode.CorrectLevel.M });
+  } catch (e) {
+    box.appendChild(h('a', { href: text }, text));
+  }
+  return box;
+}
+
+/* ---------------------------------------------------------------- idle timer (kiosk) */
+
+const Idle = {
+  timer: null, cb: null, ms: 0,
+  start(minutes, cb) {
+    this.stop();
+    this.cb = cb;
+    this.ms = Math.max(1, Number(minutes) || 3) * 60000;
+    ['pointerdown', 'keydown', 'input', 'touchstart'].forEach(ev => document.addEventListener(ev, Idle.reset, true));
+    Idle.reset();
+  },
+  reset() {
+    clearTimeout(Idle.timer);
+    if (Idle.cb) Idle.timer = setTimeout(() => { const cb = Idle.cb; Idle.stop(); cb(); }, Idle.ms);
+  },
+  stop() {
+    clearTimeout(Idle.timer);
+    Idle.cb = null;
+    ['pointerdown', 'keydown', 'input', 'touchstart'].forEach(ev => document.removeEventListener(ev, Idle.reset, true));
+  }
+};
+
+/* ---------------------------------------------------------------- header */
+
+function renderHeader() {
+  const hdr = clear(byId('hdr'));
+  const area = App.params.area || (App.params.page === 'board' ? defaultArea() : '');
+  const menuBox = h('div', { class: 'hdr-menu', hidden: true });
+  const item = (label, fn) => h('button', { onclick: () => { menuBox.hidden = true; fn(); } }, label);
+  addKids(menuBox, [
+    item(t('nav.board'), () => go('board', { area: area || defaultArea() })),
+    canCreateIn(area || defaultArea()) ? item(t('nav.new'), () => go('new', { area: area || defaultArea() })) : null,
+    App.user.isKiosk ? null : item(t('nav.actions'), () => go('actions')),
+    hasAnyRole(['MANAGER', 'APU_MANAGER', 'ADMIN']) ? item(t('nav.manager'), () => go('manager')) : null,
+    item(t('nav.escalation'), () => go('escalation')),
+    App.set.areas.length > 1 ? App.set.areas.map(a => item(t('nav.boardOf', { area: a.code }), () => go('board', { area: a.code }))) : null
+  ]);
+  addKids(hdr, [
+    h('div', { class: 'hdr-app', onclick: () => go(defaultPage(), { area: defaultArea() }) }, App.boot.appName || 'eQRAP Logistika'),
+    area ? h('div', { class: 'hdr-area' }, area + ' · ' + areaName(area)) : null,
+    h('div', { class: 'hdr-space' }),
+    h('div', { class: 'hdr-user', title: App.user.email || '' }, App.user.label || ''),
+    h('button', { class: 'hdr-btn', onclick: toggleLang, title: 'CZ / EN' }, I18N_LANG === 'cz' ? 'EN' : 'CZ'),
+    h('button', { class: 'hdr-btn', onclick: () => { menuBox.hidden = !menuBox.hidden; }, 'aria-label': t('nav.menu') }, '☰'),
+    menuBox
+  ]);
+}
+function toggleLang() {
+  setLang(I18N_LANG === 'cz' ? 'en' : 'cz');
+  render();
+}
+
+/* ---------------------------------------------------------------- start */
+
+App.start = function () {
+  if (App.boot.error) {
+    clear(byId('app')).appendChild(h('div', { class: 'card errbox' }, h('h2', null, t('err.' + App.boot.error)),
+      h('p', null, t('msg.bootHelp')), App.boot.detail ? h('p', { class: 'small' }, App.boot.detail) : null));
+    return;
+  }
+  App.params = Object.assign({}, App.boot.params || {});
+  try {
+    google.script.history.setChangeHandler(e => { App.params = Object.assign({}, (e.location && e.location.parameter) || {}); render(); });
+  } catch (e) { /* not in Apps Script */ }
+  render();
+};
+</script>

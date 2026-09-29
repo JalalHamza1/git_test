@@ -1,0 +1,79 @@
+<script>
+'use strict';
+/*
+ * ViewManager – manager page (?page=manager): tiles, "Hodnocení dnes" per supervisor, "Potřebuje vás"
+ * (most urgent first), filters (area / date / status) and search (number, text, material number).
+ */
+App.views.manager = (() => {
+  const F = { area: '', from: '', to: '', status: 'open' };
+
+  function render(root) {
+    const out = h('div', null, loadingEl());
+    const results = h('div');
+    let term = '';
+    const doSearch = async () => {
+      if (term.trim().length < 2) { clear(results); return; }
+      const res = await api('apiSearch', term.trim());
+      clear(results);
+      if (!res.ok) { showErrors(res); return; }
+      addKids(results, [h('h3', null, t('mgr.searchResults', { n: res.total })), rowsTable(res.rows)]);
+    };
+    const statuses = [{ value: 'open', label: t('mgr.st.open') }, { value: 'closed', label: t('mgr.st.closed') }, { value: 'all', label: t('mgr.st.all') }]
+      .concat(['DRAFT', 'QR_OPEN', 'WAIT_DECISION', 'ANALYSIS', 'ACTIONS_OPEN', 'VERIFY', 'CLOSED_SOLVED', 'ESCALATED', 'CLOSED']
+        .map(s => ({ value: s, label: statusLabel(s) })));
+    const search = h('input', { type: 'search', placeholder: t('mgr.searchHint'), oninput: e => { term = e.target.value; },
+      onkeydown: e => { if (e.key === 'Enter') doSearch(); } });
+    addKids(root, [
+      h('h1', null, t('mgr.title')),
+      h('div', { class: 'card' },
+        h('div', { class: 'row' }, search, h('div', { style: { flex: '0 0 auto' } }, button(t('btn.search'), doSearch, 'mgr'))), results),
+      h('div', { class: 'card' }, h('div', { class: 'row' },
+        field(t('f.area'), selectEl(App.set.areas.map(a => ({ value: a.code, label: a.code + ' · ' + a.name })), F.area, v => { F.area = v; }, t('mgr.allAreas'))),
+        field(t('mgr.from'), dateInput(F.from, v => { F.from = v; })),
+        field(t('mgr.to'), dateInput(F.to, v => { F.to = v; })),
+        field(t('f.status'), selectEl(statuses, F.status, v => { F.status = v; }, false))),
+      button(t('btn.apply'), () => load(out), 'mgr')),
+      out
+    ]);
+    load(out);
+  }
+
+  async function load(out) {
+    clear(out).appendChild(loadingEl());
+    const res = await api('apiGetManager', F);
+    clear(out);
+    if (!res.ok) { out.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
+    const tile = (key, alert) => h('div', { class: 'tile' + (alert && res.tiles[key] ? ' alert' : '') },
+      h('div', { class: 'tile-n' }, String(res.tiles[key])), h('div', { class: 'tile-l' }, t('mgr.tile.' + key)));
+    const zero = res.assessToday.filter(a => a.supervisor && a.count === 0).length;
+    addKids(out, [
+      h('div', { class: 'tiles' }, tile('newToday'), tile('waitDecision', true), tile('s3Late', true), tile('actionsLate', true),
+        tile('safetyWeek', true), tile('repeat7', true),
+        h('div', { class: 'tile' + (zero ? ' alert' : '') }, h('div', { class: 'tile-n' }, String(res.assessToday.reduce((s, a) => s + a.count, 0))),
+          h('div', { class: 'tile-l' }, t('mgr.tile.assessToday')))),
+      h('div', { class: 'card' }, h('h2', null, t('mgr.assessToday')),
+        res.assessToday.length ? table([t('f.assessor'), t('mgr.count')], res.assessToday.map(a => [a.name + (a.supervisor ? '' : ' *'),
+          h('span', { class: a.count ? 'pill-ok' : 'pill-bad' }, String(a.count))])) : h('p', { class: 'muted' }, '–')),
+      h('div', { class: 'card' }, h('h2', null, t('mgr.needs'), ' (', String(res.needs.length), ')'),
+        res.needs.length ? res.needs.map(n => h('div', { class: 'need' + (n.urgency >= 80 ? ' u-high' : ''), onclick: () => go('qrap', { id: n.id }) },
+          h('div', { class: 'need-bar' }),
+          h('div', null, h('b', null, n.id), n.safety ? h('span', { class: 'badge badge-safety' }, 'SAFETY') : null, ' · ', t('need.' + n.reason),
+            h('div', { class: 'small muted' }, n.what + (n.extra ? ' · ' + n.extra : ''))),
+          h('div', { class: 'small nowrap' }, n.area, h('br'), fmtDT(n.since)))) : h('p', { class: 'muted' }, t('mgr.nothing'))),
+      h('div', { class: 'card' }, h('h2', null, t('mgr.list', { n: res.total })), rowsTable(res.rows))
+    ]);
+  }
+
+  /** Compact QRAP table (area, number, what, chips, status). */
+  function rowsTable(rows) {
+    if (!rows.length) return h('p', { class: 'muted' }, t('board.empty'));
+    return table([t('f.area'), t('board.col.id'), t('board.col.what'), '1 – 7', t('f.status')], rows.map(r => [
+      r.area, h('span', null, qrapLink(r.id), r.safety ? h('span', { class: 'badge badge-safety' }, 'S') : null,
+        r.archived ? h('span', { class: 'badge badge-archived' }, t('lbl.archived')) : null),
+      h('span', null, r.what, h('div', { class: 'small muted' }, fmtDT(r.det))), chipsEl(r.chips),
+      h('span', { class: r.late ? 'pill-bad' : '' }, statusLabel(r.st))]), i => (rows[i].late ? 'late' : ''));
+  }
+
+  return { render: render };
+})();
+</script>

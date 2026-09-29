@@ -1,0 +1,68 @@
+<script>
+'use strict';
+/*
+ * ViewEffect – "Efektivita zkontrolována na 5 směnách bez chyb" (?page=effect&id=…), for the TL or supervisor,
+ * also on the kiosk. 5 slots; each needs a different shift (date + shift). EFFECTIVE is final,
+ * NOT_VERIFIED can be changed later, NOT_EFFECTIVE sends the QRAP back to the analysis.
+ */
+App.views.effect = (() => {
+  async function render(root, params) {
+    root.appendChild(loadingEl());
+    const res = await api('apiGetQrap', params.id);
+    if (!root.isConnected) return;
+    clear(root);
+    if (!res.ok) { root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
+    const d = res.detail;
+    const q = d.q;
+    const cur = currentShift();
+    const old = d.eff.history.filter(r => Number(r.round) < d.eff.round);
+    addKids(root, [
+      h('h1', null, t('eff.title'), ' · ', q.qrap_id),
+      h('div', { class: 'card' }, h('p', null, statusBadge(q.status), ' ', q.what),
+        h('p', null, h('b', null, t('eff.round', { n: d.eff.round })), ' · ', t('eff.progress', { n: d.eff.distinctOk })),
+        h('p', { class: 'small muted' }, t('eff.hint'))),
+      !d.can.effect ? h('div', { class: 'warnbox' }, q.status !== 'VERIFY' ? t('eff.notVerify') : t('err.E_FORBIDDEN')) : null,
+      h('div', null, d.eff.slots.map((s, i) => slotCard(d, i + 1, s, cur))),
+      old.length ? h('div', { class: 'card' }, h('h3', null, t('eff.history')), table([t('eff.roundCol'), t('eff.slot'), t('f.shift_date'),
+        t('f.shift_code'), t('f.result'), t('f.checked_by')], old.map(r => [r.round, r.slot, fmtD(r.shift_date), shiftName(r.shift_code),
+        t('eff.' + r.result), r.checked_by]))) : null,
+      h('div', { class: 'btn-row' }, button(t('qrap.detail'), () => go('qrap', { id: q.qrap_id }), 'ghost'),
+        d.can.close ? button(t('qrap.close'), () => go('close', { id: q.qrap_id }), 'primary') : null)
+    ]);
+  }
+
+  function slotCard(d, n, s, cur) {
+    const q = d.q;
+    if (s && s.result === 'EFFECTIVE') {
+      return h('div', { class: 'card slot-EFFECTIVE' }, h('b', null, n + '. ' + t('eff.EFFECTIVE')), ' · ',
+        fmtD(s.shift_date) + ' · ' + shiftName(s.shift_code) + ' · ' + s.checked_by);
+    }
+    const v = { shift_date: cur ? cur.date : todayLocal(), shift_code: cur ? cur.code : '', checked_by: App.user.isKiosk ? '' : App.user.name };
+    const box = errorBox();
+    const save = async result => {
+      if (result === 'NOT_EFFECTIVE' && !(await confirmDlg(t('eff.notEffConfirm'), t('eff.NOT_EFFECTIVE'), 'danger'))) return;
+      const res = await api('apiSaveEffect', Object.assign({ id: q.qrap_id, slot: n, result: result }, v));
+      if (!res.ok) { showErrors(res, box, byId('app')); return; }
+      toast(result === 'NOT_EFFECTIVE' ? t('eff.reopened') : t('msg.saved'), result === 'NOT_EFFECTIVE' ? 'warn' : 'ok', 6000);
+      render(clear(byId('app')), App.params);
+    };
+    return h('div', { class: 'card' + (s ? ' slot-' + s.result : '') },
+      h('h3', null, n + '. ' + t('eff.slot'), s ? ' · ' + t('eff.' + s.result) + ' (' + fmtD(s.shift_date) + ' · ' + shiftName(s.shift_code) + ')' : ''),
+      d.can.effect ? [
+        box,
+        h('div', { class: 'row' },
+          field(t('f.shift_date'), dateInput(v.shift_date, x => { v.shift_date = x; }, { max: todayLocal() }), { name: 'shift_date' }),
+          field(t('f.shift_code'), segmented(App.set.shifts.map(sh => ({ value: sh.code, label: sh.name })), v.shift_code, x => { v.shift_code = x; }),
+            { name: 'shift_code' }),
+          App.user.isKiosk ? field(t('f.checked_by'), personSelect('', x => { v.checked_by = x; }, q.area_code, { roles: ['TL', 'SUPERVISOR'] }),
+            { name: 'checked_by', required: true }) : null),
+        h('div', { class: 'btn-row' },
+          button(t('eff.EFFECTIVE'), () => save('EFFECTIVE'), 'ok', { big: true }),
+          button(t('eff.NOT_VERIFIED'), () => save('NOT_VERIFIED'), 'ghost'),
+          button(t('eff.NOT_EFFECTIVE'), () => save('NOT_EFFECTIVE'), 'danger'))
+      ] : null);
+  }
+
+  return { render: render };
+})();
+</script>

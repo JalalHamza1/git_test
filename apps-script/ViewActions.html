@@ -1,0 +1,82 @@
+<script>
+'use strict';
+/*
+ * ViewActions – "Moje akce" (?page=actions): definitive actions of the signed-in pilot, or of the people
+ * whose N+1 the user is ("Můj tým"). Filters by status and due date; done date, notes and review dates.
+ */
+App.views.actions = (() => {
+  const F = { scope: 'mine', status: 'OPENED', due: 'all' };
+
+  function render(root) {
+    const list = h('div', null, loadingEl());
+    const reload = () => load(list);
+    addKids(root, [
+      h('h1', null, t('act.title')),
+      h('div', { class: 'card' },
+        field(t('act.scope'), segmented([{ value: 'mine', label: t('act.mine') }, { value: 'team', label: t('act.team') }], F.scope,
+          v => { F.scope = v; reload(); })),
+        h('div', { class: 'row' },
+          field(t('f.status'), segmented(['OPENED', 'CLOSED', 'REMOVED', 'ALL'].map(s => ({ value: s, label: t('ast.' + s) })), F.status,
+            v => { F.status = v; reload(); })),
+          field(t('act.due'), segmented(['all', 'late', 'week'].map(s => ({ value: s, label: t('act.due.' + s) })), F.due,
+            v => { F.due = v; reload(); })))),
+      list
+    ]);
+    reload();
+  }
+
+  async function load(list) {
+    clear(list).appendChild(loadingEl());
+    const res = await api('apiGetMyActions', F);
+    clear(list);
+    if (!res.ok) { showErrors(res); return; }
+    if (!res.actions.length) { list.appendChild(h('div', { class: 'empty' }, t('act.none'))); return; }
+    res.actions.forEach(a => list.appendChild(card(a, () => load(list))));
+  }
+
+  function card(a, reload) {
+    const box = errorBox();
+    let done = a.done || '';
+    const nv = { note: '', review_date: '' };
+    return h('div', { class: 'card sec sec-pil' + (a.late ? ' late' : '') },
+      h('div', { class: 'sec-head' }, h('div', { class: 'grow' },
+        h('b', null, qrapLink(a.qrap.id)), ' · ', a.qrap.area, ' · ', statusLabel(a.qrap.status),
+        h('div', { class: 'small muted' }, a.qrap.what))),
+      h('p', { style: { fontSize: '20px', fontWeight: '700' } }, a.text),
+      kvList([
+        [t('f.pilot'), a.pilot_name],
+        [t('f.planned'), fmtD(a.planned) + (a.late ? ' · ' + t('lbl.late') : '') +
+          (a.planned_first && a.planned_first !== a.planned ? ' (' + t('ana.firstPlan') + ' ' + fmtD(a.planned_first) + ')' : '')],
+        [t('f.done'), fmtD(a.done)],
+        [t('f.status'), t('ast.' + a.status)],
+        [t('f.evidence_url'), a.evidence_url ? h('a', { href: a.evidence_url, target: '_blank', rel: 'noopener' }, a.evidence_url) : '']
+      ]),
+      box,
+      a.canEdit && a.status === 'OPENED' ? h('div', { class: 'row' },
+        field(t('f.done'), dateInput(done, v => { done = v; }, { max: todayLocal() }), { name: 'done' }),
+        h('div', { style: { flex: '0 0 auto', alignSelf: 'center' } }, button(t('act.markDone'), async () => {
+          const res = await api('apiSaveDefAction', { id: a.id, done: done || todayLocal(), evidence_url: a.evidence_url || '' });
+          if (!res.ok) { showErrors(res, box); return; }
+          toast(t('msg.saved'), 'ok');
+          reload();
+        }, 'ok'))) : null,
+      a.notes.length ? table([t('f.note'), t('f.review_date'), t('f.author'), ''], a.notes.map(n => [n.note,
+        n.review_date ? fmtD(n.review_date) : '', personName(n.author) + ' · ' + fmtDT(n.at),
+        n.review_date && a.canNote ? checkbox(t('act.reviewDone'), n.review_done === true, async v => {
+          const res = await api('apiSetReviewDone', { note_id: n.id, done: v });
+          if (!res.ok) showErrors(res);
+        }) : ''])) : null,
+      a.canNote ? h('div', { class: 'row' },
+        textInput('', v => { nv.note = v; }, { placeholder: t('f.note'), max: 1000 }),
+        field(null, dateInput('', v => { nv.review_date = v; }), { hint: t('f.review_date') }),
+        h('div', { style: { flex: '0 0 auto' } }, button(t('btn.addNote'), async () => {
+          const res = await api('apiAddActionNote', { action_id: a.id, note: nv.note, review_date: nv.review_date });
+          if (!res.ok) { showErrors(res, box); return; }
+          reload();
+        }, 'ghost'))) : null,
+      h('div', { class: 'btn-row' }, button(t('qrap.analysis'), () => go('analysis', { id: a.qrap.id }), 'ghost')));
+  }
+
+  return { render: render };
+})();
+</script>

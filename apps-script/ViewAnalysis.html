@@ -1,0 +1,198 @@
+<script>
+'use strict';
+/*
+ * ViewAnalysis – ⑤ PŘÍČINA 5 Proč? and ⑥ Konečné akce for the pilot (PC), ?page=analysis&id=…
+ * ⑤ + lesson + standard question are saved together (apiSaveAnalysis); each action row is saved on its own
+ * (apiSaveDefAction). The status (ANALYSIS → ACTIONS_OPEN → VERIFY) is moved by the server.
+ */
+App.views.analysis = (() => {
+  let D = null;
+  let F = null; // form state for ⑤ and the single ⑥ fields
+
+  async function render(root, params) {
+    root.appendChild(loadingEl());
+    const res = await api('apiGetQrap', params.id);
+    if (!root.isConnected) return;
+    clear(root);
+    if (!res.ok) { root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
+    D = res.detail;
+    const text = (ch, n) => ((D.why.find(w => w.chain === ch && Number(w.step) === n) || {}).text || '');
+    const root_ = ch => Number((D.why.find(w => w.chain === ch && w.is_root === true) || {}).step || 0);
+    F = {
+      why: { OCCURRENCE: [1, 2, 3, 4, 5].map(n => text('OCCURRENCE', n)), NON_DETECTION: [1, 2, 3, 4, 5].map(n => text('NON_DETECTION', n)) },
+      root: { OCCURRENCE: root_('OCCURRENCE'), NON_DETECTION: root_('NON_DETECTION') },
+      showNd: D.why.some(w => w.chain === 'NON_DETECTION' && w.text),
+      learned: D.q.learned || '', std_update: D.q.std_update || '', std_update_ref: D.q.std_update_ref || ''
+    };
+    draw(root);
+  }
+
+  function draw(root) {
+    const q = D.q;
+    const edit = D.can.analyze;
+    clear(root);
+    addKids(root, [
+      h('h1', null, t('ana.title'), ' · ', q.qrap_id),
+      h('div', { class: 'card' }, h('p', null, statusBadge(q.status), ' ', q.what), chipsEl(D.chips),
+        h('p', { class: 'small' }, t('f.pilots') + ': ' + (D.pilots.map(p => p.name).join(', ') || '–')),
+        D.can.isDecider && edit ? pilotAdder() : null,
+        !edit ? h('p', { class: 'warnbox' }, t('ana.readOnly')) : null),
+      whyCard(edit),
+      actionsCard(edit),
+      h('div', { class: 'btn-row' },
+        button(t('qrap.detail'), () => go('qrap', { id: q.qrap_id }), 'ghost'),
+        D.can.effect ? button(t('qrap.effect'), () => go('effect', { id: q.qrap_id }), 'ok') : null,
+        D.can.close ? button(t('qrap.close'), () => go('close', { id: q.qrap_id }), 'primary') : null)
+    ]);
+  }
+
+  function reload() { render(clear(byId('app')), App.params); }
+
+  function pilotAdder() {
+    let email = '';
+    return h('div', { class: 'row' },
+      personSelect('', v => { email = v; }, '', { byEmail: true, placeholder: t('ana.addPilot') }),
+      h('div', { style: { flex: '0 0 auto' } }, button(t('btn.add'), async () => {
+        if (!email) return;
+        const res = await api('apiAddPilot', { id: D.q.qrap_id, email: email });
+        if (!res.ok) { showErrors(res); return; }
+        toast(t('msg.saved'), 'ok');
+        reload();
+      }, 'pil')));
+  }
+
+  /** Previous answer as a question: "Proč: <answer without the final dot>?" */
+  function whyPrompt(n, prev) {
+    return n + '. ' + t('why.prompt', { prev: String(prev || '').trim().replace(/[.?!…\s]+$/, '') || '…' });
+  }
+
+  /** ⑤: each prompt quotes the previous answer ("Proč: …?"). */
+  function chainEl(ch, edit) {
+    const list = h('div');
+    const drawSteps = () => {
+      clear(list);
+      F.why[ch].forEach((txt, i) => {
+        const prev = i === 0 ? '' : F.why[ch][i - 1];
+        const label = i === 0 ? (i + 1) + '. ' + t(ch === 'OCCURRENCE' ? 'why.first' : 'why.firstNd') : whyPrompt(i + 1, prev);
+        const ta = textArea(txt, v => {
+          F.why[ch][i] = v;
+          const next = list.querySelectorAll('.fld-label')[i + 1];
+          if (next) next.textContent = whyPrompt(i + 2, v);
+        }, 2, 1000);
+        ta.disabled = !edit;
+        const rootChk = h('label', { class: 'chk' }, h('input', { type: 'radio', name: 'root_' + ch, checked: F.root[ch] === i + 1, disabled: !edit,
+          onchange: () => { F.root[ch] = i + 1; } }), t('why.root'));
+        list.appendChild(h('div', { class: 'why-step' }, field(label, ta, { name: 'why_' + ch + '_' + (i + 1) }), rootChk));
+      });
+    };
+    drawSteps();
+    return h('div', null, h('h3', null, t('why.' + ch)), list);
+  }
+
+  function whyCard(edit) {
+    const box = errorBox();
+    const stdRef = field(t('f.std_update_ref'), textInput(F.std_update_ref, v => { F.std_update_ref = v; }, { max: 300 }), { name: 'std_update_ref', required: true });
+    stdRef.hidden = F.std_update !== 'ANO';
+    const nd = F.showNd ? chainEl('NON_DETECTION', edit)
+      : edit ? button(t('ana.addNd'), () => { F.showNd = true; draw(byId('app')); }, 'ghost') : null;
+    return h('div', null,
+      sectionCard('5', t('sec.5'), 'pil', box, chainEl('OCCURRENCE', edit), nd,
+        edit ? h('p', { class: 'small muted' }, t('ana.whyHint')) : null),
+      sectionCard('6', t('ana.lesson'), 'pil',
+        field(t('f.learned'), textArea(F.learned, v => { F.learned = v; }, 3, 2000), { name: 'learned', required: true, hint: t('ana.learnedHint') }),
+        field(t('f.std_update'), segmented([{ value: 'NE', label: t('lbl.no'), kind: 'ok' }, { value: 'ANO', label: t('lbl.yes') }], F.std_update,
+          v => { F.std_update = v; stdRef.hidden = v !== 'ANO'; }), { name: 'std_update', hint: t('ana.stdHint') }),
+        stdRef,
+        edit ? button(t('ana.save'), () => save(box), 'pil', { big: true }) : null));
+  }
+
+  async function save(box) {
+    const res = await api('apiSaveAnalysis', { id: D.q.qrap_id, why: { OCCURRENCE: F.why.OCCURRENCE, NON_DETECTION: F.showNd ? F.why.NON_DETECTION : [] },
+      root: F.root, learned: F.learned, std_update: F.std_update, std_update_ref: F.std_update_ref });
+    if (!res.ok) { showErrors(res, box, byId('app')); return; }
+    toast(t('msg.saved') + ' · ' + statusLabel(res.status), 'ok');
+    if (res.warnings && res.warnings.length) await warnConfirm(res.warnings);
+    reload();
+  }
+
+  /** Options for "linked root step": every filled why of both chains. */
+  function rootOptions() {
+    const out = [];
+    ['OCCURRENCE', 'NON_DETECTION'].forEach(ch => D.why.filter(w => w.chain === ch && w.text).sort((a, b) => a.step - b.step).forEach(w => {
+      out.push({ value: (ch === 'OCCURRENCE' ? 'O' : 'N') + w.step, label: (ch === 'OCCURRENCE' ? 'O' : 'N') + w.step + ' · ' + w.text.slice(0, 60) });
+    }));
+    return out;
+  }
+
+  function actionsCard(edit) {
+    const rows = D.actions.filter(a => a.status !== 'REMOVED');
+    const removed = D.actions.filter(a => a.status === 'REMOVED');
+    const list = h('div');
+    rows.forEach(a => list.appendChild(actionRow(a, edit || a.canEdit)));
+    const addBox = h('div');
+    return sectionCard('6', t('ana.actions'), 'pil',
+      !rootOptions().length ? h('p', { class: 'warnbox' }, t('ana.needWhy')) : null,
+      list,
+      edit ? button(t('ana.addAction'), () => { clear(addBox).appendChild(actionRow(null, true)); }, 'pil') : null,
+      addBox,
+      removed.length ? h('p', { class: 'small muted' }, t('ana.removed', { n: removed.length })) : null);
+  }
+
+  /** One action row (a = null for a new action). full = may change every field. */
+  function actionRow(a, canEdit) {
+    const full = D.can.analyze;
+    const v = a ? { text: a.text, root_step: a.root_step, pilot_email: a.pilot_email, planned: a.planned, done: a.done, evidence_url: a.evidence_url }
+      : { text: '', root_step: (rootOptions().find(o => o.value === 'O' + F.root.OCCURRENCE) || {}).value || '', pilot_email: '', planned: '', done: '', evidence_url: '' };
+    const box = errorBox();
+    const dis = el => { el.disabled = !canEdit || (!full && !!a); return el; };
+    const rootSel = a && a.root_step === 'STD' ? h('div', { class: 'fld-hint' }, t('ana.stdAction'))
+      : dis(selectEl(rootOptions(), v.root_step, x => { v.root_step = x; }));
+    const card = h('div', { class: 'ia-row' + (a && a.late ? ' late' : '') },
+      a ? h('div', { class: 'fld-label' }, t('ast.' + a.status), a.late ? h('span', { class: 'badge badge-safety' }, t('lbl.late')) : null,
+        a.planned_first && a.planned_first !== a.planned ? h('span', { class: 'small muted' }, ' · ' + t('ana.firstPlan') + ' ' + fmtD(a.planned_first)) : null) : h('div', { class: 'fld-label' }, t('ana.newAction')),
+      box,
+      field(t('f.action_text'), dis(textInput(v.text, x => { v.text = x; }, { max: 1000 })), { name: 'action_text', required: true }),
+      h('div', { class: 'row' },
+        field(t('f.root_step'), rootSel, { name: 'root_step', required: true }),
+        field(t('f.pilot'), dis(personSelect(v.pilot_email, x => { v.pilot_email = x; }, '', { byEmail: true })), { name: 'pilot_email', required: true })),
+      h('div', { class: 'row' },
+        field(t('f.planned'), dis(dateInput(v.planned, x => { v.planned = x; }, { min: a ? null : todayLocal() })), { name: 'planned', required: true }),
+        field(t('f.done'), dateInput(v.done, x => { v.done = x; }, { max: todayLocal() }), { name: 'done', hint: t('ana.doneHint') }),
+        field(t('f.evidence_url'), textInput(v.evidence_url, x => { v.evidence_url = x; }, { max: 500, placeholder: 'https://' }), { name: 'evidence_url' })),
+      canEdit ? h('div', { class: 'btn-row' },
+        button(t('btn.save'), async () => {
+          const res = await api('apiSaveDefAction', Object.assign({ id: a ? a.id : '', qrap_id: D.q.qrap_id }, v));
+          if (!res.ok) { showErrors(res, box, card); return; }
+          toast(t('msg.saved') + ' · ' + statusLabel(res.status), 'ok');
+          reload();
+        }, 'pil'),
+        a && full ? button(t('btn.remove'), async () => {
+          if (!(await confirmDlg(t('ana.removeConfirm'), t('btn.remove'), 'danger'))) return;
+          const res = await api('apiRemoveDefAction', { id: a.id });
+          if (!res.ok) { showErrors(res, box); return; }
+          reload();
+        }, 'ghost') : null) : null,
+      a ? notesEl(a) : null);
+    if (!canEdit) card.querySelectorAll('input, select, textarea').forEach(el => { el.disabled = true; });
+    return card;
+  }
+
+  /** Notes and review dates of an action. */
+  function notesEl(a) {
+    const nv = { note: '', review_date: '' };
+    return h('div', { class: 'small' },
+      a.notes.length ? table([t('f.note'), t('f.review_date'), t('f.author')], a.notes.map(n => [n.note,
+        n.review_date ? fmtD(n.review_date) + (n.review_done === true ? ' ✓' : '') : '', personName(n.author) + ' · ' + fmtDT(n.at)])) : null,
+      a.canNote ? h('div', { class: 'row' },
+        textInput('', x => { nv.note = x; }, { placeholder: t('f.note'), max: 1000 }),
+        dateInput('', x => { nv.review_date = x; }),
+        h('div', { style: { flex: '0 0 auto' } }, button(t('btn.addNote'), async () => {
+          const res = await api('apiAddActionNote', { action_id: a.id, note: nv.note, review_date: nv.review_date });
+          if (!res.ok) { showErrors(res); return; }
+          reload();
+        }, 'ghost'))) : null);
+  }
+
+  return { render: render };
+})();
+</script>

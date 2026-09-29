@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eQRAP Logistika</title>
+  <?!= include('Styles'); ?>
+</head>
+<body>
+  <!-- Index.html – page skeleton. Views are drawn into #app by the client router (ClientCore). -->
+  <header id="hdr" class="hdr"></header>
+  <div id="busy" class="busybar" hidden></div>
+  <div id="offline" class="offline" hidden></div>
+  <main id="app" class="app"><div class="loading">…</div></main>
+  <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+  <div id="modal" class="modal-wrap" hidden></div>
+
+  <!-- The only external library: QR codes (qrcodejs, MIT licence). -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Bootstrap data from doGet(): user, settings, URL parameters. -->
+  <script>window.BOOT = <?!= bootJson ?>;</script>
+  <?!= include('I18n'); ?>
+  <?!= include('ClientCore'); ?>
+  <?!= include('ClientForms'); ?>
+  <?!= include('ViewBoard'); ?>
+  <?!= include('ViewWizard'); ?>
+  <?!= include('ViewWizardSteps'); ?>
+  <?!= include('ViewQrap'); ?>
+  <?!= include('ViewDecide'); ?>
+  <?!= include('ViewAnalysis'); ?>
+  <?!= include('ViewActions'); ?>
+  <?!= include('ViewEffect'); ?>
+  <?!= include('ViewAssess'); ?>
+  <?!= include('ViewManager'); ?>
+  <?!= include('ViewEscalation'); ?>
+  <script>App.start();</script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<script>
+'use strict';
+/*
+ * ViewBoard – the kiosk board (?page=board&area=WH1).
+ * One row per QRAP like the paper board: number · what / where / when · chips 1–7 · "čeká na".
+ * Newest at the bottom; the list starts scrolled to the bottom and loads older rows when scrolled up.
+ */
+App.views.board = (() => {
+  const PAGE = 40;
+  const S = { area: '', filter: 'open', rows: [], hasMore: false, loading: false, timer: null, list: null, pendingBtn: null };
+
+  function render(root, params, extra) {
+    S.area = String(params.area || defaultArea()).toUpperCase();
+    S.filter = params.filter || 'open';
+    S.rows = [];
+    S.hasMore = false;
+    S.list = h('div', { class: 'board-list', onscroll: onScroll });
+    S.pendingBtn = h('button', { class: 'btn btn-ghost btn-big', onclick: showPending }, t('board.pending', { n: '…' }));
+    const filters = segmented(['open', 'today', 'safety', 'all'].map(f => ({ value: f, label: t('board.f.' + f) })), S.filter,
+      f => { setUrl({ page: 'board', area: S.area, filter: f }); S.filter = f; load('replace'); });
+    addKids(root, [
+      h('div', { class: 'board-top' }, h('h1', null, t('board.title') + ' · ' + S.area), filters),
+      S.list,
+      h('div', { class: 'bottombar' },
+        canCreateIn(S.area) ? h('button', { class: 'btn btn-op btn-big', onclick: () => go('new', { area: S.area }) }, t('board.new')) : null,
+        canCreateIn(S.area) ? S.pendingBtn : null)
+    ]);
+    load('replace').then(() => { if (extra.toast) toast(extra.toast, 'ok', 6000); });
+    S.timer = setInterval(() => load('refresh'), 60000);
+  }
+
+  function leave() { clearInterval(S.timer); }
+
+  /** mode: replace (first load) · refresh (keep position) · older (prepend when scrolling up) */
+  async function load(mode) {
+    if (S.loading) return;
+    S.loading = true;
+    const req = { area: S.area, filter: S.filter, limit: mode === 'refresh' ? Math.max(PAGE, S.rows.length) : PAGE };
+    if (mode === 'older' && S.rows.length) req.before = S.rows[0].key;
+    const res = await api('apiGetBoard', req);
+    S.loading = false;
+    if (!res.ok) { showErrors(res); return; }
+    S.pendingBtn.textContent = t('board.pending', { n: res.pending });
+    const list = S.list;
+    const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
+    if (mode === 'older') {
+      const before = list.scrollHeight;
+      S.rows = res.rows.concat(S.rows);
+      S.hasMore = res.hasMore;
+      draw();
+      list.scrollTop = list.scrollHeight - before + list.scrollTop;
+    } else {
+      S.rows = res.rows;
+      S.hasMore = res.hasMore;
+      draw();
+      if (mode === 'replace' || atBottom) list.scrollTop = list.scrollHeight;
+    }
+  }
+
+  function draw() {
+    const list = clear(S.list);
+    list.appendChild(h('div', { class: 'bhead' }, h('div', null, t('board.col.id')), h('div', null, t('board.col.what')),
+      h('div', null, '1 – 7'), h('div', null, t('board.col.wait'))));
+    if (S.hasMore) list.appendChild(h('div', { class: 'board-more' }, t('board.older')));
+    if (!S.rows.length) list.appendChild(h('div', { class: 'empty' }, t('board.empty')));
+    S.rows.forEach(r => list.appendChild(rowEl(r)));
+  }
+
+  function rowEl(r) {
+    const open = () => go('qrap', { id: r.id });
+    return h('div', {
+      class: 'brow' + (r.late ? ' late' : '') + (FINAL_ST.indexOf(r.st) >= 0 ? ' closed' : ''),
+      role: 'button', tabindex: '0', onclick: open, onkeydown: e => { if (e.key === 'Enter') open(); }
+    },
+    h('div', { class: 'b-id' }, r.id, r.safety ? h('span', { class: 'badge badge-safety' }, 'SAFETY') : null,
+      r.rep ? h('span', { class: 'badge badge-rep' }, t('board.repeat')) : null),
+    h('div', { class: 'b-what' },
+      h('div', { class: 'b-text' }, r.what || t('board.noText')),
+      h('div', { class: 'b-meta' }, [r.zone, r.loc].filter(Boolean).join(' / ') + (r.det ? ' · ' + fmtDT(r.det) : ''))),
+    chipsEl(r.chips),
+    h('div', { class: 'b-wait' }, r.wait ? t('board.waitFor') + ' ' + t('wait.' + r.wait) : statusLabel(r.st)));
+  }
+
+  function onScroll() {
+    if (S.list.scrollTop < 80 && S.hasMore && !S.loading) load('older');
+  }
+
+  /** "Pokračovat v rozpracovaném": drafts and QRAPs whose ③ is still open. */
+  async function showPending() {
+    const res = await api('apiGetDrafts', S.area);
+    if (!res.ok) { showErrors(res); return; }
+    const pick = d => {
+      byId('modal').hidden = true;
+      const step = d.status !== 'DRAFT' ? 4 : !d.s1 ? 1 : !d.photos ? 2 : !d.s2 ? 3 : d.risk ? 5 : 4;
+      go('wizard', { id: d.id, step: step });
+    };
+    const body = h('div', null, res.drafts.length ? res.drafts.map(d => h('button', { class: 'sugg', onclick: () => pick(d) },
+      h('b', null, d.id), ' · ', statusLabel(d.status), h('br'), d.what || t('board.noText'),
+      h('div', { class: 'small muted' }, fmtDT(d.detected_at || d.created_at)))) : h('p', { class: 'muted' }, t('board.noPending')));
+    modal({ title: t('board.pendingTitle'), body: body, buttons: [{ label: t('btn.close'), value: true }] });
+  }
+
+  return { render: render, leave: leave };
+})();
+</script>

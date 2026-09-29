@@ -1,0 +1,205 @@
+<script>
+'use strict';
+/*
+ * ViewQrap – read-only detail of one QRAP (?page=qrap&id=…): all 7 sections in the order of the paper row,
+ * photos, the buttons the current user may use next, a QR code to the supervisor page and the admin tools.
+ */
+App.views.qrap = (() => {
+  async function render(root, params) {
+    root.appendChild(loadingEl());
+    const res = await api('apiGetQrap', params.id);
+    if (!root.isConnected) return;
+    clear(root);
+    if (!res.ok) { root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
+    draw(root, res.detail);
+  }
+
+  function draw(root, d) {
+    const q = d.q;
+    addKids(root, [topCard(d), actionButtons(d), sec1(d), sec2(d), sec3(d), sec4(d), sec5(d), sec6(d), sec7(d), adminBox(d)]);
+  }
+
+  function topCard(d) {
+    const q = d.q;
+    const related = [];
+    if (q.parent_id) related.push([t('f.parent_id'), qrapLink(q.parent_id)]);
+    if (q.assign_ref) related.push([t('f.assign_ref'), qrapLink(q.assign_ref)]);
+    return h('div', { class: 'card top-card' },
+      h('div', { class: 'grow' },
+        h('h1', null, q.qrap_id, q.safety === 'ANO' ? h('span', { class: 'badge badge-safety' }, 'SAFETY') : null,
+          q.archived === true ? h('span', { class: 'badge badge-archived' }, t('lbl.archived')) : null),
+        h('p', null, statusBadge(q.status), d.waiting ? ' ' + t('board.waitFor') + ' ' + t('wait.' + d.waiting) : ''),
+        chipsEl(d.chips),
+        kvList([[t('f.area'), q.area_code + ' · ' + areaName(q.area_code)], [t('f.level'), q.level]].concat(related)),
+        h('p', { class: 'small muted' }, q.template_version)),
+      h('div', null, qrCode(d.links.decide), h('div', { class: 'small muted', style: { maxWidth: '190px' } }, t('qrap.qrHint'))));
+  }
+
+  /** Buttons for what this user may do next (flags come from the server). */
+  function actionButtons(d) {
+    const q = d.q;
+    const c = d.can;
+    const b = [];
+    if (c.editQr && q.status === 'DRAFT') b.push(button(t('qrap.continue'), () => go('wizard', { id: q.qrap_id, step: 1 }), 'op', { big: true }));
+    if (c.editQr && q.status !== 'DRAFT') {
+      b.push(button(t('qrap.editQr'), () => go('wizard', { id: q.qrap_id, step: 1 }), 'ghost'));
+      if (!d.s3.complete) b.push(button(t('qrap.finishS3'), () => go('wizard', { id: q.qrap_id, step: 4 }), 'op', { big: true }));
+    }
+    if (c.decide || c.shiftInfo) b.push(button(t('qrap.decide'), () => go('decide', { id: q.qrap_id }), 'primary', { big: true }));
+    if (['ANALYSIS', 'ACTIONS_OPEN', 'VERIFY', 'CLOSED'].indexOf(q.status) >= 0) {
+      b.push(button(t('qrap.analysis'), () => go('analysis', { id: q.qrap_id }), c.analyze ? 'pil' : 'ghost', { big: c.analyze }));
+    }
+    if (c.effect) b.push(button(t('qrap.effect'), () => go('effect', { id: q.qrap_id }), 'ok', { big: true }));
+    if (c.close) b.push(button(t('qrap.close'), () => go('close', { id: q.qrap_id }), 'primary', { big: true }));
+    if (c.assess) b.push(button(t('qrap.assess'), () => go('assess', { id: q.qrap_id }), 'mgr'));
+    b.push(button(t('nav.board'), () => go('board', { area: q.area_code }), 'ghost'));
+    return h('div', { class: 'btn-row' }, b);
+  }
+
+  function sec1(d) {
+    const q = d.q;
+    return sectionCard('1', t('sec.1'), 'op', kvList([
+      [t('f.safety'), yn(q.safety, true)],
+      [t('f.what'), q.what],
+      [t('f.how_found'), listLabel('HOW_FOUND', q.how_found)],
+      [t('f.detected_at'), fmtDT(q.detected_at)],
+      [t('f.where'), [q.zone, q.location_code].filter(Boolean).join(' / ')],
+      [t('f.origin_zone'), q.origin_zone],
+      [t('f.qty'), q.qty === '' ? '' : q.qty + ' ' + listLabel('UNIT', q.unit) + (q.nok_situation === true ? ' · ' + t('f.nok_situation') : '')],
+      [t('f.repeat_7d'), q.repeat_7d === 'ANO' ? h('span', null, t('lbl.yes') + ' → ', qrapLink(q.repeat_ref)) : yn(q.repeat_7d)],
+      [t('f.finder_name'), [q.finder_name, q.finder_badge].filter(Boolean).join(' · ')],
+      [t('f.material_no'), q.material_no], [t('f.hu_or_delivery_no'), q.hu_or_delivery_no], [t('f.supplier'), q.supplier],
+      [t('f.sent_at'), fmtDT(q.sent_at)]
+    ]), photos(d), q.photo_exception ? h('p', null, h('b', null, t('f.photo_exception') + ': '), q.photo_exception) : null);
+  }
+
+  function photos(d) {
+    return h('div', { class: 'thumbs' }, ['WRONG', 'CORRECT'].map(kind => {
+      const p = d.photos.find(x => x.kind === kind);
+      if (!p) return null;
+      const img = h('img', { alt: t('wiz.photo' + kind) });
+      loadPhoto(p.thumb_file_id, img);
+      return h('div', { class: 'thumb thumb-' + kind.toLowerCase(), onclick: () => showPhoto(p.file_id, t('wiz.photo' + kind)) },
+        h('b', null, t('wiz.photo' + kind)), img);
+    }));
+  }
+
+  function sec2(d) {
+    return sectionCard('2', t('sec.2'), 'op', d.alerts.length ? table([t('f.role'), t('f.notified_to'), t('f.at')], d.alerts.map(a => [
+      listLabel('ALERT_ROLE', a.role_code) + (a.other_text ? ' (' + a.other_text + ')' : ''), a.notified_to, fmtDT(a.notified_at)]))
+      : h('p', { class: 'muted' }, '–'));
+  }
+
+  function sec3(d) {
+    const q = d.q;
+    return sectionCard('3', t('sec.3'), 'op', kvList([
+      [t('f.risk_stock_shipped'), yn(q.risk_stock_shipped)],
+      [t('f.check'), q.risk_stock_shipped === 'ANO' ? (q.check_in_progress === true ? t('f.check_in_progress')
+        : (q.checked_qty === '' ? '–' : q.checked_qty) + ' / ' + (q.wrong_found_qty === '' ? '–' : q.wrong_found_qty) + ' ' + t('lbl.pcs')) : ''],
+      [t('f.process_stopped'), yn(q.process_stopped, true) + (q.restored_at ? ' → ' + fmtDT(q.restored_at) : '')],
+      [t('f.containment_done_at'), fmtDT(q.containment_done_at)]
+    ]), d.ia.length ? table([t('f.ia_type'), t('f.ia_text'), t('f.ia_owner'), t('f.ia_done')], d.ia.map(a =>
+      [listLabel('ACTION_TYPE', a.type), a.text, a.owner_name, a.done_at ? fmtDT(a.done_at) : t('lbl.open')])) : null,
+    d.s3.complete ? h('div', { class: 'okbox' }, t('wiz.s3Complete'))
+      : h('div', { class: 'warnbox' }, t('wiz.s3Later') + ' ' + d.s3.missing.map(m => t('s3.' + m)).join(', ')),
+    d.can.editCheck && !d.can.editQr ? checkForm(d) : null);
+  }
+
+  /** Quality may correct the ③ check data. */
+  function checkForm(d) {
+    const v = { checked_qty: d.q.checked_qty, wrong_found_qty: d.q.wrong_found_qty, check_in_progress: d.q.check_in_progress === true };
+    const box = errorBox();
+    const form = h('div', { class: 'card' }, h('h3', null, t('qrap.qualityCheck')), box,
+      h('div', { class: 'row' },
+        field(t('f.checked_qty'), numInput(v.checked_qty, x => { v.checked_qty = x; }), { name: 'checked_qty' }),
+        field(t('f.wrong_found_qty'), numInput(v.wrong_found_qty, x => { v.wrong_found_qty = x; }), { name: 'wrong_found_qty' })),
+      checkbox(t('f.check_in_progress'), v.check_in_progress, x => { v.check_in_progress = x; }),
+      button(t('btn.save'), async () => {
+        const res = await api('apiSaveStep', { id: d.q.qrap_id, step: 4, mode: 'later', data: v });
+        if (!res.ok) { showErrors(res, box, form); return; }
+        toast(t('msg.saved'), 'ok');
+        render(clear(byId('app')), App.params);
+      }, 'primary'));
+    return form;
+  }
+
+  function sec4(d) {
+    const q = d.q;
+    const shifts = App.set.shifts.map(s => {
+      const r = d.shiftInfo.find(x => x.shift_code === s.code);
+      return [s.name, r ? personName(r.informed_by) + ' · ' + fmtDT(r.informed_at) : '–'];
+    });
+    return sectionCard('4', t('sec.4'), 'sup',
+      h('h3', null, t('f.shiftInfo')), kvList(shifts),
+      kvList([
+        [t('f.decision'), q.decision ? t('dec.' + q.decision) : t('lbl.notYet')],
+        [t('f.decision_comment'), q.decision_comment],
+        [t('f.pilots'), d.pilots.map(p => p.name).join(', ')],
+        [t('f.assign_ref'), q.assign_ref ? qrapLink(q.assign_ref) : ''],
+        [t('f.signed'), q.decided_by ? personName(q.decided_by) + ' · ' + fmtDT(q.decided_at) : '']
+      ]));
+  }
+
+  function sec5(d) {
+    if (d.q.status === 'CLOSED_SOLVED' || d.q.status === 'ESCALATED') return sectionCard('5', t('sec.5'), 'pil', h('p', { class: 'muted' }, t('lbl.notNeeded')));
+    const chains = ['OCCURRENCE', 'NON_DETECTION'].map(ch => {
+      const steps = d.why.filter(w => w.chain === ch && w.text).sort((a, b) => a.step - b.step);
+      if (!steps.length) return null;
+      return h('div', null, h('h3', null, t('why.' + ch)), h('ol', null, steps.map(w => h('li', { class: w.is_root === true ? 'why-root' : '' },
+        w.text, w.is_root === true ? ' ← ' + t('why.root') : ''))));
+    });
+    return sectionCard('5', t('sec.5'), 'pil', chains.some(Boolean) ? chains : h('p', { class: 'muted' }, t('lbl.notYet')));
+  }
+
+  function sec6(d) {
+    const q = d.q;
+    if (q.status === 'CLOSED_SOLVED' || q.status === 'ESCALATED') return sectionCard('6', t('sec.6'), 'pil', h('p', { class: 'muted' }, t('lbl.notNeeded')));
+    const acts = d.actions.filter(a => a.status !== 'REMOVED');
+    return sectionCard('6', t('sec.6'), 'pil',
+      kvList([[t('f.learned'), q.learned], [t('f.std_update'), q.std_update ? yn(q.std_update) + (q.std_update_ref ? ' → ' + q.std_update_ref : '') : '']]),
+      acts.length ? table([t('f.action_text'), t('f.root_step'), t('f.pilot'), t('f.planned'), t('f.done'), t('f.status')], acts.map(a =>
+        [a.text, a.root_step, a.pilot_name, fmtD(a.planned), fmtD(a.done), t('ast.' + a.status) + (a.late ? ' · ' + t('lbl.late') : '')]),
+      i => (acts[i].late ? 'late' : '')) : null,
+      h('h3', null, t('f.effect'), ' (', t('eff.round', { n: d.eff.round }), ')'),
+      h('div', { class: 'slots' }, d.eff.slots.map((s, i) => h('div', { class: 'slot' + (s ? ' slot-' + s.result : '') },
+        h('b', null, (i + 1) + '. '), s ? [t('eff.' + s.result), h('br'), fmtD(s.shift_date) + ' · ' + shiftName(s.shift_code)] : '–'))),
+      kvList([[t('f.closed'), q.status === 'CLOSED' && q.closed_by ? personName(q.closed_by) + ' · ' + fmtDT(q.closed_at) : '']]));
+  }
+
+  function sec7(d) {
+    const a = d.assess[0];
+    if (!a) return sectionCard('7', t('sec.7'), 'mgr', h('p', { class: 'muted' }, t('assess.none')));
+    return sectionCard('7', t('sec.7'), 'mgr',
+      kvList([1, 2, 3, 4, 5].map(n => [t('assess.c' + n), t('assessVal.' + a['c' + n])]).concat([
+        [t('f.ojt_with'), a.ojt_with], [t('f.feedback'), a.feedback + (a.feedback_type ? ' (' + t('fb.' + a.feedback_type) + ')' : '')],
+        [t('f.assessor'), personName(a.assessor) + ' · ' + fmtDT(a.at)]])),
+      h('p', { class: 'small muted' }, t('assess.count', { n: d.assess.length })));
+  }
+
+  /** Admin: unlock ①–③ / ④, reopen, archive. A reason is always required. */
+  function adminBox(d) {
+    if (!d.can.admin) return null;
+    const q = d.q;
+    const run = async (fn, payload, title) => {
+      const reason = await promptDlg(title, t('admin.reason'), 5);
+      if (!reason) return;
+      const res = await api(fn, Object.assign({ id: q.qrap_id, reason: reason }, payload));
+      if (!res.ok) { showErrors(res); return; }
+      toast(t('msg.saved'), 'ok');
+      render(clear(byId('app')), App.params);
+    };
+    const locked = String(q.locked_parts || '').split(',');
+    return h('section', { class: 'card' }, h('h2', null, t('admin.title')), h('p', { class: 'small muted' }, t('admin.locked') + ': ' + (q.locked_parts || '–')),
+      h('div', { class: 'btn-row' },
+        locked.indexOf('QR') >= 0 && ['DRAFT', 'QR_OPEN', 'WAIT_DECISION'].indexOf(q.status) >= 0
+          ? button(t('admin.unlockQr'), () => run('apiAdminUnlock', { part: 'QR' }, t('admin.unlockQr')), 'danger') : null,
+        ['ANALYSIS', 'CLOSED_SOLVED'].indexOf(q.status) >= 0
+          ? button(t('admin.unlockDecision'), () => run('apiAdminUnlock', { part: 'DECISION' }, t('admin.unlockDecision')), 'danger') : null,
+        ['CLOSED', 'CLOSED_SOLVED'].indexOf(q.status) >= 0 ? button(t('admin.reopen'), () => run('apiAdminReopen', {}, t('admin.reopen')), 'danger') : null,
+        button(q.archived === true ? t('admin.unarchive') : t('admin.archive'),
+          () => run('apiAdminArchive', { archived: q.archived !== true }, q.archived === true ? t('admin.unarchive') : t('admin.archive')), 'ghost')));
+  }
+
+  return { render: render };
+})();
+</script>

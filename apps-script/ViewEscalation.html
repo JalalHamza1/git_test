@@ -1,0 +1,36 @@
+<script>
+'use strict';
+/*
+ * ViewEscalation – "Eskalace" (?page=escalation): QRAPs on APU and PLANT level, and the line QRAPs that
+ * were escalated (with the link to their copy, "Assign Sheet #").
+ */
+App.views.escalation = (() => {
+  async function render(root) {
+    root.appendChild(loadingEl());
+    const res = await api('apiGetEscalations');
+    if (!root.isConnected) return;
+    clear(root);
+    if (!res.ok) { root.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
+    addKids(root, [
+      h('h1', null, t('esc.title')),
+      block(t('esc.apu'), res.apu, true),
+      block(t('esc.plant'), res.plant, true),
+      block(t('esc.escalated'), res.escalated, false)
+    ]);
+  }
+
+  function block(title, rows, showParent) {
+    return h('div', { class: 'card' }, h('h2', null, title, ' (', String(rows.length), ')'),
+      rows.length ? table([t('board.col.id'), t('board.col.what'), '1 – 7', t('f.status'), showParent ? t('f.parent_id') : t('f.assign_ref')],
+        rows.slice().reverse().map(r => [
+          h('span', null, qrapLink(r.id), r.safety ? h('span', { class: 'badge badge-safety' }, 'S') : null),
+          h('span', null, r.what, h('div', { class: 'small muted' }, r.area + ' · ' + fmtDT(r.det))),
+          chipsEl(r.chips),
+          h('span', { class: r.late ? 'pill-bad' : '' }, statusLabel(r.st) + (r.wait ? ' · ' + t('wait.' + r.wait) : '')),
+          qrapLink(showParent ? r.parent : r.copy)
+        ]), i => (rows[rows.length - 1 - i].late ? 'late' : '')) : h('p', { class: 'muted' }, '–'));
+  }
+
+  return { render: render };
+})();
+</script>
