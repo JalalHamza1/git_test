@@ -96,6 +96,13 @@ function chipsEl(chips) {
     h('span', { class: 'chip chip-' + c, title: t('chip.' + (i + 1)) + ': ' + t('chipState.' + c) }, String(i + 1))));
 }
 
+/** Calm 7-segment progress bar (same states as the chips, no numbers). */
+function progressBar(chips) {
+  const done = (chips || []).filter(c => c === 'done' || c === 'na').length;
+  return h('div', { class: 'pbar', title: done + ' / 7', 'aria-label': t('board.chips') },
+    (chips || []).map((c, i) => h('span', { class: 'pseg pseg-' + c, title: t('chip.' + (i + 1)) + ': ' + t('chipState.' + c) })));
+}
+
 /** ✓ / ✗ marker. */
 function mark(ok) { return h('span', { class: ok ? 'ok-mark' : 'bad-mark' }, ok ? '✓' : '✗'); }
 

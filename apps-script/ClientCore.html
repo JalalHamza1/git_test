@@ -230,10 +230,10 @@ function setUrl(params) {
   try { google.script.history.replace(App.params, App.params); } catch (e) { /* ignore */ }
 }
 function defaultPage() {
-  if (App.user.isKiosk) return 'board';
+  if (App.user.isKiosk) return 'home';
   if (hasAnyRole(['MANAGER', 'APU_MANAGER'])) return 'manager';
   if (hasRole('PILOT') && !hasAnyRole(['SUPERVISOR', 'TL', 'OPERATOR'])) return 'actions';
-  return 'board';
+  return 'home';
 }
 function render(extra) {
   if (App.view && App.view.leave) App.view.leave();
@@ -241,14 +241,15 @@ function render(extra) {
   const page = App.params.page || defaultPage();
   const view = App.views[page];
   const root = clear(byId('app'));
+  root.className = 'app page-' + page;
   byId('modal').hidden = true;
   App.view = view || null;
   renderHeader();
   if (!view) { root.appendChild(h('div', { class: 'empty' }, t('msg.unknownPage'))); return; }
   view.render(root, Object.assign({ page: page }, App.params), extra || {});
   window.scrollTo(0, 0);
-  if (App.user.isKiosk && page !== 'board') {
-    Idle.start(App.set.config.IDLE_MINUTES || 3, () => (view.onIdle ? view.onIdle() : go('board', { area: defaultArea() })));
+  if (App.user.isKiosk && page !== 'board' && page !== 'home') {
+    Idle.start(App.set.config.IDLE_MINUTES || 3, () => (view.onIdle ? view.onIdle() : go('home', { area: defaultArea() })));
   }
 }
 
@@ -409,15 +410,17 @@ const Idle = {
 /** Main navigation entries for the current user. */
 function navItems() {
   const area = App.params.area || defaultArea();
-  const items = [{ key: 'board', label: t('nav.board'), fn: () => go('board', { area: area }) }];
+  const items = [];
+  if (hasAnyRole(['MANAGER', 'APU_MANAGER', 'ADMIN'])) items.push({ key: 'manager', label: t('nav.overview'), fn: () => go('manager') });
+  else items.push({ key: 'home', label: t('nav.home'), fn: () => go('home', { area: area }) });
+  items.push({ key: 'board', label: t('nav.board'), fn: () => go('board', { area: area }) });
   if (!App.user.isKiosk) items.push({ key: 'actions', label: t('nav.actions'), fn: () => go('actions') });
-  if (hasAnyRole(['MANAGER', 'APU_MANAGER', 'ADMIN'])) items.push({ key: 'manager', label: t('nav.manager'), fn: () => go('manager') });
   items.push({ key: 'escalation', label: t('nav.escalation'), fn: () => go('escalation') });
   return items;
 }
 /** Which navigation entry a page belongs to (QRAP pages belong to the board). */
 function navKey(page) {
-  return ['actions', 'manager', 'escalation'].indexOf(page) >= 0 ? page : 'board';
+  return ['home', 'actions', 'manager', 'escalation'].indexOf(page) >= 0 ? page : 'board';
 }
 function initials(name) {
   return String(name || '?').split(/[\s.@]+/).filter(Boolean).slice(0, 2).map(w => w.charAt(0).toUpperCase()).join('') || '?';

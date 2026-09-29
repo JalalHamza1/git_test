@@ -372,6 +372,95 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; margin: 6px
   .board-list { height: calc(100vh - 270px); }
   .toast { left: 12px; right: 12px; bottom: 84px; max-width: none; }
 }
+
+/* ---------------------------------------------------------------- home (kiosk / operators) */
+.home { max-width: 860px; margin: 0 auto; }
+.home-hero { text-align: center; padding: 28px 16px 8px; }
+.home-kicker { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.home-title { font-size: 30px; font-weight: 700; margin: 8px 0 6px; letter-spacing: -.02em; }
+.home-lead { color: var(--text-2); margin: 0 auto 22px; max-width: 520px; }
+.home-actions { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.btn-hero { height: 64px; min-width: 340px; font-size: 18px; border-radius: 10px; }
+.home-actions .btn-big { min-width: 340px; }
+.stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 26px 0 8px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px; text-align: center; }
+.stat.alert { box-shadow: inset 0 -3px 0 var(--bad); }
+.stat-n { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat-l { font-size: 12.5px; color: var(--muted); }
+.home-section { margin-top: 24px; }
+.home-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.home-section-head h2 { font-size: 15px; }
+.home-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.home-empty { padding: 28px; text-align: center; color: var(--muted); background: var(--surface); border: 1px dashed var(--border-2); border-radius: var(--r); }
+.qcard { display: block; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+  padding: 14px 16px; cursor: pointer; box-shadow: var(--sh); }
+.qcard:hover { border-color: var(--border-2); }
+.qcard.late { box-shadow: inset 3px 0 0 var(--bad), var(--sh); }
+.qcard-top { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.qcard-id { font-weight: 700; color: var(--text); }
+.qcard-time { margin-left: auto; }
+.qcard-what { font-weight: 550; margin: 6px 0 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.qcard-bottom { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.qcard-wait { font-size: 12.5px; color: var(--muted); }
+.qcard.late .qcard-wait { color: var(--bad); font-weight: 600; }
+.qcard .pbar { margin-left: auto; }
+
+/* ---------------------------------------------------------------- progress bar (7 segments) */
+.pbar { display: inline-flex; gap: 3px; }
+.pseg { width: 16px; height: 6px; border-radius: 3px; background: #e5e8ec; }
+.pseg-done { background: #7cc79a; }
+.pseg-wait { background: #f2c27a; }
+.pseg-late { background: var(--bad); }
+.pseg-na { background: transparent; border: 1px dashed #cbd1d8; height: 6px; }
+
+/* ---------------------------------------------------------------- centred wizard */
+.wizard { max-width: 780px; }
+.wizard .form-grid, .wizard .form-grid-3 { grid-template-columns: 1fr; }
+.wizard .form-grid > div:empty { display: none; }
+.wiz-body .form-group { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 20px 22px 6px;
+  margin-bottom: 14px; box-shadow: var(--sh); }
+.wiz-body .form-group + .form-group { border-top: 1px solid var(--border); margin-top: 0; padding-top: 20px; }
+.wiz-body .form-group-title { font-size: 15px; font-weight: 650; letter-spacing: 0; text-transform: none; color: var(--text); margin-bottom: 16px; }
+.wiz-body > .card, .wiz-body > p { max-width: 100%; }
+
+/* ---------------------------------------------------------------- QRAP tabs, paper form, history */
+.tab-bar { margin: 4px 0 16px; }
+.paper-card { overflow-x: auto; }
+.paper-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 10px; }
+.paper-bands, .paper { display: grid; grid-template-columns: repeat(7, minmax(150px, 1fr)); min-width: 1080px; }
+.band { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); text-align: center;
+  padding: 6px; border: 1px solid var(--border); border-bottom: 0; background: var(--subtle); }
+.paper { border: 1px solid var(--border-2); }
+.pp-col { border-right: 1px solid var(--border); min-width: 0; }
+.pp-col:last-child { border-right: 0; }
+.pp-head { display: flex; align-items: center; gap: 6px; padding: 8px; font-size: 11.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .03em; background: #f1f3f6; border-bottom: 1px solid var(--border); min-height: 44px; }
+.pp-num { width: 20px; height: 20px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border-2); display: grid; place-items: center; flex: none; font-size: 11px; }
+.pp-body { padding: 8px; font-size: 12.5px; }
+.pp-line { margin-bottom: 7px; }
+.pp-l { display: block; font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+.pp-v { font-weight: 550; overflow-wrap: anywhere; }
+.pp-list { margin: 0 0 8px; padding-left: 16px; }
+.pp-list li { margin-bottom: 5px; }
+.pp-col:nth-child(2) .pp-list, .pp-col:nth-child(7) .pp-list { list-style: none; padding-left: 0; }
+.pp-sub { font-size: 11px; color: var(--muted); }
+.pp-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pp-photo { text-align: center; font-size: 10px; color: var(--muted); }
+.pp-photo img { width: 100%; border-radius: 4px; border: 2px solid var(--border); }
+.pp-photo-wrong img { border-color: #f0b4ae; } .pp-photo-correct img { border-color: #a9d9b9; }
+.timeline { position: relative; padding-left: 22px; }
+.timeline::before { content: ""; position: absolute; left: 6px; top: 6px; bottom: 6px; width: 2px; background: var(--border); }
+.tl-item { position: relative; padding: 0 0 16px; }
+.tl-dot { position: absolute; left: -21px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); }
+.tl-text { font-weight: 550; }
+.tl-meta { font-size: 12.5px; color: var(--muted); }
+.tiles-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 720px) {
+  .home-list { grid-template-columns: 1fr; }
+  .btn-hero, .home-actions .btn-big { min-width: 0; width: 100%; }
+  .home-title { font-size: 24px; }
+  .tiles-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 </style>
 
 </head>
@@ -426,6 +515,23 @@ const I18N = {
     'close.checklist': 'Podmínky uzavření', 'ana.crumb': 'Analýza a akce', 'ana.notes': 'Poznámky a revize',
     'act.sub': 'Konečné akce, kde jste pilot – nebo akce vašeho týmu (N+1).', 'act.doneDate': 'Datum dokončení', 'f.qrap': 'QRAP',
     'eff.progressLabel': 'Postup', 'meta.when': 'Zjištěno', 'mgr.sub': 'Přehled všech oblastí: co je po termínu a co čeká.', 'esc.sub': 'QRAP na úrovni APU a závodu.',
+    'nav.home': 'Domů', 'nav.overview': 'Přehled',
+    'home.title': 'Našli jste problém?', 'home.lead': 'Nahlaste ho hned – zabere to pár minut. Formulář vás provede krok za krokem.',
+    'home.report': '+ Nahlásit problém', 'home.continue': 'Pokračovat v rozpracovaném ({n})', 'home.attention': 'Vyžaduje pozornost',
+    'home.allBoard': 'Celá tabule →', 'home.statOpen': 'otevřené', 'home.statLate': 'po termínu', 'home.statToday': 'dnes nahlášené',
+    'home.nothing': 'Vše je v pořádku – nic nečeká.',
+    'qtab.overview': 'Přehled', 'qtab.paper': 'Formulář', 'qtab.history': 'Historie',
+    'paper.band1': 'QR – operátor', 'paper.band2': 'Supervizor', 'paper.band3': 'Pověření pracovníci', 'paper.band4': 'Supervizor / manažer',
+    'paper.repeat': 'Opakování 7 dní', 'paper.risk': 'Riziko na skladě', 'paper.check': 'Zkontrolováno / špatně', 'paper.restart': 'Restart',
+    'paper.shifts': 'Směny informovány', 'paper.sign': 'Podpis', 'paper.na': 'Není potřeba', 'paper.eff': 'Efektivita 5 směn',
+    'paper.std': 'Aktualizace standardu', 'paper.closed': 'Uzavření schváleno', 'paper.who': 'Kdo / kdy',
+    'hist.created': 'QRAP založen', 'hist.photo': 'Nahrána fotka ({kind})', 'hist.sent': 'QRAP odeslán', 'hist.iaDone': 'Opatření hotovo: {text}',
+    'hist.containment': 'Okamžitá opatření kompletní', 'hist.shift': 'Informována směna {shift}', 'hist.decision': 'Rozhodnutí: {d}',
+    'hist.pilot': 'Přidělen pilot {name}', 'hist.action': 'Nová konečná akce: {text}', 'hist.note': 'Poznámka: {text}',
+    'hist.eff': 'Efektivita slot {n}: {r} ({shift})', 'hist.assess': 'Hodnocení QRQC', 'hist.closed': 'QRAP uzavřen',
+    'hist.hint': 'Každá změna je navíc uložena v listu AUDIT_LOG.',
+    'mgr.hello': 'Dobrý den, {name}', 'mgr.showAll': 'Zobrazit vše ({n})', 'mgr.allQraps': 'Zobrazit ({n})', 'mgr.table': 'Všechny QRAP',
+    'mgr.assessMissing': 'Dnes ještě nehodnotili: {n}', 'mgr.assessAll': 'Všichni supervizoři dnes hodnotili.',
     // navigation and buttons
     'nav.board': 'Tabule', 'nav.new': 'Nový QRAP', 'nav.actions': 'Moje akce', 'nav.manager': 'Manažer',
     'nav.escalation': 'Eskalace', 'nav.boardOf': 'Tabule {area}', 'nav.menu': 'Menu',
@@ -619,6 +725,23 @@ const I18N = {
   },
 
   en: {
+    'nav.home': 'Home', 'nav.overview': 'Overview',
+    'home.title': 'Found a problem?', 'home.lead': 'Report it now – it takes a few minutes. The form guides you step by step.',
+    'home.report': '+ Report a problem', 'home.continue': 'Continue a draft ({n})', 'home.attention': 'Needs attention',
+    'home.allBoard': 'Full board →', 'home.statOpen': 'open', 'home.statLate': 'overdue', 'home.statToday': 'reported today',
+    'home.nothing': 'All good – nothing is waiting.',
+    'qtab.overview': 'Overview', 'qtab.paper': 'Form', 'qtab.history': 'History',
+    'paper.band1': 'QR – operator', 'paper.band2': 'Supervisor', 'paper.band3': 'Assigned people', 'paper.band4': 'Supervisor / manager',
+    'paper.repeat': 'Repeat 7 days', 'paper.risk': 'Risk on stock', 'paper.check': 'Checked / wrong', 'paper.restart': 'Restart',
+    'paper.shifts': 'Shifts informed', 'paper.sign': 'Signature', 'paper.na': 'Not needed', 'paper.eff': 'Effectiveness 5 shifts',
+    'paper.std': 'Standard update', 'paper.closed': 'Closure approved', 'paper.who': 'Who / when',
+    'hist.created': 'QRAP created', 'hist.photo': 'Photo uploaded ({kind})', 'hist.sent': 'QRAP sent', 'hist.iaDone': 'Action done: {text}',
+    'hist.containment': 'Containment complete', 'hist.shift': 'Shift informed: {shift}', 'hist.decision': 'Decision: {d}',
+    'hist.pilot': 'Pilot assigned: {name}', 'hist.action': 'New definitive action: {text}', 'hist.note': 'Note: {text}',
+    'hist.eff': 'Effectiveness slot {n}: {r} ({shift})', 'hist.assess': 'QRQC assessment', 'hist.closed': 'QRAP closed',
+    'hist.hint': 'Every change is also stored in the AUDIT_LOG tab.',
+    'mgr.hello': 'Hello, {name}', 'mgr.showAll': 'Show all ({n})', 'mgr.allQraps': 'Show ({n})', 'mgr.table': 'All QRAPs',
+    'mgr.assessMissing': 'Not assessed yet today: {n}', 'mgr.assessAll': 'All supervisors assessed today.',
     'role.op': 'Filled by operator / TL', 'role.sup': 'Filled by supervisor', 'role.pil': 'Filled by pilots', 'role.mgr': 'Supervisor / manager',
     'secShort.1': 'Description', 'secShort.2': 'Alerts', 'secShort.3': 'Containment', 'secShort.4': 'Decision', 'secShort.5': '5 Why',
     'secShort.6': 'Actions', 'secShort.7': 'Assessment',
@@ -1025,10 +1148,10 @@ function setUrl(params) {
   try { google.script.history.replace(App.params, App.params); } catch (e) { /* ignore */ }
 }
 function defaultPage() {
-  if (App.user.isKiosk) return 'board';
+  if (App.user.isKiosk) return 'home';
   if (hasAnyRole(['MANAGER', 'APU_MANAGER'])) return 'manager';
   if (hasRole('PILOT') && !hasAnyRole(['SUPERVISOR', 'TL', 'OPERATOR'])) return 'actions';
-  return 'board';
+  return 'home';
 }
 function render(extra) {
   if (App.view && App.view.leave) App.view.leave();
@@ -1036,14 +1159,15 @@ function render(extra) {
   const page = App.params.page || defaultPage();
   const view = App.views[page];
   const root = clear(byId('app'));
+  root.className = 'app page-' + page;
   byId('modal').hidden = true;
   App.view = view || null;
   renderHeader();
   if (!view) { root.appendChild(h('div', { class: 'empty' }, t('msg.unknownPage'))); return; }
   view.render(root, Object.assign({ page: page }, App.params), extra || {});
   window.scrollTo(0, 0);
-  if (App.user.isKiosk && page !== 'board') {
-    Idle.start(App.set.config.IDLE_MINUTES || 3, () => (view.onIdle ? view.onIdle() : go('board', { area: defaultArea() })));
+  if (App.user.isKiosk && page !== 'board' && page !== 'home') {
+    Idle.start(App.set.config.IDLE_MINUTES || 3, () => (view.onIdle ? view.onIdle() : go('home', { area: defaultArea() })));
   }
 }
 
@@ -1204,15 +1328,17 @@ const Idle = {
 /** Main navigation entries for the current user. */
 function navItems() {
   const area = App.params.area || defaultArea();
-  const items = [{ key: 'board', label: t('nav.board'), fn: () => go('board', { area: area }) }];
+  const items = [];
+  if (hasAnyRole(['MANAGER', 'APU_MANAGER', 'ADMIN'])) items.push({ key: 'manager', label: t('nav.overview'), fn: () => go('manager') });
+  else items.push({ key: 'home', label: t('nav.home'), fn: () => go('home', { area: area }) });
+  items.push({ key: 'board', label: t('nav.board'), fn: () => go('board', { area: area }) });
   if (!App.user.isKiosk) items.push({ key: 'actions', label: t('nav.actions'), fn: () => go('actions') });
-  if (hasAnyRole(['MANAGER', 'APU_MANAGER', 'ADMIN'])) items.push({ key: 'manager', label: t('nav.manager'), fn: () => go('manager') });
   items.push({ key: 'escalation', label: t('nav.escalation'), fn: () => go('escalation') });
   return items;
 }
 /** Which navigation entry a page belongs to (QRAP pages belong to the board). */
 function navKey(page) {
-  return ['actions', 'manager', 'escalation'].indexOf(page) >= 0 ? page : 'board';
+  return ['home', 'actions', 'manager', 'escalation'].indexOf(page) >= 0 ? page : 'board';
 }
 function initials(name) {
   return String(name || '?').split(/[\s.@]+/).filter(Boolean).slice(0, 2).map(w => w.charAt(0).toUpperCase()).join('') || '?';
@@ -1369,6 +1495,13 @@ function qrapTags(safety, repeat, archived) {
 function chipsEl(chips) {
   return h('div', { class: 'chips', 'aria-label': t('board.chips') }, (chips || []).map((c, i) =>
     h('span', { class: 'chip chip-' + c, title: t('chip.' + (i + 1)) + ': ' + t('chipState.' + c) }, String(i + 1))));
+}
+
+/** Calm 7-segment progress bar (same states as the chips, no numbers). */
+function progressBar(chips) {
+  const done = (chips || []).filter(c => c === 'done' || c === 'na').length;
+  return h('div', { class: 'pbar', title: done + ' / 7', 'aria-label': t('board.chips') },
+    (chips || []).map((c, i) => h('span', { class: 'pseg pseg-' + c, title: t('chip.' + (i + 1)) + ': ' + t('chipState.' + c) })));
 }
 
 /** ✓ / ✗ marker. */
@@ -1546,6 +1679,71 @@ async function loadDetail(root, id) {
   <script>
 'use strict';
 /*
+ * ViewHome – calm start page for the kiosk and the people who fill in QRAPs (?page=home&area=WH1).
+ * One big action ("Nahlásit problém"), drafts to continue, and only the few QRAPs that need attention.
+ * The full board stays one click away (?page=board).
+ */
+App.views.home = (() => {
+  const SHOW = 6;
+
+  function render(root, params, extra) {
+    const area = String(params.area || defaultArea()).toUpperCase();
+    const canNew = canCreateIn(area);
+    const stats = h('div', { class: 'home-stats' }, loadingEl());
+    const list = h('div', { class: 'home-list' });
+    const pendingBtn = h('button', { class: 'btn btn-big', onclick: () => App.views.board.showPending(area) }, t('home.continue', { n: '…' }));
+    addKids(root, [
+      h('div', { class: 'home' },
+        h('div', { class: 'home-hero' },
+          h('div', { class: 'home-kicker' }, area + ' · ' + areaName(area)),
+          h('h1', { class: 'home-title' }, t('home.title')),
+          h('p', { class: 'home-lead' }, t('home.lead')),
+          canNew ? h('div', { class: 'home-actions' },
+            h('button', { class: 'btn btn-primary btn-hero', onclick: () => go('new', { area: area }) }, t('home.report')),
+            pendingBtn) : null),
+        stats,
+        h('div', { class: 'home-section' },
+          h('div', { class: 'home-section-head' }, h('h2', null, t('home.attention')),
+            button(t('home.allBoard'), () => go('board', { area: area }), 'link')),
+          list))
+    ]);
+    if (extra.toast) toast(extra.toast, 'ok', 6000);
+    load();
+
+    async function load() {
+      const res = await api('apiGetBoard', { area: area, filter: 'open', limit: 200 });
+      if (!root.isConnected) return;
+      if (!res.ok) { clear(stats); showErrors(res); return; }
+      pendingBtn.textContent = t('home.continue', { n: res.pending });
+      const open = res.rows.filter(r => r.open);
+      const late = open.filter(r => r.late);
+      const today = res.rows.filter(r => r.today);
+      clear(stats).appendChild(h('div', { class: 'stat-row' },
+        stat(open.length, t('home.statOpen')), stat(late.length, t('home.statLate'), late.length > 0), stat(today.length, t('home.statToday'))));
+      // most urgent first: overdue, safety, then newest
+      const pick = open.slice().sort((a, b) => (b.late - a.late) || (b.safety - a.safety) || (a.key < b.key ? 1 : -1)).slice(0, SHOW);
+      clear(list);
+      if (!pick.length) { list.appendChild(h('div', { class: 'home-empty' }, t('home.nothing'))); return; }
+      pick.forEach(r => list.appendChild(h('button', { type: 'button', class: 'qcard' + (r.late ? ' late' : ''), onclick: () => go('qrap', { id: r.id }) },
+        h('div', { class: 'qcard-top' }, h('span', { class: 'qcard-id' }, r.id), qrapTags(r.safety, r.rep), h('span', { class: 'qcard-time' }, fmtDT(r.det))),
+        h('div', { class: 'qcard-what' }, r.what || t('board.noText')),
+        h('div', { class: 'qcard-bottom' }, statusBadge(r.st),
+          r.wait ? h('span', { class: 'qcard-wait' }, (r.late ? t('lbl.late') + ' · ' : '') + t('board.waitFor') + ' ' + t('wait.' + r.wait)) : null,
+          progressBar(r.chips)))));
+    }
+  }
+
+  function stat(n, label, alert) {
+    return h('div', { class: 'stat' + (alert ? ' alert' : '') }, h('div', { class: 'stat-n' }, String(n)), h('div', { class: 'stat-l' }, label));
+  }
+
+  return { render: render };
+})();
+</script>
+
+  <script>
+'use strict';
+/*
  * ViewBoard – the kiosk board (?page=board&area=WH1).
  * One row per QRAP like the paper board: number · problem · status / "čeká na" · progress 1–7.
  * Newest at the bottom; the list starts scrolled to the bottom and loads older rows when scrolled up.
@@ -1561,7 +1759,7 @@ App.views.board = (() => {
     S.hasMore = false;
     S.list = h('div', { class: 'board-list', onscroll: onScroll });
     S.sub = h('span', null, S.area + ' · ' + areaName(S.area));
-    S.pendingBtn = h('button', { class: 'btn btn-big', onclick: showPending }, t('board.pending', { n: '…' }));
+    S.pendingBtn = h('button', { class: 'btn btn-big', onclick: () => showPending() }, t('board.pending', { n: '…' }));
     const filters = tabs(['open', 'today', 'safety', 'all'].map(f => ({ value: f, label: t('board.f.' + f) })), S.filter,
       f => { setUrl({ page: 'board', area: S.area, filter: f }); S.filter = f; load('replace'); });
     const canNew = canCreateIn(S.area);
@@ -1624,7 +1822,7 @@ App.views.board = (() => {
     h('div', { class: 'b-what' }, h('div', { class: 'b-text' }, r.what || t('board.noText')), h('div', { class: 'b-meta' }, meta)),
     h('div', { class: 'b-status' }, statusBadge(r.st),
       r.wait ? h('div', { class: 'b-wait' }, (r.late ? t('lbl.late') + ' · ' : '') + t('board.waitFor') + ' ' + t('wait.' + r.wait)) : null),
-    chipsEl(r.chips));
+    progressBar(r.chips));
   }
 
   function onScroll() {
@@ -1632,8 +1830,8 @@ App.views.board = (() => {
   }
 
   /** "Pokračovat v rozpracovaném": drafts and QRAPs whose ③ is still open. */
-  async function showPending() {
-    const res = await api('apiGetDrafts', S.area);
+  async function showPending(area) {
+    const res = await api('apiGetDrafts', area || S.area);
     if (!res.ok) { showErrors(res); return; }
     const pick = d => {
       byId('modal').hidden = true;
@@ -1648,7 +1846,7 @@ App.views.board = (() => {
     modal({ title: t('board.pendingTitle'), body: body, buttons: [{ label: t('btn.close'), value: true }] });
   }
 
-  return { render: render, leave: leave };
+  return { render: render, leave: leave, showPending: showPending };
 })();
 </script>
 
@@ -1731,13 +1929,14 @@ App.views.wizard = App.views.new = (() => {
   function draw() {
     const S = Wiz.S;
     const root = clear(Wiz.root);
+    root.classList.add('wizard');
     const trail = [boardCrumb(S.area)].concat(S.id && S.status !== 'DRAFT'
       ? [qrapCrumb(S.id), { label: t('wiz.edit') }] : [{ label: S.id || t('wiz.newTitle') }]);
     root.appendChild(pageHead({ crumbs: trail, title: S.id ? S.id : t('wiz.newTitle'), badges: S.status ? statusBadge(S.status) : null }));
     root.appendChild(stepper());
     Wiz.errBox = errorBox();
     root.appendChild(Wiz.errBox);
-    Wiz.body = h('div', { class: 'card' });
+    Wiz.body = h('div', { class: 'wiz-body' });
     root.appendChild(Wiz.body);
     Wiz.steps[S.step](Wiz.body);
     root.appendChild(navBar());
@@ -1818,13 +2017,13 @@ App.views.wizard = App.views.new = (() => {
     if (!setErrors(Wiz.errBox, errs)) return;
     const res = await api('apiSubmitQrap', S.id);
     if (!res.ok) { showErrors(res, Wiz.errBox); return; }
-    go('board', { area: S.area }, { extra: { toast: t('wiz.sent', { id: S.id }) } });
+    go('home', { area: S.area }, { extra: { toast: t('wiz.sent', { id: S.id }) } });
   }
 
   async function cancel() {
     const S = Wiz.S;
     if (S.dirty && !(await confirmDlg(t('wiz.leaveUnsaved'), t('btn.leave'), 'danger'))) return;
-    go(S.id ? 'qrap' : 'board', S.id ? { id: S.id } : { area: S.area });
+    go(S.id ? 'qrap' : 'home', S.id ? { id: S.id } : { area: S.area });
   }
 
   /** Kiosk idle timeout: save what was typed as a draft, then back to the board. */
@@ -1836,7 +2035,7 @@ App.views.wizard = App.views.new = (() => {
       const res = await save(step, 'draft');
       toast(res.ok ? t('wiz.idleSaved', { id: S.id }) : t('wiz.idleNotSaved'), res.ok ? 'ok' : 'warn', 7000);
     }
-    go('board', { area: S ? S.area : defaultArea() });
+    go('home', { area: S ? S.area : defaultArea() });
   }
 
   return { render: render, onIdle: onIdle, leave: () => {} };
@@ -2265,18 +2464,122 @@ Wiz.data[4] = () => {
  * for the supervisor's phone. Below: the 7 sections in the order of the paper row, then the admin tools.
  */
 App.views.qrap = (() => {
+  let tab = 'overview';
+
   async function render(root, params) {
     const d = await loadDetail(root, params.id);
     if (!d) return;
     const q = d.q;
+    const body = h('div');
+    const show = key => {
+      tab = key;
+      clear(body);
+      if (key === 'paper') addKids(body, [paperForm(d)]);
+      else if (key === 'history') addKids(body, [historyCard(d)]);
+      else addKids(body, [sec1(d), sec2(d), sec3(d), sec4(d), sec5(d), sec6(d), sec7(d), adminBox(d)]);
+    };
     addKids(root, [
       pageHead({
         crumbs: [boardCrumb(q.area_code), { label: q.qrap_id }],
         title: q.qrap_id,
         badges: [statusBadge(q.status)].concat(qrapTags(q.safety === 'ANO', q.repeat_7d === 'ANO', q.archived === true))
       }),
-      topCard(d), sec1(d), sec2(d), sec3(d), sec4(d), sec5(d), sec6(d), sec7(d), adminBox(d)
+      topCard(d),
+      h('div', { class: 'tab-bar' }, tabs([{ value: 'overview', label: t('qtab.overview') }, { value: 'paper', label: t('qtab.paper') },
+        { value: 'history', label: t('qtab.history') }], tab, show)),
+      body
     ]);
+    show(tab);
+  }
+
+  // ---------------------------------------------------------------- paper view (like the A1 sheet row)
+
+  /** The QRAP laid out like one row of the paper board: 7 columns, left to right. */
+  function paperForm(d) {
+    const q = d.q;
+    const line = (label, value) => value === '' || value === null || value === undefined ? null
+      : h('div', { class: 'pp-line' }, h('span', { class: 'pp-l' }, label), h('span', { class: 'pp-v' }, value));
+    const col = (n, title, ...content) => h('div', { class: 'pp-col' }, h('div', { class: 'pp-head' }, h('span', { class: 'pp-num' }, n), title),
+      h('div', { class: 'pp-body' }, content.filter(Boolean).length ? content : h('span', { class: 'muted' }, '—')));
+    const na = q.status === 'CLOSED_SOLVED' || q.status === 'ESCALATED';
+    const acts = d.actions.filter(a => a.status !== 'REMOVED');
+    const whys = d.why.filter(w => w.chain === 'OCCURRENCE' && w.text).sort((a, b) => a.step - b.step);
+    const a = d.assess[0];
+    const photo = kind => {
+      const p = d.photos.find(x => x.kind === kind);
+      if (!p) return null;
+      const img = h('img', { alt: '' });
+      loadPhoto(p.thumb_file_id, img);
+      return h('div', { class: 'pp-photo pp-photo-' + kind.toLowerCase() }, img, h('span', null, t('wiz.photo' + kind)));
+    };
+    return h('div', { class: 'card paper-card' },
+      h('div', { class: 'paper-top' }, h('b', null, 'QRAP ' + q.qrap_id), h('span', { class: 'muted' }, q.template_version)),
+      h('div', { class: 'paper-bands' },
+        h('div', { class: 'band', style: { gridColumn: 'span 3' } }, t('paper.band1')),
+        h('div', { class: 'band' }, t('paper.band2')),
+        h('div', { class: 'band', style: { gridColumn: 'span 2' } }, t('paper.band3')),
+        h('div', { class: 'band' }, t('paper.band4'))),
+      h('div', { class: 'paper' },
+        col('1', t('sec.1'),
+          line('SAFETY', yn(q.safety, true)), line(t('f.what'), q.what), line(t('f.how_found'), listLabel('HOW_FOUND', q.how_found)),
+          line(t('f.detected_at'), fmtDT(q.detected_at)), line(t('f.where'), [q.zone, q.location_code].filter(Boolean).join(' / ')),
+          line(t('f.qty'), q.qty === '' ? '' : q.qty + ' ' + listLabel('UNIT', q.unit)),
+          line(t('paper.repeat'), q.repeat_7d === 'ANO' ? t('lbl.yes') + ' → ' + q.repeat_ref : yn(q.repeat_7d)),
+          line(t('f.finder_name'), q.finder_name), line(t('f.material_no'), q.material_no),
+          h('div', { class: 'pp-photos' }, photo('WRONG'), photo('CORRECT'))),
+        col('2', t('sec.2'), d.alerts.length ? h('ul', { class: 'pp-list' }, d.alerts.map(x => h('li', null, '☑ ' + listLabel('ALERT_ROLE', x.role_code)))) : null),
+        col('3', t('sec.3'),
+          line(t('paper.risk'), yn(q.risk_stock_shipped)),
+          line(t('paper.check'), q.checked_qty === '' ? '' : q.checked_qty + ' / ' + q.wrong_found_qty + ' ' + t('lbl.pcs')),
+          d.ia.length ? h('ul', { class: 'pp-list' }, d.ia.map(x => h('li', null, x.text, h('div', { class: 'pp-sub' },
+            x.owner_name + (x.done_at ? ' · ' + fmtDT(x.done_at) : ' · ' + t('lbl.open')))))) : null,
+          line(t('paper.restart'), q.process_stopped === 'ANO' ? fmtDT(q.restored_at) || '—' : yn(q.process_stopped, true))),
+        col('4', t('sec.4'),
+          line(t('paper.shifts'), App.set.shifts.map(sh => (d.shiftInfo.some(x => x.shift_code === sh.code) ? '☑ ' : '☐ ') + sh.name).join('  ')),
+          line(t('f.decision'), q.decision ? t('dec.' + q.decision) : ''), line(t('f.decision_comment'), q.decision_comment),
+          line(t('f.assign_ref'), q.assign_ref), line(t('paper.sign'), q.decided_by ? personName(q.decided_by) + ' · ' + fmtDT(q.decided_at) : '')),
+        col('5', t('sec.5'), na ? h('span', { class: 'muted' }, t('paper.na')) : whys.length ? h('ol', { class: 'pp-list' }, whys.map(w =>
+          h('li', { class: w.is_root === true ? 'why-root' : '' }, w.text))) : null),
+        col('6', t('sec.6'), na ? h('span', { class: 'muted' }, t('paper.na')) : null,
+          !na ? line(t('f.learned'), q.learned) : null,
+          !na && acts.length ? h('ul', { class: 'pp-list' }, acts.map(x => h('li', null, x.text, h('div', { class: 'pp-sub' },
+            x.pilot_name + ' · ' + t('f.planned') + ' ' + fmtD(x.planned) + (x.done ? ' · ' + t('f.done') + ' ' + fmtD(x.done) : ''))))) : null,
+          !na ? line(t('paper.eff'), d.eff.slots.map(x => x && x.result === 'EFFECTIVE' ? '●' : '○').join(' ')) : null,
+          !na ? line(t('paper.std'), q.std_update ? yn(q.std_update) + (q.std_update_ref ? ' → ' + q.std_update_ref : '') : '') : null,
+          !na ? line(t('paper.closed'), q.closed_by && q.status === 'CLOSED' ? personName(q.closed_by) + ' · ' + fmtDT(q.closed_at) : '') : null),
+        col('7', t('sec.7'), a ? h('div', null,
+          h('ul', { class: 'pp-list' }, [1, 2, 3, 4, 5].map(n => h('li', null, t('assess.c' + n) + ': ' + t('assessVal.' + a['c' + n])))),
+          line(t('paper.who'), personName(a.assessor) + ' · ' + fmtDT(a.at)), line(t('f.feedback'), a.feedback)) : null)));
+  }
+
+  // ---------------------------------------------------------------- history (timeline)
+
+  /** Everything that happened to this QRAP, in time order, built from the saved data. */
+  function historyCard(d) {
+    const q = d.q;
+    const ev = [];
+    const add = (at, who, text) => { if (at) ev.push({ at: at, who: who || '', text: text }); };
+    add(q.created_at, q.created_by, t('hist.created'));
+    d.photos.forEach(p => add(p.uploaded_at, p.uploaded_by, t('hist.photo', { kind: t('wiz.photo' + p.kind) })));
+    add(q.sent_at, '', t('hist.sent'));
+    d.ia.forEach(x => add(x.done_at, x.owner_name, t('hist.iaDone', { text: x.text })));
+    add(q.containment_done_at, '', t('hist.containment'));
+    d.shiftInfo.forEach(x => add(x.informed_at, x.informed_by, t('hist.shift', { shift: shiftName(x.shift_code) })));
+    add(q.decided_at, q.decided_by, t('hist.decision', { d: q.decision ? t('dec.' + q.decision) : '' }) + (q.decision_comment ? ' – „' + q.decision_comment + '“' : ''));
+    d.pilots.forEach(p => add(p.assigned_at, '', t('hist.pilot', { name: p.name })));
+    d.actions.forEach(x => {
+      add(x.created_at, x.created_by, t('hist.action', { text: x.text }));
+      (x.notes || []).forEach(n => add(n.at, n.author, t('hist.note', { text: n.note })));
+    });
+    d.eff.history.forEach(x => add(x.checked_at, x.checked_by, t('hist.eff', { n: x.slot, r: t('eff.' + x.result), shift: shiftName(x.shift_code) })));
+    d.assess.forEach(x => add(x.at, x.assessor, t('hist.assess')));
+    if (q.status === 'CLOSED' || q.status === 'CLOSED_SOLVED') add(q.closed_at, q.closed_by, t('hist.closed'));
+    ev.sort((a, b) => (a.at < b.at ? -1 : 1));
+    return card(t('qtab.history'), h('div', { class: 'timeline' }, ev.map(e => h('div', { class: 'tl-item' },
+      h('div', { class: 'tl-dot' }),
+      h('div', { class: 'tl-body' }, h('div', { class: 'tl-text' }, e.text),
+        h('div', { class: 'tl-meta' }, fmtDT(e.at) + (e.who ? ' · ' + (e.who.indexOf('@') > 0 ? personName(e.who) : e.who) : '')))))),
+    h('p', { class: 'fld-hint' }, t('hist.hint')));
   }
 
   function topCard(d) {
@@ -3074,11 +3377,13 @@ App.views.assess = (() => {
   <script>
 'use strict';
 /*
- * ViewManager – manager page (?page=manager): key numbers, "Potřebuje vás" (most urgent first),
- * assessments today per supervisor, filters (area / date / status) and search (number, text, material).
+ * ViewManager – the manager's own start page (?page=manager).
+ * Calm by default: 4 key numbers, the few QRAPs that need attention, assessments today.
+ * The full filtered table is folded away behind "Všechny QRAP".
  */
 App.views.manager = (() => {
   const F = { area: '', from: '', to: '', status: 'open' };
+  const NEEDS_SHOWN = 6;
 
   function render(root) {
     const out = h('div', null, loadingEl());
@@ -3091,21 +3396,15 @@ App.views.manager = (() => {
       if (!res.ok) { showErrors(res); return; }
       results.appendChild(card(t('mgr.searchResults', { n: res.total }), rowsTable(res.rows)));
     };
-    const statuses = [{ value: 'open', label: t('mgr.st.open') }, { value: 'closed', label: t('mgr.st.closed') }, { value: 'all', label: t('mgr.st.all') }]
-      .concat(['DRAFT', 'QR_OPEN', 'WAIT_DECISION', 'ANALYSIS', 'ACTIONS_OPEN', 'VERIFY', 'CLOSED_SOLVED', 'ESCALATED', 'CLOSED']
-        .map(s => ({ value: s, label: statusLabel(s) })));
     const search = h('input', { type: 'search', placeholder: t('mgr.searchHint'), oninput: e => { term = e.target.value; },
       onkeydown: e => { if (e.key === 'Enter') doSearch(); } });
+    const areaSel = selectEl(App.set.areas.map(a => ({ value: a.code, label: a.code + ' · ' + a.name })), F.area,
+      v => { F.area = v; load(out); }, t('mgr.allAreas'));
+    areaSel.classList.add('hdr-select');
     addKids(root, [
-      pageHead({ title: t('mgr.title'), sub: t('mgr.sub'),
-        actions: h('div', { style: { width: '380px', maxWidth: '100%' } }, withButton(search, button(t('btn.search'), doSearch, 'ghost'))) }),
+      pageHead({ title: t('mgr.hello', { name: (App.user.name || '').split(' ')[0] }), sub: t('mgr.sub'),
+        actions: [areaSel, h('div', { style: { width: '320px', maxWidth: '100%' } }, withButton(search, button(t('btn.search'), doSearch, 'ghost')))] }),
       results,
-      h('div', { class: 'card' }, h('div', { class: 'toolbar' },
-        field(t('f.area'), selectEl(App.set.areas.map(a => ({ value: a.code, label: a.code + ' · ' + a.name })), F.area, v => { F.area = v; }, t('mgr.allAreas'))),
-        field(t('mgr.from'), dateInput(F.from, v => { F.from = v; })),
-        field(t('mgr.to'), dateInput(F.to, v => { F.to = v; })),
-        field(t('f.status'), selectEl(statuses, F.status, v => { F.status = v; }, false)),
-        button(t('btn.apply'), () => load(out), 'primary'))),
       out
     ]);
     load(out);
@@ -3118,38 +3417,53 @@ App.views.manager = (() => {
     if (!res.ok) { out.appendChild(h('div', { class: 'empty' }, errText(res.errors[0]))); return; }
     const tile = (key, alert) => h('div', { class: 'tile' + (alert && res.tiles[key] ? ' alert' : '') },
       h('div', { class: 'tile-n' }, String(res.tiles[key])), h('div', { class: 'tile-l' }, t('mgr.tile.' + key)));
-    const assessTotal = res.assessToday.reduce((s, a) => s + a.count, 0);
-    const missing = res.assessToday.filter(a => a.supervisor && a.count === 0).length;
+    const needsList = h('div', { class: 'list' });
+    const drawNeeds = all => {
+      clear(needsList);
+      (all ? res.needs : res.needs.slice(0, NEEDS_SHOWN)).forEach(n => needsList.appendChild(listRow(
+        [h('div', null, h('b', null, n.id), ' ', n.safety ? tag('SAFETY', 'bad') : null, ' · ', t('need.' + n.reason)),
+          h('div', { class: 'small muted' }, n.what)],
+        h('span', null, n.area, h('br'), fmtDT(n.since)),
+        { onClick: () => go('qrap', { id: n.id }), cls: n.urgency >= 80 ? 'urgent' : 'attention' })));
+      if (!all && res.needs.length > NEEDS_SHOWN) {
+        needsList.appendChild(listRow(button(t('mgr.showAll', { n: res.needs.length }), () => drawNeeds(true), 'link'), null));
+      }
+    };
+    drawNeeds(false);
+    const tableBox = h('div', { hidden: true });
+    const toggle = button(t('mgr.allQraps', { n: res.total }), () => { tableBox.hidden = !tableBox.hidden; }, 'ghost');
+    addKids(tableBox, [
+      h('div', { class: 'toolbar', style: { marginBottom: '14px' } },
+        field(t('mgr.from'), dateInput(F.from, v => { F.from = v; })),
+        field(t('mgr.to'), dateInput(F.to, v => { F.to = v; })),
+        field(t('f.status'), selectEl([{ value: 'open', label: t('mgr.st.open') }, { value: 'closed', label: t('mgr.st.closed') },
+          { value: 'all', label: t('mgr.st.all') }], F.status, v => { F.status = v; }, false)),
+        button(t('btn.apply'), () => load(out), 'primary')),
+      rowsTable(res.rows)
+    ]);
+    const missing = res.assessToday.filter(a => a.supervisor && a.count === 0);
     addKids(out, [
-      h('div', { class: 'tiles' }, tile('newToday'), tile('waitDecision', true), tile('s3Late', true), tile('actionsLate', true),
-        tile('safetyWeek', true), tile('repeat7', true),
-        h('div', { class: 'tile' + (missing ? ' alert' : '') }, h('div', { class: 'tile-n' }, String(assessTotal)),
-          h('div', { class: 'tile-l' }, t('mgr.tile.assessToday')))),
+      h('div', { class: 'tiles tiles-4' }, tile('waitDecision', true), tile('s3Late', true), tile('actionsLate', true), tile('safetyWeek', true)),
       h('div', { class: 'cols' },
-        card(t('mgr.needs') + ' (' + res.needs.length + ')',
-          res.needs.length ? h('div', { class: 'list' }, res.needs.map(n => listRow(
-            [h('div', null, h('b', null, n.id), ' ', n.safety ? tag('SAFETY', 'bad') : null, ' ', h('span', null, t('need.' + n.reason))),
-              h('div', { class: 'small muted' }, n.what + (n.extra ? ' · ' + n.extra : ''))],
-            h('span', null, n.area, h('br'), fmtDT(n.since)),
-            { onClick: () => go('qrap', { id: n.id }), cls: n.urgency >= 80 ? 'urgent' : 'attention' })))
-            : h('p', { class: 'muted' }, t('mgr.nothing'))),
+        card(t('mgr.needs'), res.needs.length ? needsList : h('div', { class: 'home-empty' }, t('mgr.nothing'))),
         card(t('mgr.assessToday'),
+          h('p', { class: 'small muted', style: { marginTop: '0' } }, missing.length ? t('mgr.assessMissing', { n: missing.length }) : t('mgr.assessAll')),
           res.assessToday.length ? h('div', { class: 'list' }, res.assessToday.map(a => listRow(
-            a.name + (a.supervisor ? '' : ' *'), h('span', { class: a.count ? 'pill-ok' : 'pill-bad' }, String(a.count)))))
+            a.name + (a.supervisor ? '' : ' *'), h('span', { class: a.count ? 'pill-ok' : 'muted' }, a.count ? '✓ ' + a.count : '—'))))
             : h('p', { class: 'muted' }, '–'))),
-      card(t('mgr.list', { n: res.total }), rowsTable(res.rows))
+      h('div', { class: 'card' }, h('div', { class: 'home-section-head', style: { margin: '0' } },
+        h('h2', { class: 'card-title', style: { margin: '0' } }, t('mgr.table')), toggle), tableBox)
     ]);
   }
 
-  /** Compact QRAP table (area, number, what, status, progress). */
+  /** Compact QRAP table: number, problem, status, progress. */
   function rowsTable(rows) {
     if (!rows.length) return h('p', { class: 'muted' }, t('board.empty'));
-    return table([t('f.area'), t('board.col.id'), t('board.col.what'), t('board.col.status'), t('board.col.progress')], rows.map(r => [
-      r.area,
-      h('span', null, qrapLink(r.id), ' ', qrapTags(r.safety, false, r.archived)),
+    return table([t('board.col.id'), t('board.col.what'), t('board.col.status'), t('board.col.progress')], rows.map(r => [
+      h('span', null, qrapLink(r.id), h('div', { class: 'small muted' }, r.area)),
       h('span', null, r.what, h('div', { class: 'small muted' }, fmtDT(r.det))),
       h('span', null, statusBadge(r.st), r.late ? h('div', { class: 'small pill-bad' }, t('lbl.late')) : null),
-      chipsEl(r.chips)]), i => (rows[i].late ? 'late' : ''));
+      progressBar(r.chips)]), i => (rows[i].late ? 'late' : ''));
   }
 
   return { render: render };

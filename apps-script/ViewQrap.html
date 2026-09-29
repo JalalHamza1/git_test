@@ -6,18 +6,122 @@
  * for the supervisor's phone. Below: the 7 sections in the order of the paper row, then the admin tools.
  */
 App.views.qrap = (() => {
+  let tab = 'overview';
+
   async function render(root, params) {
     const d = await loadDetail(root, params.id);
     if (!d) return;
     const q = d.q;
+    const body = h('div');
+    const show = key => {
+      tab = key;
+      clear(body);
+      if (key === 'paper') addKids(body, [paperForm(d)]);
+      else if (key === 'history') addKids(body, [historyCard(d)]);
+      else addKids(body, [sec1(d), sec2(d), sec3(d), sec4(d), sec5(d), sec6(d), sec7(d), adminBox(d)]);
+    };
     addKids(root, [
       pageHead({
         crumbs: [boardCrumb(q.area_code), { label: q.qrap_id }],
         title: q.qrap_id,
         badges: [statusBadge(q.status)].concat(qrapTags(q.safety === 'ANO', q.repeat_7d === 'ANO', q.archived === true))
       }),
-      topCard(d), sec1(d), sec2(d), sec3(d), sec4(d), sec5(d), sec6(d), sec7(d), adminBox(d)
+      topCard(d),
+      h('div', { class: 'tab-bar' }, tabs([{ value: 'overview', label: t('qtab.overview') }, { value: 'paper', label: t('qtab.paper') },
+        { value: 'history', label: t('qtab.history') }], tab, show)),
+      body
     ]);
+    show(tab);
+  }
+
+  // ---------------------------------------------------------------- paper view (like the A1 sheet row)
+
+  /** The QRAP laid out like one row of the paper board: 7 columns, left to right. */
+  function paperForm(d) {
+    const q = d.q;
+    const line = (label, value) => value === '' || value === null || value === undefined ? null
+      : h('div', { class: 'pp-line' }, h('span', { class: 'pp-l' }, label), h('span', { class: 'pp-v' }, value));
+    const col = (n, title, ...content) => h('div', { class: 'pp-col' }, h('div', { class: 'pp-head' }, h('span', { class: 'pp-num' }, n), title),
+      h('div', { class: 'pp-body' }, content.filter(Boolean).length ? content : h('span', { class: 'muted' }, '—')));
+    const na = q.status === 'CLOSED_SOLVED' || q.status === 'ESCALATED';
+    const acts = d.actions.filter(a => a.status !== 'REMOVED');
+    const whys = d.why.filter(w => w.chain === 'OCCURRENCE' && w.text).sort((a, b) => a.step - b.step);
+    const a = d.assess[0];
+    const photo = kind => {
+      const p = d.photos.find(x => x.kind === kind);
+      if (!p) return null;
+      const img = h('img', { alt: '' });
+      loadPhoto(p.thumb_file_id, img);
+      return h('div', { class: 'pp-photo pp-photo-' + kind.toLowerCase() }, img, h('span', null, t('wiz.photo' + kind)));
+    };
+    return h('div', { class: 'card paper-card' },
+      h('div', { class: 'paper-top' }, h('b', null, 'QRAP ' + q.qrap_id), h('span', { class: 'muted' }, q.template_version)),
+      h('div', { class: 'paper-bands' },
+        h('div', { class: 'band', style: { gridColumn: 'span 3' } }, t('paper.band1')),
+        h('div', { class: 'band' }, t('paper.band2')),
+        h('div', { class: 'band', style: { gridColumn: 'span 2' } }, t('paper.band3')),
+        h('div', { class: 'band' }, t('paper.band4'))),
+      h('div', { class: 'paper' },
+        col('1', t('sec.1'),
+          line('SAFETY', yn(q.safety, true)), line(t('f.what'), q.what), line(t('f.how_found'), listLabel('HOW_FOUND', q.how_found)),
+          line(t('f.detected_at'), fmtDT(q.detected_at)), line(t('f.where'), [q.zone, q.location_code].filter(Boolean).join(' / ')),
+          line(t('f.qty'), q.qty === '' ? '' : q.qty + ' ' + listLabel('UNIT', q.unit)),
+          line(t('paper.repeat'), q.repeat_7d === 'ANO' ? t('lbl.yes') + ' → ' + q.repeat_ref : yn(q.repeat_7d)),
+          line(t('f.finder_name'), q.finder_name), line(t('f.material_no'), q.material_no),
+          h('div', { class: 'pp-photos' }, photo('WRONG'), photo('CORRECT'))),
+        col('2', t('sec.2'), d.alerts.length ? h('ul', { class: 'pp-list' }, d.alerts.map(x => h('li', null, '☑ ' + listLabel('ALERT_ROLE', x.role_code)))) : null),
+        col('3', t('sec.3'),
+          line(t('paper.risk'), yn(q.risk_stock_shipped)),
+          line(t('paper.check'), q.checked_qty === '' ? '' : q.checked_qty + ' / ' + q.wrong_found_qty + ' ' + t('lbl.pcs')),
+          d.ia.length ? h('ul', { class: 'pp-list' }, d.ia.map(x => h('li', null, x.text, h('div', { class: 'pp-sub' },
+            x.owner_name + (x.done_at ? ' · ' + fmtDT(x.done_at) : ' · ' + t('lbl.open')))))) : null,
+          line(t('paper.restart'), q.process_stopped === 'ANO' ? fmtDT(q.restored_at) || '—' : yn(q.process_stopped, true))),
+        col('4', t('sec.4'),
+          line(t('paper.shifts'), App.set.shifts.map(sh => (d.shiftInfo.some(x => x.shift_code === sh.code) ? '☑ ' : '☐ ') + sh.name).join('  ')),
+          line(t('f.decision'), q.decision ? t('dec.' + q.decision) : ''), line(t('f.decision_comment'), q.decision_comment),
+          line(t('f.assign_ref'), q.assign_ref), line(t('paper.sign'), q.decided_by ? personName(q.decided_by) + ' · ' + fmtDT(q.decided_at) : '')),
+        col('5', t('sec.5'), na ? h('span', { class: 'muted' }, t('paper.na')) : whys.length ? h('ol', { class: 'pp-list' }, whys.map(w =>
+          h('li', { class: w.is_root === true ? 'why-root' : '' }, w.text))) : null),
+        col('6', t('sec.6'), na ? h('span', { class: 'muted' }, t('paper.na')) : null,
+          !na ? line(t('f.learned'), q.learned) : null,
+          !na && acts.length ? h('ul', { class: 'pp-list' }, acts.map(x => h('li', null, x.text, h('div', { class: 'pp-sub' },
+            x.pilot_name + ' · ' + t('f.planned') + ' ' + fmtD(x.planned) + (x.done ? ' · ' + t('f.done') + ' ' + fmtD(x.done) : ''))))) : null,
+          !na ? line(t('paper.eff'), d.eff.slots.map(x => x && x.result === 'EFFECTIVE' ? '●' : '○').join(' ')) : null,
+          !na ? line(t('paper.std'), q.std_update ? yn(q.std_update) + (q.std_update_ref ? ' → ' + q.std_update_ref : '') : '') : null,
+          !na ? line(t('paper.closed'), q.closed_by && q.status === 'CLOSED' ? personName(q.closed_by) + ' · ' + fmtDT(q.closed_at) : '') : null),
+        col('7', t('sec.7'), a ? h('div', null,
+          h('ul', { class: 'pp-list' }, [1, 2, 3, 4, 5].map(n => h('li', null, t('assess.c' + n) + ': ' + t('assessVal.' + a['c' + n])))),
+          line(t('paper.who'), personName(a.assessor) + ' · ' + fmtDT(a.at)), line(t('f.feedback'), a.feedback)) : null)));
+  }
+
+  // ---------------------------------------------------------------- history (timeline)
+
+  /** Everything that happened to this QRAP, in time order, built from the saved data. */
+  function historyCard(d) {
+    const q = d.q;
+    const ev = [];
+    const add = (at, who, text) => { if (at) ev.push({ at: at, who: who || '', text: text }); };
+    add(q.created_at, q.created_by, t('hist.created'));
+    d.photos.forEach(p => add(p.uploaded_at, p.uploaded_by, t('hist.photo', { kind: t('wiz.photo' + p.kind) })));
+    add(q.sent_at, '', t('hist.sent'));
+    d.ia.forEach(x => add(x.done_at, x.owner_name, t('hist.iaDone', { text: x.text })));
+    add(q.containment_done_at, '', t('hist.containment'));
+    d.shiftInfo.forEach(x => add(x.informed_at, x.informed_by, t('hist.shift', { shift: shiftName(x.shift_code) })));
+    add(q.decided_at, q.decided_by, t('hist.decision', { d: q.decision ? t('dec.' + q.decision) : '' }) + (q.decision_comment ? ' – „' + q.decision_comment + '“' : ''));
+    d.pilots.forEach(p => add(p.assigned_at, '', t('hist.pilot', { name: p.name })));
+    d.actions.forEach(x => {
+      add(x.created_at, x.created_by, t('hist.action', { text: x.text }));
+      (x.notes || []).forEach(n => add(n.at, n.author, t('hist.note', { text: n.note })));
+    });
+    d.eff.history.forEach(x => add(x.checked_at, x.checked_by, t('hist.eff', { n: x.slot, r: t('eff.' + x.result), shift: shiftName(x.shift_code) })));
+    d.assess.forEach(x => add(x.at, x.assessor, t('hist.assess')));
+    if (q.status === 'CLOSED' || q.status === 'CLOSED_SOLVED') add(q.closed_at, q.closed_by, t('hist.closed'));
+    ev.sort((a, b) => (a.at < b.at ? -1 : 1));
+    return card(t('qtab.history'), h('div', { class: 'timeline' }, ev.map(e => h('div', { class: 'tl-item' },
+      h('div', { class: 'tl-dot' }),
+      h('div', { class: 'tl-body' }, h('div', { class: 'tl-text' }, e.text),
+        h('div', { class: 'tl-meta' }, fmtDT(e.at) + (e.who ? ' · ' + (e.who.indexOf('@') > 0 ? personName(e.who) : e.who) : '')))))),
+    h('p', { class: 'fld-hint' }, t('hist.hint')));
   }
 
   function topCard(d) {

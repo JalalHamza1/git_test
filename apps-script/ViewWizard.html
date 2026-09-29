@@ -77,13 +77,14 @@ App.views.wizard = App.views.new = (() => {
   function draw() {
     const S = Wiz.S;
     const root = clear(Wiz.root);
+    root.classList.add('wizard');
     const trail = [boardCrumb(S.area)].concat(S.id && S.status !== 'DRAFT'
       ? [qrapCrumb(S.id), { label: t('wiz.edit') }] : [{ label: S.id || t('wiz.newTitle') }]);
     root.appendChild(pageHead({ crumbs: trail, title: S.id ? S.id : t('wiz.newTitle'), badges: S.status ? statusBadge(S.status) : null }));
     root.appendChild(stepper());
     Wiz.errBox = errorBox();
     root.appendChild(Wiz.errBox);
-    Wiz.body = h('div', { class: 'card' });
+    Wiz.body = h('div', { class: 'wiz-body' });
     root.appendChild(Wiz.body);
     Wiz.steps[S.step](Wiz.body);
     root.appendChild(navBar());
@@ -164,13 +165,13 @@ App.views.wizard = App.views.new = (() => {
     if (!setErrors(Wiz.errBox, errs)) return;
     const res = await api('apiSubmitQrap', S.id);
     if (!res.ok) { showErrors(res, Wiz.errBox); return; }
-    go('board', { area: S.area }, { extra: { toast: t('wiz.sent', { id: S.id }) } });
+    go('home', { area: S.area }, { extra: { toast: t('wiz.sent', { id: S.id }) } });
   }
 
   async function cancel() {
     const S = Wiz.S;
     if (S.dirty && !(await confirmDlg(t('wiz.leaveUnsaved'), t('btn.leave'), 'danger'))) return;
-    go(S.id ? 'qrap' : 'board', S.id ? { id: S.id } : { area: S.area });
+    go(S.id ? 'qrap' : 'home', S.id ? { id: S.id } : { area: S.area });
   }
 
   /** Kiosk idle timeout: save what was typed as a draft, then back to the board. */
@@ -182,7 +183,7 @@ App.views.wizard = App.views.new = (() => {
       const res = await save(step, 'draft');
       toast(res.ok ? t('wiz.idleSaved', { id: S.id }) : t('wiz.idleNotSaved'), res.ok ? 'ok' : 'warn', 7000);
     }
-    go('board', { area: S ? S.area : defaultArea() });
+    go('home', { area: S ? S.area : defaultArea() });
   }
 
   return { render: render, onIdle: onIdle, leave: () => {} };

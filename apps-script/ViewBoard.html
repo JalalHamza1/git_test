@@ -16,7 +16,7 @@ App.views.board = (() => {
     S.hasMore = false;
     S.list = h('div', { class: 'board-list', onscroll: onScroll });
     S.sub = h('span', null, S.area + ' · ' + areaName(S.area));
-    S.pendingBtn = h('button', { class: 'btn btn-big', onclick: showPending }, t('board.pending', { n: '…' }));
+    S.pendingBtn = h('button', { class: 'btn btn-big', onclick: () => showPending() }, t('board.pending', { n: '…' }));
     const filters = tabs(['open', 'today', 'safety', 'all'].map(f => ({ value: f, label: t('board.f.' + f) })), S.filter,
       f => { setUrl({ page: 'board', area: S.area, filter: f }); S.filter = f; load('replace'); });
     const canNew = canCreateIn(S.area);
@@ -79,7 +79,7 @@ App.views.board = (() => {
     h('div', { class: 'b-what' }, h('div', { class: 'b-text' }, r.what || t('board.noText')), h('div', { class: 'b-meta' }, meta)),
     h('div', { class: 'b-status' }, statusBadge(r.st),
       r.wait ? h('div', { class: 'b-wait' }, (r.late ? t('lbl.late') + ' · ' : '') + t('board.waitFor') + ' ' + t('wait.' + r.wait)) : null),
-    chipsEl(r.chips));
+    progressBar(r.chips));
   }
 
   function onScroll() {
@@ -87,8 +87,8 @@ App.views.board = (() => {
   }
 
   /** "Pokračovat v rozpracovaném": drafts and QRAPs whose ③ is still open. */
-  async function showPending() {
-    const res = await api('apiGetDrafts', S.area);
+  async function showPending(area) {
+    const res = await api('apiGetDrafts', area || S.area);
     if (!res.ok) { showErrors(res); return; }
     const pick = d => {
       byId('modal').hidden = true;
@@ -103,6 +103,6 @@ App.views.board = (() => {
     modal({ title: t('board.pendingTitle'), body: body, buttons: [{ label: t('btn.close'), value: true }] });
   }
 
-  return { render: render, leave: leave };
+  return { render: render, leave: leave, showPending: showPending };
 })();
 </script>

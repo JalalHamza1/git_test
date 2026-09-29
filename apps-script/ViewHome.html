@@ -1,0 +1,64 @@
+<script>
+'use strict';
+/*
+ * ViewHome – calm start page for the kiosk and the people who fill in QRAPs (?page=home&area=WH1).
+ * One big action ("Nahlásit problém"), drafts to continue, and only the few QRAPs that need attention.
+ * The full board stays one click away (?page=board).
+ */
+App.views.home = (() => {
+  const SHOW = 6;
+
+  function render(root, params, extra) {
+    const area = String(params.area || defaultArea()).toUpperCase();
+    const canNew = canCreateIn(area);
+    const stats = h('div', { class: 'home-stats' }, loadingEl());
+    const list = h('div', { class: 'home-list' });
+    const pendingBtn = h('button', { class: 'btn btn-big', onclick: () => App.views.board.showPending(area) }, t('home.continue', { n: '…' }));
+    addKids(root, [
+      h('div', { class: 'home' },
+        h('div', { class: 'home-hero' },
+          h('div', { class: 'home-kicker' }, area + ' · ' + areaName(area)),
+          h('h1', { class: 'home-title' }, t('home.title')),
+          h('p', { class: 'home-lead' }, t('home.lead')),
+          canNew ? h('div', { class: 'home-actions' },
+            h('button', { class: 'btn btn-primary btn-hero', onclick: () => go('new', { area: area }) }, t('home.report')),
+            pendingBtn) : null),
+        stats,
+        h('div', { class: 'home-section' },
+          h('div', { class: 'home-section-head' }, h('h2', null, t('home.attention')),
+            button(t('home.allBoard'), () => go('board', { area: area }), 'link')),
+          list))
+    ]);
+    if (extra.toast) toast(extra.toast, 'ok', 6000);
+    load();
+
+    async function load() {
+      const res = await api('apiGetBoard', { area: area, filter: 'open', limit: 200 });
+      if (!root.isConnected) return;
+      if (!res.ok) { clear(stats); showErrors(res); return; }
+      pendingBtn.textContent = t('home.continue', { n: res.pending });
+      const open = res.rows.filter(r => r.open);
+      const late = open.filter(r => r.late);
+      const today = res.rows.filter(r => r.today);
+      clear(stats).appendChild(h('div', { class: 'stat-row' },
+        stat(open.length, t('home.statOpen')), stat(late.length, t('home.statLate'), late.length > 0), stat(today.length, t('home.statToday'))));
+      // most urgent first: overdue, safety, then newest
+      const pick = open.slice().sort((a, b) => (b.late - a.late) || (b.safety - a.safety) || (a.key < b.key ? 1 : -1)).slice(0, SHOW);
+      clear(list);
+      if (!pick.length) { list.appendChild(h('div', { class: 'home-empty' }, t('home.nothing'))); return; }
+      pick.forEach(r => list.appendChild(h('button', { type: 'button', class: 'qcard' + (r.late ? ' late' : ''), onclick: () => go('qrap', { id: r.id }) },
+        h('div', { class: 'qcard-top' }, h('span', { class: 'qcard-id' }, r.id), qrapTags(r.safety, r.rep), h('span', { class: 'qcard-time' }, fmtDT(r.det))),
+        h('div', { class: 'qcard-what' }, r.what || t('board.noText')),
+        h('div', { class: 'qcard-bottom' }, statusBadge(r.st),
+          r.wait ? h('span', { class: 'qcard-wait' }, (r.late ? t('lbl.late') + ' · ' : '') + t('board.waitFor') + ' ' + t('wait.' + r.wait)) : null,
+          progressBar(r.chips)))));
+    }
+  }
+
+  function stat(n, label, alert) {
+    return h('div', { class: 'stat' + (alert ? ' alert' : '') }, h('div', { class: 'stat-n' }, String(n)), h('div', { class: 'stat-l' }, label));
+  }
+
+  return { render: render };
+})();
+</script>
