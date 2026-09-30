@@ -605,8 +605,8 @@
       reset: () => pb.send('/api/tm/calendar/reset', { method: 'POST' }).then(r => location.origin + r.path),
     },
     claude: {
-      // Funnel serves the connector on port 8443 of the same address.
-      url: path => 'https://' + location.hostname + ':8443' + path,
+      // The connector is public on the port the app isn't using: the app on 443 → connector on 8443, and vice versa.
+      url: path => 'https://' + location.hostname + (location.port === '8443' ? '' : ':8443') + path,
       status: () => pb.send('/api/tm/claude', {}),
       enable: () => pb.send('/api/tm/claude/enable', { method: 'POST' }),
       reset: () => pb.send('/api/tm/claude/reset', { method: 'POST' }),
