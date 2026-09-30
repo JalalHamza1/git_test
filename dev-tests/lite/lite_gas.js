@@ -250,7 +250,7 @@ function makeEnv(opts) {
   const code = files.map(f => '// ---- ' + f + '\n' + fs.readFileSync(path.join(SRC, f), 'utf8')).join('\n');
   vm.runInContext(code, ctx, { filename: 'all.gs' });
   // Reset per-call globals like Apps Script does for every server call.
-  const RESET = 'MEMO_={};CFG_=null;ME_=null;NO_MAIL_=false;';
+  const RESET = 'MEMO_={};CFG_=null;ME_=null;REAL_=null;NO_MAIL_=false;';
   function call(fn, ...args) {
     vm.runInContext(RESET, ctx);
     ctx.__args = JSON.parse(JSON.stringify(args)); // the browser can only send plain JSON

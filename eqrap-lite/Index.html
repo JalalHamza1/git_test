@@ -269,50 +269,110 @@ body.kiosk { font-size: 16px; }
   .card { break-inside: avoid; border-color: #999; }
 }
 
-/* ===== Clean greenish-white theme: white cards, soft sage accent, no highlighted blocks ===== */
+/* ===== Bright green theme (Valeo-style): white surfaces, black text, one vivid green =====
+   To use the exact brand green, change --accent / --accent-d / --accent-s below. */
 :root {
-  --bg: #f6faf7; --line: #e3ece6; --line2: #cfddd4; --text: #1f2d26; --muted: #6b7c72;
-  --accent: #4f8a6b; --accent-d: #3f7358; --accent-s: #eef5f0;
-  --ok: #4f8a6b; --ok-s: transparent; --warn: #8a6d3b; --warn-s: transparent; --bad: #b4534b; --bad-s: transparent;
+  --bg: #f6faf4; --card: #fff; --line: #dfe9da; --line2: #c7d9c0; --text: #111a13; --muted: #5d6b60;
+  --accent: #3aa935; --accent-d: #267a22; --accent-s: #ebf7e7;
+  --ok: #267a22; --ok-s: transparent; --warn: #8a5a00; --warn-s: transparent; --bad: #c0392b; --bad-s: transparent;
+  --series-1: #2a78d6; --series-2: #eb6834; /* chart colours (validated for colour-blind readers) */
 }
 body { background: var(--bg); }
-.top { border-bottom-color: var(--line); }
-.logo { background: var(--accent); }
-.card, .list, .tile, .flow div { border-color: var(--line); box-shadow: none; }
-/* sections: plain white, thin line, no coloured frames */
+.top { border-bottom: 1px solid var(--line); box-shadow: inset 0 3px 0 var(--accent); }
+.logo { background: var(--accent); border-radius: 8px; }
+.card, .list, .tile, .flow div { border-color: var(--line); box-shadow: 0 1px 2px rgba(16, 40, 20, .04); }
 .sec, .sec.now { border: 1px solid var(--line); }
 .sec .sec-head, .sec.now .sec-head { background: #fff; border-bottom: 1px solid var(--line); }
-.sec .num, .sec.done .num, .sec.now .num { background: var(--accent-s); border: 1px solid var(--line2); color: var(--accent-d); border-radius: 50%; }
+.sec .num, .sec.done .num, .sec.now .num { background: var(--accent); border: 0; color: #fff; border-radius: 50%; }
+.sec.wait .num, .sec.skip .num { background: #fff; border: 1px solid var(--line2); color: var(--muted); }
 .sec.wait h2, .sec.skip h2 { color: var(--muted); }
-/* bands like the paper form, but light */
-.band, .band.dark { background: var(--accent-s); color: var(--accent-d); font-weight: 600; }
-/* labels: text only, no filled chips */
-.badge, .badge.warn, .badge.info, .badge.ok, .badge.bad, .badge.muted { background: transparent; border: 1px solid var(--line2); color: var(--muted); font-weight: 600; }
-.badge.ok { color: var(--ok); } .badge.bad { color: var(--bad); }
-.tag { background: transparent; border: 1px solid var(--line2); font-weight: 500; }
-/* no highlighted boxes */
+.band, .band.dark { background: var(--accent); color: #fff; font-weight: 700; }
+.badge, .badge.warn, .badge.info, .badge.ok, .badge.bad, .badge.muted { background: #fff; border: 1px solid var(--line2); color: var(--text); font-weight: 600; }
+.badge.ok { color: var(--ok); border-color: #b9dcb2; }
+.badge.warn { color: var(--warn); border-color: #ecd9ae; }
+.badge.bad { color: var(--bad); border-color: #efc1bb; }
+.tag { background: #fff; border: 1px solid var(--line2); font-weight: 600; font-size: 11px; padding: 1px 8px; }
+.tag.bad { color: var(--bad); border-color: #efc1bb; }
 .next, .next.ok, .next.bad, .next.grey, .box, .box.ok, .box.bad, .root, .note, .note.warn, .act-form, .ia-row {
   background: #fff; border: 1px solid var(--line); color: var(--text); }
+.next { border-left: 4px solid var(--accent); }
+.next.bad { border-left-color: var(--bad); }
 .whys li.root-step { background: transparent; font-weight: 600; }
-.row.late { box-shadow: none; }
-.row:hover { background: var(--accent-s); }
-.row.head { background: #fff; }
-.tile.on { border-color: var(--accent); box-shadow: none; }
-.tile.alert b { color: var(--text); }
-.check.on, .choice.on { background: #fff; border-color: var(--accent); color: var(--text); }
-.nav.on { background: transparent; color: var(--accent-d); text-decoration: underline; text-underline-offset: 6px; }
-.btn.primary { background: var(--accent); border-color: var(--accent); }
-.btn.primary:hover { background: var(--accent-d); }
+.tile.on { border-color: var(--accent); box-shadow: inset 0 -3px 0 var(--accent); }
+.tile.alert b { color: var(--bad); }
+.check.on, .choice.on { background: var(--accent-s); border-color: var(--accent); color: var(--text); }
+.nav.on { background: var(--accent-s); color: var(--accent-d); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { background: var(--accent-d); border-color: var(--accent-d); }
 .btn.ghost, .link { color: var(--accent-d); }
 .btn.ghost:hover { background: var(--accent-s); }
 input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-s); }
-.wiz-step.done { color: var(--accent); border-bottom-color: var(--line2); }
+.wiz-step.done { color: var(--accent-d); border-bottom-color: #a9d8a1; }
 .wiz-step.on { color: var(--accent-d); border-bottom-color: var(--accent); }
 .step.done::before, .step.done::after { background: var(--accent); border-color: var(--accent); }
 .step.now::after { background: #fff; border-color: var(--accent); }
 .step.now { color: var(--accent-d); }
 .toast { background: var(--text); }
-.done-page .tick { background: var(--accent); }
+/* home: title + one big button */
+.hero { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.hero h1 { margin: 0; }
+.hero-btn { font-size: 18px; padding: 16px 32px; border-radius: 12px; box-shadow: 0 6px 16px rgba(58, 169, 53, .28); }
+body.kiosk .hero-btn { font-size: 22px; padding: 22px 44px; }
+.flash { display: flex; gap: 14px; align-items: center; background: #fff; border: 1px solid #b9dcb2; border-left: 4px solid var(--accent);
+  border-radius: var(--r); padding: 12px 16px; margin-bottom: 14px; font-weight: 600; }
+/* ticket list */
+.row { grid-template-columns: 124px minmax(0, 1fr) 150px 190px 120px 110px; padding: 14px 18px; }
+.row:hover { background: #f8fcf6; }
+.row.head { background: #fafdf9; }
+.row-tags { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+.row-tags:empty { display: none; }
+.prog { display: flex; align-items: center; gap: 8px; }
+.prog-bar { display: flex; gap: 2px; flex: 1; }
+.prog-bar span { flex: 1; height: 6px; border-radius: 3px; background: var(--line); }
+.prog-bar span.on { background: var(--accent); }
+.prog small { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.list.flat { border: 0; box-shadow: none; }
+.list.flat .row { grid-template-columns: 110px minmax(0, 1fr) 150px; padding: 10px 0; }
+.list.flat .row .c-prog, .list.flat .row .c-age, .list.flat .row .c-area { display: none; }
+/* dashboard */
+.tiles-6 { grid-template-columns: repeat(6, 1fr); }
+.tiles-3 { grid-template-columns: repeat(3, 1fr); }
+.kpi { cursor: default; }
+.kpi small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.cols3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.legend { display: flex; gap: 16px; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.dot.s1 { background: var(--series-1); } .dot.s2 { background: var(--series-2); }
+.viz-box { position: relative; }
+.viz { width: 100%; height: auto; display: block; }
+.viz-grid { stroke: #edf2ea; stroke-width: 1; }
+.viz-base { stroke: #b8c6b3; stroke-width: 1; }
+.viz-axis { fill: var(--muted); font-size: 11px; }
+.viz-s1 { fill: var(--series-1); } .viz-s2 { fill: var(--series-2); }
+.viz-hit { fill: transparent; }
+.viz-group:hover .viz-hit { fill: #f2f7ef; }
+.viz-tip { position: absolute; top: 4px; transform: translateX(-50%); background: #fff; border: 1px solid var(--line2); border-radius: 8px;
+  padding: 8px 10px; font-size: 12px; box-shadow: 0 6px 18px rgba(0,0,0,.08); pointer-events: none; white-space: nowrap; }
+.hbar { display: grid; grid-template-columns: 160px 1fr 36px; gap: 10px; align-items: center; padding: 5px 0; font-size: 13px; }
+.hbar.click { cursor: pointer; } .hbar.click:hover .hbar-l { color: var(--accent-d); }
+.hbar-l { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbar-t { background: #f2f6f0; border-radius: 4px; height: 12px; }
+.hbar-f { display: block; height: 12px; border-radius: 0 4px 4px 0; background: var(--series-1); min-width: 2px; }
+.hbar b { text-align: right; font-variant-numeric: tabular-nums; }
+/* admin */
+table.people { width: 100%; border-collapse: collapse; font-size: 14px; }
+.people th, .people td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.people th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.people tr.inactive td { color: var(--muted); }
+@media (max-width: 820px) {
+  .hero-btn { width: 100%; }
+  .row { grid-template-columns: 1fr auto; }
+  .c-prog { order: 6; grid-column: 1 / -1; }
+  .tiles-6, .tiles-3 { grid-template-columns: repeat(2, 1fr); }
+  .cols2, .cols3 { grid-template-columns: 1fr; }
+  .hbar { grid-template-columns: 110px 1fr 30px; }
+}
 </style>
 </head>
 <body>
@@ -337,16 +397,20 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
 const S = {
   me: BOOT.me || {}, cfg: BOOT.cfg || {}, lists: BOOT.lists || {}, people: BOOT.people || [],
   qraps: BOOT.qraps || [], actions: BOOT.actions || [], effects: BOOT.effects || [], assess: BOOT.assess || [], all: false,
-  kiosk: !!(BOOT.params && BOOT.params.kiosk === '1'),
-  view: 'board', id: null, edit: null, filter: 'open', area: '', search: '', history: {}
+  kiosk: !!(BOOT.params && BOOT.params.kiosk === '1') || (BOOT.me && BOOT.me.role === 'KIOSK'),
+  view: 'board', id: null, edit: null, filter: 'open', area: '', search: '', history: {}, flash: null, adm: null
 };
+const isManager = () => S.me.role === 'MANAŽER' || S.me.role === 'ADMIN';
+const isAdmin = () => S.me.role === 'ADMIN';
+const onKiosk = () => S.me.role === 'KIOSK';
 
 const STATUS = {
   'OPATŘENÍ':   { label: '③ Opatření', cls: 'warn', next: '③ Okamžitá opatření', who: 'kdokoli ze směny (TL)' },
   'ROZHODNUTÍ': { label: '④ Rozhodnutí', cls: 'warn', next: '④ Rozhodnutí OJT', who: 'vedoucí' },
   'ANALÝZA':    { label: '⑤ 5 Proč', cls: 'info', next: '⑤ 5 Proč a ⑥ konečné akce', who: 'piloti' },
   'AKCE':       { label: '⑥ Akce', cls: 'info', next: '⑥ Konečné akce', who: 'piloti akcí' },
-  'OVĚŘENÍ':    { label: '⑥ Ověření 5 směn', cls: 'info', next: '⑥ Efektivita 5 směn a uzavření', who: 'TL a vedoucí' },
+  'OVĚŘENÍ':    { label: '⑥ Ověření 5 směn', cls: 'info', next: '⑥ Efektivita 5 směn, potom uzavření manažerem', who: 'TL, manažer uzavře' },
+  'SCHVÁLENÍ':  { label: 'Ke schválení', cls: 'warn', next: 'Uzavření – schválení manažerem', who: 'manažer' },
   'UZAVŘENO':   { label: 'Uzavřeno', cls: 'ok' },
   'ZRUŠENO':    { label: 'Zrušeno', cls: 'muted' }
 };
@@ -487,8 +551,13 @@ const hours3 = () => Number(S.cfg.LHUTA_OPATRENI_HODIN) || 24;
 const deadline3 = q => new Date(new Date(q.when || q.created).getTime() + hours3() * 3600e3);
 const actLate = a => !a.done && a.due && a.due < today();
 const isLate = q => isOpen(q) && ((q.status === 'OPATŘENÍ' && deadline3(q) < new Date()) || actsOf(q.id, '⑥').some(actLate));
-const roleName = r => (r === 'MANAŽER' ? 'Manažer' : r === 'VEDOUCÍ' ? 'Vedoucí' : '');
-function personName(email) { const p = S.people.find(x => x.email === email); return p ? p.name : email; }
+const roleName = r => ({ 'VEDOUCÍ': 'Vedoucí', 'MANAŽER': 'Manažer', 'ADMIN': 'Admin', 'KIOSK': 'Kiosk' }[r] || '');
+function personName(email) {
+  const kiosk = / \(kiosk\)$/.test(email || '');
+  const e = String(email || '').replace(/ \(kiosk\)$/, '');
+  const p = S.people.find(x => x.email === e);
+  return (p ? p.name : e) + (kiosk ? ' (na kiosku)' : '');
+}
 const pilotNames = q => split(q.pilots).map(personName).join(', ');
 function badge(q) { const st = STATUS[q.status] || { label: q.status, cls: '' }; return h('span', { class: 'badge ' + st.cls }, st.label); }
 const ynText = v => (v === 'ANO' ? 'ano' : v === 'NE' ? 'ne' : '');
@@ -524,7 +593,8 @@ function edit(key) {
 }
 
 function render() {
-  const pages = { board: boardPage, new: newPage, detail: detailPage, help: helpPage, done: donePage };
+  const pages = { board: boardPage, new: newPage, detail: detailPage, help: helpPage, dash: dashPage, admin: adminPage };
+  if ((S.view === 'dash' && !isManager()) || (S.view === 'admin' && !isAdmin())) S.view = 'board';
   fill(document.getElementById('app'), header(), h('main', null, (pages[S.view] || boardPage)()));
 }
 
@@ -534,34 +604,49 @@ function header() {
     : h('span', { class: 'who', title: S.me.email }, S.me.name || S.me.email || '', S.me.role ? h('span', { class: 'role' }, roleName(S.me.role)) : null);
   return h('header', { class: 'top' }, h('div', { class: 'top-in' },
     h('button', { class: 'brand', onclick: () => go('board') }, h('span', { class: 'logo' }, 'Q'), S.cfg.NAZEV || 'eQRAP'),
-    h('nav', null, nav('Přehled', 'board'), nav('Jak to funguje', 'help')),
+    h('nav', null, nav('Tabule', 'board'), isManager() ? nav('Přehled', 'dash') : null, isAdmin() ? nav('Správa', 'admin') : null,
+      nav('Jak to funguje', 'help')),
     h('div', { class: 'grow' }),
     h('button', { class: 'btn primary', onclick: () => go('new') }, '+ Nahlásit problém'),
     who));
 }
 
-// ------------------------------------------------------------------ 4. BOARD (PŘEHLED)
+// ------------------------------------------------------------------ 4. BOARD (TABULE = HOME)
 const FILTERS = {
-  open:   { label: 'Otevřené', test: isOpen },
-  mine:   { label: 'Moje úkoly', test: q => isMine(q) },
-  decide: { label: 'Čeká na rozhodnutí', test: q => q.status === 'ROZHODNUTÍ' },
-  late:   { label: 'Po termínu', test: isLate, alert: true },
-  closed: { label: 'Uzavřené', test: q => !isOpen(q) }
+  open:      { label: 'Otevřené', test: isOpen },
+  mine:      { label: 'Moje úkoly', test: q => isMine(q) },
+  decide:    { label: 'Čeká na rozhodnutí', test: q => q.status === 'ROZHODNUTÍ' },
+  approve:   { label: 'Čeká na manažera', test: q => q.status === 'SCHVÁLENÍ' || (q.status === 'OVĚŘENÍ' && q.eff.allOk) },
+  late:      { label: 'Po termínu', test: isLate, alert: true },
+  closed:    { label: 'Uzavřené', test: q => q.status === 'UZAVŘENO' },
+  cancelled: { label: 'Zrušené', test: q => q.status === 'ZRUŠENO' }
 };
 
-/** "My tasks": leaders see what waits for them, pilots their analysis, everybody their own actions. */
+/** "My tasks": leaders see what waits for them, pilots their analysis, managers what waits for closing. */
 function isMine(q) {
   if (!isOpen(q)) return false;
   if (S.actions.some(a => a.qrapId === q.id && a.canDone && a.ownerEmail === S.me.email)) return true;
-  if (q.can.analyze && q.status === 'ANALÝZA') return true;
-  if (S.me.role && (!S.me.area || S.me.area === q.zone) && q.status !== 'OPATŘENÍ') return true;
-  return !!S.me.email && q.createdBy === S.me.email && q.status === 'OPATŘENÍ';
+  if (split(q.pilots).includes(S.me.email) && ['ANALÝZA', 'AKCE'].includes(q.status)) return true;
+  if (isManager() && FILTERS.approve.test(q)) return true;
+  if (S.me.role && (!S.me.area || S.me.area === q.zone) && ['OPATŘENÍ', 'ROZHODNUTÍ'].includes(q.status)) return true;
+  return false;
+}
+
+/** How far the QRAP is on the paper form: how many of the parts ①–⑦ are behind it. */
+function stage(q) {
+  return { 'OPATŘENÍ': 2, 'ROZHODNUTÍ': 3, 'ANALÝZA': 4, 'AKCE': 5, 'OVĚŘENÍ': 6, 'SCHVÁLENÍ': 6, 'UZAVŘENO': 7 }[q.status] || 0;
+}
+function progressEl(q) {
+  const n = stage(q);
+  return h('div', { class: 'prog', title: 'Hotovo ' + n + ' ze 7 částí formuláře' },
+    h('div', { class: 'prog-bar' }, [1, 2, 3, 4, 5, 6, 7].map(i => h('span', { class: i <= n ? 'on' : '' }))),
+    h('small', null, n + '/7'));
 }
 
 let redrawBoard = null;
 function boardPage() {
-  const keys = S.kiosk ? ['open', 'decide', 'late', 'closed'] : ['open', 'mine', 'decide', 'late', 'closed'];
-  if (!keys.includes(S.filter)) S.filter = 'open';
+  const keys = S.kiosk ? ['open', 'decide', 'approve', 'late', 'closed'] : ['open', 'mine', 'decide', 'late', 'closed'];
+  if (!keys.includes(S.filter) && S.filter !== 'cancelled') S.filter = 'open';
   const tiles = h('div', { class: 'tiles' });
   const listBox = h('div', { class: 'list' });
   const countEl = h('span', { class: 'sub' });
@@ -570,12 +655,12 @@ function boardPage() {
   const drawList = () => {
     const words = S.search.trim().toLowerCase();
     const test = FILTERS[S.filter].test;
-    const rows = S.qraps.filter(q => inArea(q) && (words ? haystack(q).includes(words) : test(q))).sort(order);
-    countEl.textContent = words ? 'Nalezeno: ' + rows.length : rows.length + ' ' + (rows.length === 1 ? 'problém' : 'problémů');
+    const rows = S.qraps.filter(q => inArea(q) && (words ? q.status !== 'ZRUŠENO' && haystack(q).includes(words) : test(q))).sort(order);
+    countEl.textContent = words ? 'Nalezeno: ' + rows.length : rows.length + ' ' + (rows.length === 1 ? 'QRAP' : 'QRAP');
     fill(listBox,
-      h('div', { class: 'row head' }, h('div', null, 'Číslo'), h('div', null, 'CO · JAK'), h('div', null, 'KDE'),
-        h('div', null, 'Stav'), h('div', null, 'KDY')),
-      rows.length ? rows.map(rowEl) : h('div', { class: 'empty' }, words ? 'Nic nenalezeno.' : 'Tady nic není.'));
+      h('div', { class: 'row head' }, h('div', null, 'Číslo'), h('div', null, 'Problém'), h('div', null, 'Kde'),
+        h('div', null, 'Stav'), h('div', null, 'Průběh ①–⑦'), h('div', null, 'Zjištěno')),
+      rows.length ? rows.map(rowEl) : h('div', { class: 'empty' }, words ? 'Nic nenalezeno.' : 'Žádné QRAP v tomto filtru.'));
   };
   const drawTiles = () => fill(tiles, keys.map(k => {
     const n = S.qraps.filter(q => inArea(q) && FILTERS[k].test(q)).length;
@@ -592,16 +677,25 @@ function boardPage() {
     oninput: e => { S.search = e.target.value; draw(); } });
   draw();
 
+  const open = S.qraps.filter(isOpen);
+  const flash = S.flash;
+  S.flash = null;
+  const cancelled = S.qraps.filter(FILTERS.cancelled.test).length;
   return h('div', null,
-    h('div', { class: 'page-head' },
-      h('div', null, h('h1', null, 'Tabule QRAP'), h('div', { class: 'sub' }, 'Kliknutím na řádek otevřete celý formulář QRAP.')),
-      h('button', { class: 'btn ghost', onclick: e => refresh(false, e.currentTarget) }, '⟳ Obnovit')),
+    h('div', { class: 'hero' },
+      h('div', null, h('h1', null, 'Tabule QRAP'),
+        h('div', { class: 'sub' }, open.length + ' otevřených · ' + open.filter(isLate).length + ' po termínu · kliknutím otevřete formulář')),
+      h('button', { class: 'btn primary hero-btn', onclick: () => go('new') }, '+ Nahlásit problém')),
+    flash ? h('div', { class: 'flash' }, h('span', null, '✓ ' + flash.text),
+      flash.id && !S.kiosk ? h('button', { class: 'link', onclick: () => go('detail', flash.id) }, 'Otevřít ' + flash.id) : null) : null,
     myActions(),
     tiles,
-    h('div', { class: 'toolbar' }, areaSel, search, h('div', { class: 'grow' }), countEl),
+    h('div', { class: 'toolbar' }, areaSel, search, h('div', { class: 'grow' }), countEl,
+      h('button', { class: 'btn ghost small', onclick: e => refresh(false, e.currentTarget) }, '⟳ Obnovit')),
     listBox,
-    S.all ? null : h('div', { class: 'more' }, h('button', { class: 'link', onclick: e => refresh(false, e.currentTarget, true) },
-      'Zobrazit i starší uzavřené problémy')));
+    h('div', { class: 'more' },
+      S.all ? null : h('button', { class: 'link', onclick: e => refresh(false, e.currentTarget, true) }, 'Zobrazit i starší uzavřené'),
+      isManager() && cancelled ? [' · ', h('button', { class: 'link', onclick: () => { S.filter = 'cancelled'; render(); } }, 'Zrušené (' + cancelled + ')')] : null));
 }
 
 function haystack(q) {
@@ -617,14 +711,17 @@ function order(a, b) {
 function rowEl(q) {
   const st = STATUS[q.status] || {};
   const open = () => go('detail', q.id);
-  return h('div', { class: 'row' + (isLate(q) ? ' late' : ''), tabindex: 0, onclick: open, onkeydown: e => { if (e.key === 'Enter') open(); } },
-    h('div', { class: 'c-id' }, q.id, q.safety === 'ANO' ? h('div', null, h('span', { class: 'badge bad' }, 'SAFETY')) : null),
+  return h('div', { class: 'row', tabindex: 0, onclick: open, onkeydown: e => { if (e.key === 'Enter') open(); } },
+    h('div', { class: 'c-id' }, q.id,
+      h('div', { class: 'row-tags' }, q.safety === 'ANO' ? h('span', { class: 'tag bad' }, 'SAFETY') : null,
+        q.decision === 'ESKALACE' ? h('span', { class: 'tag' }, 'Eskalováno') : null)),
     h('div', { class: 'c-what' }, h('b', null, q.what), h('div', { class: 'sub' },
       [q.how, q.qty === '' ? '' : q.qty + ' ' + q.unit, q.materialNo, q.huNo].filter(Boolean).join(' · '))),
-    h('div', { class: 'c-area sub' }, [q.zone, q.location].filter(Boolean).join(' / ')),
+    h('div', { class: 'c-area' }, h('div', null, q.zone), h('div', { class: 'sub' }, q.location)),
     h('div', { class: 'c-st' }, badge(q), h('div', { class: 'sub' },
       isLate(q) ? h('span', { class: 'late-txt' }, 'po termínu') : (st.who ? 'čeká: ' + st.who : ''))),
-    h('div', { class: 'c-age sub' }, ago(q.when || q.created)));
+    h('div', { class: 'c-prog' }, progressEl(q)),
+    h('div', { class: 'c-age sub' }, fmtDT(q.when || q.created), h('div', null, ago(q.when || q.created))));
 }
 
 function myActions() {
@@ -644,7 +741,9 @@ function myActions() {
 /** New QRAP as a step-by-step wizard (Zpět / Další). The last step shows everything for a check before sending. */
 function newPage() {
   const pf = popisForm({ when: new Date().toISOString(), finder: S.kiosk ? '' : S.me.name, zone: S.me.area || '' }, true);
-  const of = opatreniForm({}, []);
+  const RF = makeForm({});
+  const riskEl = h('div', { class: 'grid' }, RF.yesno('risk', 'Je riziko u zboží už na skladě nebo už expedovaného?', { req: true, wide: true,
+    hint: 'Může být stejná chyba i u zboží, které je už na skladě nebo už expedované? ANO → Kvalita dostane e-mail.' }));
   // split ① into its groups (Problém | Kdy a kde | Množství + Kdo + Nepovinné | Fotky)
   const groups = [];
   Array.from(pf.one.children).forEach(el => {
@@ -663,8 +762,8 @@ function newPage() {
       return true;
     } },
     { name: '② Upozornění', el: section(2, 'now', pf.two) },
-    { name: '③ Opatření', el: section(3, 'now', h('div', null, of.el, h('p', { class: 'sub', style: 'margin-top:12px' },
-      'Stačí odpověď na riziko – zbytek ③ může doplnit TL později (do ' + hours3() + ' h od KDY).'))) },
+    { name: '③ Riziko', el: section(3, 'now', h('div', null, riskEl, h('p', { class: 'sub', style: 'margin-top:12px' },
+      'Ostatní okamžitá opatření ③ doplní TL / vedoucí do ' + hours3() + ' h od KDY.'))) },
     { name: 'Kontrola', el: null }
   ];
   let at = 0;
@@ -675,20 +774,22 @@ function newPage() {
   const send = h('button', { class: 'btn primary', onclick: async () => {
     const data = pf.read();
     if (!data) return;
-    const s3 = of.read();
+    const s3 = RF.read();
     if (!s3) return;
     data.s3 = s3;
     const res = await save(send, 'apiCreate', [data]);
-    if (res) go(S.kiosk ? 'done' : 'detail', res.qrap.id, true);
+    if (!res) return;
+    S.flash = { id: res.qrap.id, text: 'QRAP ' + res.qrap.id + ' odeslán. Vedoucí zóny dostal e-mail.' };
+    S.filter = 'open';
+    go('board', null, true);
   } }, 'Odeslat ✓');
   function valid(i) {
     const st = steps[i];
-    if (i === 5) return !!of.read();
+    if (i === 5) return !!RF.read();
     if (!pf.F.read()) return false;
     const d = pf.F.peek();
     if (i === 1 && new Date(d.when).getTime() > Date.now() + 5 * 60000) return !!pf.F.mark('when', 'KDY nemůže být v budoucnosti.');
     if (i === 2) {
-      if (!d.finder && !d.badge) return !!pf.F.mark('finder', 'Vyplňte JMÉNO nebo číslo odznaku.');
       if (Number(d.qty) === 0 && !d.nokSituation) return !!pf.F.mark('qty', 'Zadejte KOLIK větší než 0, nebo zaškrtněte „NOK situace bez kusů“.');
       if (Number(d.qty) > 0 && !d.unit) return !!pf.F.mark('unit', 'Vyberte jednotku.');
     }
@@ -718,17 +819,6 @@ function newPage() {
   return page;
 }
 
-function donePage() {
-  const q = byId(S.id) || {};
-  return h('div', { class: 'narrow card done-page' },
-    h('div', { class: 'tick' }, '✓'),
-    h('h1', null, 'QRAP ' + (q.id || '') + ' odeslán.'),
-    h('p', { class: 'muted' }, q.status === 'OPATŘENÍ' ? 'Vedoucí dostal e-mail. TL doplní okamžitá opatření ③.' : 'Vedoucí dostal e-mail.'),
-    h('div', { class: 'form-btns', style: 'justify-content:center' },
-      h('button', { class: 'btn primary big', onclick: () => go('new') }, '+ Nahlásit další'),
-      h('button', { class: 'btn big', onclick: () => go('board') }, 'Zpět na tabuli')));
-}
-
 // ------------------------------------------------------------------ 6. PROBLEM DETAIL ①–⑦
 /** One numbered block of the QRAP form. state: done | now | wait | skip */
 function section(n, state, body, button) {
@@ -753,7 +843,8 @@ function detailPage() {
   return h('div', { class: 'narrow' },
     h('button', { class: 'link no-print', onclick: () => go('board') }, '← Tabule'),
     h('div', { class: 'd-head' },
-      h('div', null, h('h1', null, q.id, ' ', badge(q), q.safety === 'ANO' ? [' ', h('span', { class: 'badge bad' }, 'SAFETY')] : null),
+      h('div', null, h('h1', null, q.id, ' ', badge(q), q.safety === 'ANO' ? [' ', h('span', { class: 'tag bad' }, 'SAFETY')] : null,
+        q.decision === 'ESKALACE' ? [' ', h('span', { class: 'tag' }, 'Eskalováno')] : null),
         h('div', { class: 'sub' }, [q.zone, q.location, 'KDY ' + fmtDT(q.when)].filter(Boolean).join(' · '))),
       h('button', { class: 'btn no-print', onclick: () => window.print() }, 'Tisk / PDF')),
     steps(q), nextBox(q),
@@ -767,7 +858,7 @@ function detailPage() {
 function steps(q) {
   if (q.status === 'ZRUŠENO') return null;
   const names = ['Nahlášeno', 'Opatření', 'Rozhodnutí', '5 Proč', 'Akce', 'Ověření 5 směn', 'Uzavřeno'];
-  const at = { 'OPATŘENÍ': 1, 'ROZHODNUTÍ': 2, 'ANALÝZA': 3, 'AKCE': 4, 'OVĚŘENÍ': 5, 'UZAVŘENO': 7 }[q.status] || 0;
+  const at = { 'OPATŘENÍ': 1, 'ROZHODNUTÍ': 2, 'ANALÝZA': 3, 'AKCE': 4, 'OVĚŘENÍ': 5, 'SCHVÁLENÍ': 6, 'UZAVŘENO': 7 }[q.status] || 0;
   return h('div', { class: 'steps no-print' }, names.map((n, i) =>
     h('div', { class: 'step ' + (i < at ? 'done' : i === at ? 'now' : '') }, n)));
 }
@@ -775,7 +866,7 @@ function steps(q) {
 function nextBox(q) {
   if (q.status === 'UZAVŘENO') {
     return h('div', { class: 'next ok' }, h('b', null, '✓ Uzavřeno ' + fmtDT(q.closedAt)),
-      h('span', { class: 'sub' }, q.decision === 'VYŘEŠENO' ? '· vyřešeno bez 5 Proč' : '· uzavření schválil(a) ' + q.closedBy));
+      h('span', { class: 'sub' }, (q.decision === 'VYŘEŠENO' ? '· vyřešeno bez 5 Proč' : '· po ověření 5 směn') + ' · uzavřel(a) ' + q.closedBy));
   }
   if (q.status === 'ZRUŠENO') return h('div', { class: 'next grey' }, h('b', null, 'Zrušeno: '), q.cancelReason);
   const st = STATUS[q.status];
@@ -799,13 +890,18 @@ function sec1(q, pf) {
       ['KDE?', [q.zone, q.location].filter(Boolean).join(' / ')], ['Kde vzniklo?', q.originZone || 'nevím / stejné'],
       ['KOLIK?', q.qty === '' ? '' : q.qty + ' ' + q.unit + (q.nokSituation ? ' · NOK situace bez kusů' : '')],
       ['Stejný problém v posledních 7 dnech?', q.repeat7 === 'ANO' ? 'ANO → ' + q.repeatRef : ynText(q.repeat7)],
-      ['JMÉNO', [q.finder, q.badge].filter(Boolean).join(' · ')], ['Číslo materiálu', q.materialNo],
+      ['JMÉNO', q.finder], ['Číslo materiálu', q.materialNo],
       ['Číslo HU / dodacího listu', q.huNo], ['Dodavatel', q.supplier]]),
     photosView(q)), q.can.popis ? editBtn('popis', 'Upravit ① ②') : null);
 }
 
 function sec2(q, pf) {
-  if (pf) return section(2, 'now', h('div', null, pf.two, formButtons('Uložit ① a ②', saveSection(q, 'popis', pf.read, 1))));
+  if (pf) {
+    const SF = makeForm({});
+    const signer = signerField(SF, 'Kdo upravuje? (vedoucí – u vlastního hlášení není potřeba)', true);
+    return section(2, 'now', h('div', null, pf.two, signer ? h('div', { class: 'grid', style: 'margin-top:12px' }, signer) : null,
+      formButtons('Uložit ① a ②', b => { const d = pf.read(); const x = SF.read(); if (d && x) submit(b, 'apiSave', [q.id, 'popis', Object.assign(d, x)], 1); })));
+  }
   return section(2, 'done', h('div', null,
     h('div', { class: 'tags' }, split(q.notified).map(x => h('span', { class: 'tag' }, isOther(x) && q.notifiedOther ? 'jiné: ' + q.notifiedOther : x)))));
 }
@@ -842,7 +938,9 @@ function sec4(q) {
   if (q.can.shifts) {
     const F = makeForm({ shifts: q.shifts });
     const b = h('button', { class: 'btn small', onclick: () => { const d = F.read(); if (d) submit(b, 'apiSave', [q.id, 'smeny', d], 4); } }, 'Uložit směny');
-    shiftsEl = h('div', null, F.checks('shifts', 'Informace všem směnám během 5\' meetingu', shiftsAll), h('div', { style: 'margin-top:8px' }, b));
+    const signer = signerField(F, 'Kdo označuje směny? (vedoucí)');
+    shiftsEl = h('div', null, F.checks('shifts', 'Informace všem směnám během 5\' meetingu', shiftsAll),
+      signer ? h('div', { class: 'grid', style: 'margin-top:8px' }, signer) : null, h('div', { style: 'margin-top:8px' }, b));
   } else {
     shiftsEl = kv([['Informace všem směnám během 5\' meetingu', shiftsAll.map(s => (informed.includes(s) ? '✓ ' : '✗ ') + s).join('   ')]]);
   }
@@ -852,7 +950,9 @@ function sec4(q) {
       h('p', { style: 'margin-top:12px' }, h('b', null, d.label)),
       q.decisionNote ? h('p', { class: 'pre' }, 'Komentář: ' + q.decisionNote) : null,
       q.pilots ? kv([['Piloti', pilotNames(q)]]) : null,
-      h('div', { class: 'by' }, 'Podepsal(a) ' + q.decisionBy + ' · ' + fmtDT(q.decisionAt) + ' · zamčeno')));
+      q.decision === 'ESKALACE' ? note('Eskalováno – manažeři dostali e-mail. Manažer vybere piloty („+ přidat pilota“ v ⑤).') : null,
+      h('div', { class: 'by' }, 'Podepsal(a) ' + q.decisionBy + ' · ' + fmtDT(q.decisionAt) + ' · zamčeno'),
+      q.decision === 'VYŘEŠENO' ? closureBox(q) : null));
   }
   const msg = !q.s3Done ? 'Rozhodnutí je možné, až jsou okamžitá opatření ③ kompletní.'
     : q.can.decide ? 'Rozhodněte a podepište.' : 'Čeká na rozhodnutí vedoucího.';
@@ -871,6 +971,7 @@ function sec5(q) {
     const have = split(q.pilots);
     return h('div', { class: 'editing' }, section(5, 'now', h('div', null,
       F.checks('pilots', 'Přidat piloty', S.people.filter(p => !have.includes(p.email)).map(p => p.name), { req: true }),
+      h('div', { class: 'grid', style: 'margin-top:10px' }, signerField(F, 'Kdo přidává? (vedoucí / manažer)')),
       formButtons('Přidat', saveSection(q, 'piloti', F.read, 5)))));
   }
   const filled = c => [1, 2, 3, 4, 5].filter(i => q[c + i]);
@@ -914,7 +1015,8 @@ function actionRow(q, a) {
     h('div', { class: 'act-st' }, a.done ? h('span', { class: 'badge ok' }, '✓ ' + fmtD(a.done))
       : h('span', { class: 'badge ' + (late ? 'bad' : '') }, late ? 'Po termínu' : 'Otevřená')),
     h('div', { class: 'act-btns no-print' },
-      a.canDone ? h('button', { class: 'btn small', onclick: e => submit(e.currentTarget, 'apiSaveAction', [q.id, { no: a.no, done: true }], 6) }, '✓ Hotovo') : null,
+      a.canDone ? h('button', { class: 'btn small', onclick: e => (onKiosk() ? edit('akce:' + a.no)
+        : submit(e.currentTarget, 'apiSaveAction', [q.id, { no: a.no, done: true }], 6)) }, '✓ Hotovo') : null,
       a.canEdit || a.canDone ? h('button', { class: 'btn small ghost', onclick: () => edit('akce:' + a.no) }, 'Upravit') : null));
 }
 
@@ -956,17 +1058,23 @@ function effectBox(q) {
       older.map(e => 'kolo ' + e.round + '/slot ' + e.slot + ' ' + e.result).join(', ')) : null);
 }
 
-/** ⑥ Uzavření QRAP – checklist and signature. */
+/** Uzavření QRAP – only a manager closes: after the 5 shifts (checklist) or after „Problém vyřešen: ŽÁDNÉ 5 Proč“. */
 function closureBox(q) {
-  if (q.status === 'UZAVŘENO' && q.decision !== 'VYŘEŠENO') {
+  if (q.status === 'UZAVŘENO') {
     return h('div', { class: 'box ok' }, h('b', null, '✓ Uzavření QRAP schválil(a) ' + q.closedBy), ' · ' + fmtDT(q.closedAt));
   }
-  if (q.status !== 'OVĚŘENÍ') return null;
-  const ok = q.checklist.every(c => c.ok);
-  const b = h('button', { class: 'btn primary', disabled: !ok, onclick: () => submit(b, 'apiSave', [q.id, 'uzavreni', {}], 6) }, 'Podepsat uzavření');
-  return h('div', { class: 'box' }, h('b', null, 'Podmínky uzavření'),
-    h('ul', { class: 'checklist' }, q.checklist.map(c => h('li', null, h('span', { class: c.ok ? 'ok' : 'no' }, c.ok ? '✓ ' : '✗ '), c.label))),
-    q.can.close ? h('div', null, b, h('span', { class: 'sub' }, '  Podpis = váš účet + čas.')) : note('Uzavření podepisuje vedoucí.'));
+  if (q.status !== 'OVĚŘENÍ' && q.status !== 'SCHVÁLENÍ') return null;
+  const approve = q.status === 'SCHVÁLENÍ';
+  const ok = approve || q.checklist.every(c => c.ok);
+  const F = makeForm({});
+  const b = h('button', { class: 'btn primary', disabled: !ok, onclick: () => { const d = F.read(); if (d) submit(b, 'apiSave', [q.id, 'uzavreni', d], approve ? 4 : 6); } },
+    approve ? 'Schválit a uzavřít' : 'Podepsat uzavření');
+  const signer = signerField(F, 'Kdo uzavírá? (manažer)');
+  return h('div', { class: 'box' }, h('b', null, approve ? 'Uzavření – schválení manažerem' : 'Podmínky uzavření'),
+    approve ? h('p', { class: 'sub' }, 'Vedoucí rozhodl „Problém vyřešen: ŽÁDNÉ 5 Proč“. QRAP uzavře manažer.')
+      : h('ul', { class: 'checklist' }, q.checklist.map(c => h('li', null, h('span', { class: c.ok ? 'ok' : 'no' }, c.ok ? '✓ ' : '✗ '), c.label))),
+    q.can.close ? h('div', null, signer ? h('div', { class: 'grid' }, signer) : null, h('div', { class: 'form-btns' }, b), signNote())
+      : note('QRAP uzavírá manažer.'));
 }
 
 function sec7(q) {
@@ -1003,20 +1111,35 @@ function historyBox(q) {
 }
 
 function adminBox(q) {
-  if (!q.can.admin) return null;
+  if (!q.can.manage) return null;
   const open = isOpen(q);
-  const reason = h('input', { placeholder: 'Důvod (uloží se do historie)' });
+  const F = makeForm({});
+  const reason = F.input('reason', 'Důvod (uloží se do historie)', { req: true, wide: true });
+  const signer = signerField(F, 'Kdo? (manažer)');
   const op = (label, code, cls) => {
-    const b = h('button', { class: 'btn ' + (cls || ''), onclick: () => submit(b, 'apiAdmin', [q.id, code, reason.value], 1) }, label);
+    const b = h('button', { class: 'btn ' + (cls || ''), onclick: () => { const d = F.read(); if (d) submit(b, 'apiAdmin', [q.id, code, d.reason, d.signer || ''], 1); } }, label);
     return b;
   };
-  return h('div', { class: 'card no-print' }, h('h2', null, 'SPRÁVA (JEN MANAŽER)'),
-    h('div', { class: 'inline-form' }, reason,
+  return h('div', { class: 'card no-print' }, h('h2', null, 'SPRÁVA QRAP (MANAŽER)'),
+    h('div', { class: 'grid' }, reason, signer),
+    h('div', { class: 'form-btns' },
       open && q.decision ? op('Odemknout ①–④ (zrušit rozhodnutí)', 'unlock') : null,
       open ? op('Zrušit QRAP', 'cancel', 'danger') : op('Znovu otevřít', 'reopen')));
 }
 
 // ------------------------------------------------------------------ 7. FORMS (① … ⑦)
+/**
+ * Kiosk: "Kdo podepisuje?" – the person types their name (suggestions from Lidé). The server checks the name and
+ * its role. On a personal account nothing is asked – the Google account decides.
+ */
+function signerField(F, label, optional) {
+  if (!onKiosk()) return null;
+  return F.input('signer', label, { req: !optional, list: 'people-list', wide: true, ph: 'Začněte psát své jméno',
+    hint: 'Jméno musí být na seznamu Lidé – vyberte ho z nabídky.' });
+}
+const signNote = () => h('p', { class: 'sub' }, onKiosk() ? 'Podpis = vaše jméno + čas, uloží se do historie.'
+  : 'Podpis = váš účet (' + S.me.email + ') + čas, uloží se do historie.');
+
 /**
  * A tiny form builder: every field remembers how to read its value and whether it is required.
  * Fields inside a hidden block are skipped (not required, value '').
@@ -1129,7 +1252,8 @@ function showIf(el, on) { el.hidden = !on; return el; }
 
 /** ① POPIS PROBLÉMU and ② KDO BYL UPOZORNĚN? – on the new page (isNew) and when editing. */
 function popisForm(v, isNew) {
-  const F = makeForm(Object.assign({}, v, { photoExc: v.photoException ? 'ANO' : '' }));
+  const F = makeForm(Object.assign({}, v, { photoExc: v.photoException ? 'ANO' : '',
+    notifyPeople: split(v.notifyPeople).map(personName).join(', ') }));
   const L = S.lists;
   const howOther = showIf(h('div', { class: 'wide' }, F.input('howOther', 'JAK – jiné (popište)', { req: true })), isOther(v.how));
   const recent = S.qraps.filter(q => q.id !== v.id && Date.now() - new Date(q.when).getTime() < 7 * 864e5)
@@ -1158,8 +1282,7 @@ function popisForm(v, isNew) {
     F.select('unit', 'Jednotka', L.units || []),
     F.toggle('nokSituation', 'NOK situace bez kusů', { wide: true }),
     h('div', { class: 'sub-h wide' }, 'Kdo problém našel'),
-    F.input('finder', 'JMÉNO', { list: 'people-list', hint: 'Vyberte jméno ze seznamu…' }),
-    F.input('badge', 'Číslo odznaku', { hint: '…nebo zadejte číslo odznaku.' }),
+    F.input('finder', 'JMÉNO', { req: true, list: 'people-list', hint: 'Napište své jméno (nabídka ze seznamu je jen pomůcka).' }),
     h('div', { class: 'sub-h wide' }, 'Nepovinné údaje'),
     F.input('materialNo', 'Číslo materiálu'),
     F.input('huNo', 'Číslo manipulační jednotky / dodacího listu'),
@@ -1169,17 +1292,19 @@ function popisForm(v, isNew) {
     F.toggle('photoExc', 'Fotku nelze pořídit (výjimka s důvodem)', { wide: true, onchange: on => showIf(excBox, on) }),
     excBox);
   const otherBox = showIf(F.input('notifiedOther', 'Jiné – kdo', { req: true }), split(v.notified).some(isOther));
+  const leaders = S.people.filter(p => ['VEDOUCÍ', 'MANAŽER', 'ADMIN'].includes(p.role)).map(p => p.name);
   const two = h('div', null,
     F.checks('notified', 'Upozorněné role', S.lists.alert || [], { req: true, hint: 'Koho jste informovali? Vyberte alespoň jednu roli.',
       onchange: list => showIf(otherBox, list.some(isOther)) }),
     h('div', { style: 'margin-top:10px' }, otherBox),
-    h('p', { class: 'sub' }, 'Když je riziko u zboží na skladě nebo expedovaného (③ = ANO), přidá se Kvalita automaticky.'));
+    h('p', { class: 'sub' }, 'Když je riziko u zboží na skladě nebo expedovaného (③ = ANO), přidá se Kvalita automaticky.'),
+    leaders.length ? h('div', { style: 'margin-top:14px' }, F.checks('notifyPeople', 'Poslat e-mail také (nepovinné)', leaders,
+      { hint: 'Vedoucí zóny dostane e-mail vždy. Tady můžete přidat další osoby.' })) : null);
   return {
     one, two, F, photos,
     read() {
       const d = F.read();
       if (!d) return null;
-      if (!d.finder && !d.badge) return F.mark('finder', 'Vyplňte JMÉNO nebo číslo odznaku.');
       if (d.qty !== '' && Number(d.qty) === 0 && !d.nokSituation) return F.mark('qty', 'Zadejte KOLIK větší než 0, nebo zaškrtněte „NOK situace bez kusů“.');
       if (Number(d.qty) > 0 && !d.unit) return F.mark('unit', 'Vyberte jednotku.');
       if (new Date(d.when).getTime() > Date.now() + 5 * 60000) return F.mark('when', 'KDY nemůže být v budoucnosti.');
@@ -1294,7 +1419,8 @@ function decisionForm(q) {
     h('div', { style: 'margin-top:10px' }, warn),
     h('div', { style: 'margin-top:12px' }, pilots),
     h('div', { style: 'margin-top:12px' }, F.input('decisionNote', 'Komentář', { rows: 2, hint: 'Povinný u „Problém vyřešen“ a „Eskalace“.' })),
-    h('p', { class: 'sub' }, 'Podpis = váš účet (' + S.me.email + ') + čas. Rozhodnutí se zamkne.'),
+    h('div', { class: 'grid', style: 'margin-top:12px' }, signerField(F, 'Kdo podepisuje? (vedoucí)')),
+    signNote(),
     formButtons('Podepsat', b => {
       const d = F.read();
       if (!d) return;
@@ -1331,7 +1457,8 @@ function pricinaForm(q) {
       F.input('learned', 'Co jsme se naučili z QR?', { rows: 2, wide: true, hint: 'Povinné pro uzavření.' }),
       F.yesno('std', 'Příležitost k aktualizaci STANDARDU?', { hint: 'ANO vytvoří akci „Aktualizovat standard“.',
         onchange: x => showIf(stdRef, x === 'ANO') }),
-      stdRef),
+      stdRef,
+      signerField(F, 'Kdo vyplňuje? (pilot nebo vedoucí)')),
     formButtons('Uložit analýzu', b => {
       const d = F.read();
       if (!d) return;
@@ -1360,7 +1487,8 @@ function actionForm(q, a) {
       full ? F.input('due', 'Plán', { req: true, type: 'date', min: a ? null : today() }) : null,
       done,
       F.input('evidence', 'Odkaz na důkaz', { ph: 'https://…' }),
-      F.input('note', 'Poznámka', { wide: true })),
+      F.input('note', 'Poznámka', { wide: true }),
+      signerField(F, 'Kdo ukládá? (pilot akce, pilot nebo vedoucí)')),
     formButtons(a ? 'Uložit akci' : 'Přidat akci', b => {
       const d = F.read();
       if (!d) return;
@@ -1395,8 +1523,9 @@ function assessForm(q) {
       CRITERIA.map(c => F.radio(c[0], c[1] + ' – ' + c[2], opts, { req: true, inline: true, wide: true, hint: hints[c[0]] })),
       F.input('ojtWith', 'OJT s kým'),
       F.select('feedbackType', 'Typ zpětné vazby', ['pochvala', 'silná stránka', 'ke zlepšení']),
-      F.input('feedback', 'Zpětná vazba', { rows: 2, wide: true })),
-    h('p', { class: 'sub' }, 'Hodnotitel a čas se uloží automaticky (' + S.me.name + ').'),
+      F.input('feedback', 'Zpětná vazba', { rows: 2, wide: true }),
+      signerField(F, 'Kdo hodnotí? (vedoucí / manažer)')),
+    h('p', { class: 'sub' }, onKiosk() ? 'Hodnotitel a čas se uloží automaticky.' : 'Hodnotitel a čas se uloží automaticky (' + S.me.name + ').'),
     formButtons('Uložit hodnocení', b => { const d = F.read(); if (d) submit(b, 'apiAssess', [q.id, d], 7); }));
 }
 
@@ -1477,37 +1606,256 @@ function zoom(url) {
 }
 
 // ------------------------------------------------------------------ 9. HELP, KIOSK, REFRESH, START
+// ------------------------------------------------------------------ 9a. PŘEHLED (dashboard for managers)
+const DAY = 864e5;
+function svg(tag, attrs, ...kids) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs || {}).forEach(([k, v]) => { if (v !== null && v !== undefined) el.setAttribute(k, v); });
+  kids.flat(Infinity).forEach(k => { if (k !== null && k !== undefined && k !== false) el.append(k instanceof Node ? k : String(k)); });
+  return el;
+}
+function mondayOf(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+const shortD = d => d.getDate() + '. ' + (d.getMonth() + 1) + '.';
+
+/** Bars with a 4px rounded top, anchored to the baseline. */
+function barPath(x, y, w, hgt) {
+  const r = Math.min(4, w / 2, hgt);
+  if (hgt <= 0) return '';
+  return 'M' + x + ',' + (y + hgt) + 'V' + (y + r) + 'Q' + x + ',' + y + ' ' + (x + r) + ',' + y + 'H' + (x + w - r) +
+    'Q' + (x + w) + ',' + y + ' ' + (x + w) + ',' + (y + r) + 'V' + (y + hgt) + 'Z';
+}
+
+/** New vs. closed QRAPs per week (last 8 weeks): grouped bars, legend, hover tooltip, table view. */
+function weekChart() {
+  const start = mondayOf(Date.now() - 7 * 7 * DAY);
+  const weeks = Array.from({ length: 8 }, (_, i) => {
+    const from = new Date(start.getTime() + i * 7 * DAY);
+    const to = new Date(from.getTime() + 7 * DAY);
+    const inW = iso => iso && new Date(iso) >= from && new Date(iso) < to;
+    return { label: shortD(from), range: shortD(from) + ' – ' + shortD(new Date(to.getTime() - DAY)),
+      created: S.qraps.filter(q => inW(q.created)).length, closed: S.qraps.filter(q => q.status === 'UZAVŘENO' && inW(q.closedAt)).length };
+  });
+  const W = 1080, H = 240, L = 34, R = 8, T = 12, B = 28;
+  const max = Math.max(4, ...weeks.map(w => Math.max(w.created, w.closed)));
+  const top = Math.ceil(max / 4) * 4;
+  const y = v => T + (H - T - B) * (1 - v / top);
+  const gw = (W - L - R) / weeks.length;
+  const bw = Math.min(22, (gw - 18) / 2);
+  const tip = h('div', { class: 'viz-tip', hidden: true });
+  const chart = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'viz', role: 'img', 'aria-label': 'Nové a uzavřené QRAP po týdnech' },
+    [0, 1, 2, 3, 4].map(i => {
+      const v = top * i / 4;
+      return [svg('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), class: 'viz-grid' }),
+        svg('text', { x: L - 6, y: y(v) + 4, class: 'viz-axis', 'text-anchor': 'end' }, String(v))];
+    }),
+    weeks.map((w, i) => {
+      const gx = L + i * gw;
+      const x1 = gx + (gw - (bw * 2 + 2)) / 2;
+      const g = svg('g', { class: 'viz-group' },
+        svg('rect', { x: gx, y: T, width: gw, height: H - T - B, class: 'viz-hit' }),
+        svg('path', { d: barPath(x1, y(w.created), bw, y(0) - y(w.created)), class: 'viz-s1' }),
+        svg('path', { d: barPath(x1 + bw + 2, y(w.closed), bw, y(0) - y(w.closed)), class: 'viz-s2' }),
+        svg('text', { x: gx + gw / 2, y: H - 9, class: 'viz-axis', 'text-anchor': 'middle' }, w.label));
+      g.addEventListener('mouseenter', e => {
+        fill(tip, h('b', null, 'Týden ' + w.range), h('div', null, h('i', { class: 'dot s1' }), 'Nové: ' + w.created),
+          h('div', null, h('i', { class: 'dot s2' }), 'Uzavřené: ' + w.closed));
+        tip.hidden = false;
+        tip.style.left = Math.min(78, (i + 0.5) / weeks.length * 100) + '%';
+      });
+      g.addEventListener('mouseleave', () => { tip.hidden = true; });
+      return g;
+    }),
+    svg('line', { x1: L, x2: W - R, y1: y(0), y2: y(0), class: 'viz-base' }));
+  const table = h('table', { class: 'roles', hidden: true },
+    h('tr', null, h('th', null, 'Týden'), h('th', null, 'Nové'), h('th', null, 'Uzavřené')),
+    weeks.map(w => h('tr', null, h('td', null, w.range), h('td', null, w.created), h('td', null, w.closed))));
+  const toggle = h('button', { class: 'link', onclick: () => { table.hidden = !table.hidden; box.hidden = !table.hidden; toggle.textContent = table.hidden ? 'Zobrazit tabulku' : 'Zobrazit graf'; } }, 'Zobrazit tabulku');
+  const box = h('div', { class: 'viz-box' }, chart, tip);
+  return h('div', { class: 'card' },
+    h('div', { class: 'sec-head' }, h('h2', null, 'NOVÉ A UZAVŘENÉ QRAP – POSLEDNÍCH 8 TÝDNŮ'), h('div', { class: 'grow' }), toggle),
+    h('div', { class: 'legend' }, h('span', null, h('i', { class: 'dot s1' }), 'Nové'), h('span', null, h('i', { class: 'dot s2' }), 'Uzavřené')),
+    box, table);
+}
+
+/** Horizontal bars for one series (one colour), value written next to each bar. */
+function barList(title, pairs, onClick) {
+  const max = Math.max(1, ...pairs.map(p => p[1]));
+  return h('div', { class: 'card' }, h('h2', null, title),
+    pairs.length ? pairs.map(([label, n]) => h('div', { class: 'hbar' + (onClick ? ' click' : ''), title: label + ': ' + n, onclick: onClick ? () => onClick(label) : null },
+      h('span', { class: 'hbar-l' }, label), h('span', { class: 'hbar-t' }, h('span', { class: 'hbar-f', style: 'width:' + (n / max * 100) + '%' })),
+      h('b', null, n))) : note('Zatím žádná data.'));
+}
+
+function dashPage() {
+  const all = S.qraps.filter(q => q.status !== 'ZRUŠENO');
+  const open = all.filter(isOpen);
+  const since = Date.now() - 90 * DAY;
+  const recent = all.filter(q => new Date(q.when || q.created).getTime() >= since);
+  const count = (list, key) => {
+    const m = {};
+    list.forEach(q => { const k = q[key] || '–'; m[k] = (m[k] || 0) + 1; });
+    return Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  };
+  const closed = all.filter(q => q.status === 'UZAVŘENO' && q.closedAt);
+  const avgDays = closed.length ? closed.reduce((m, q) => m + (new Date(q.closedAt) - new Date(q.when || q.created)) / DAY, 0) / closed.length : null;
+  const withS3 = all.filter(q => q.s3Done);
+  const s3in = withS3.filter(q => new Date(q.s3Done) - new Date(q.when || q.created) <= hours3() * 3600e3).length;
+  const tile = (n, label, filter, alert) => h('button', { class: 'tile' + (alert && n ? ' alert' : ''),
+    onclick: () => { S.filter = filter; S.search = ''; go('board'); } }, h('b', null, n), h('span', null, label));
+  const kpi = (value, label, sub) => h('div', { class: 'tile kpi' }, h('b', null, value), h('span', null, label), sub ? h('small', null, sub) : null);
+  const lateActs = S.actions.filter(a => a.part === '⑥' && actLate(a) && !a.removed);
+  const byOwner = {};
+  lateActs.forEach(a => { (byOwner[a.owner] = byOwner[a.owner] || []).push(a); });
+  const watch = open.filter(q => q.safety === 'ANO' || q.decision === 'ESKALACE');
+  return h('div', null,
+    h('div', { class: 'hero' }, h('div', null, h('h1', null, 'Přehled'),
+      h('div', { class: 'sub' }, 'Data: ' + (S.all ? 'všechny QRAP' : 'otevřené + uzavřené za posledních ' + (S.cfg.ZOBRAZIT_UZAVRENE_DNI || 60) + ' dní'))),
+      S.all ? null : h('button', { class: 'btn', onclick: e => refresh(false, e.currentTarget, true) }, 'Načíst všechna data')),
+    h('div', { class: 'tiles tiles-6' },
+      tile(open.length, 'Otevřené', 'open'), tile(open.filter(isLate).length, 'Po termínu', 'late', true),
+      tile(open.filter(FILTERS.decide.test).length, 'Čeká na rozhodnutí', 'decide'),
+      tile(open.filter(FILTERS.approve.test).length, 'Čeká na manažera', 'approve'),
+      tile(open.filter(q => q.safety === 'ANO').length, 'SAFETY otevřené', 'open', true),
+      tile(open.filter(q => q.decision === 'ESKALACE').length, 'Eskalované', 'open')),
+    h('div', { class: 'tiles tiles-3' },
+      kpi(avgDays === null ? '–' : avgDays.toFixed(1).replace('.', ',') + ' dne', 'Průměrná doba do uzavření', closed.length + ' uzavřených QRAP'),
+      kpi(withS3.length ? Math.round(s3in / withS3.length * 100) + ' %' : '–', 'Okamžitá opatření ③ do ' + hours3() + ' h', s3in + ' z ' + withS3.length),
+      kpi(recent.filter(q => q.repeat7 === 'ANO').length, 'Opakované problémy (90 dní)', 'odpověď „Stejný problém v posledních 7 dnech“')),
+    weekChart(),
+    h('div', { class: 'cols2' },
+      barList('JAK BYL OBJEVEN (90 DNÍ)', count(recent, 'how'), label => { S.search = label; go('board'); }),
+      barList('PODLE ZÓNY (90 DNÍ)', count(recent, 'zone'), label => { S.area = label; S.filter = 'open'; go('board'); })),
+    h('div', { class: 'cols2' },
+      h('div', { class: 'card' }, h('h2', null, 'KONEČNÉ AKCE PO TERMÍNU'),
+        lateActs.length ? h('table', { class: 'roles' }, h('tr', null, h('th', null, 'Pilot'), h('th', null, 'Počet'), h('th', null, 'Nejstarší plán')),
+          Object.entries(byOwner).sort((a, b) => b[1].length - a[1].length).map(([o, list]) => h('tr', null, h('td', null, o), h('td', null, list.length),
+            h('td', null, fmtD(list.map(a => a.due).sort()[0]))))) : note('Žádné akce po termínu.')),
+      h('div', { class: 'card' }, h('h2', null, 'SAFETY A ESKALACE (OTEVŘENÉ)'),
+        watch.length ? h('div', { class: 'list flat' }, watch.map(rowEl)) : note('Nic otevřeného.'))));
+}
+
+// ------------------------------------------------------------------ 9b. SPRÁVA (admin only)
+const SETTING_LABELS = {
+  NAZEV: 'Název aplikace', EMAILY: 'Posílat e-maily (ANO / NE)', EMAIL_KVALITA: 'E-mail Kvality', EMAIL_BOZP: 'E-mail BOZP / EHS',
+  LHUTA_OPATRENI_HODIN: 'Lhůta ③ okamžitá opatření (hodin)', ZOBRAZIT_UZAVRENE_DNI: 'Uzavřené QRAP na tabuli (dní)',
+  KIOSK_NAVRAT_SEKUND: 'Kiosk – návrat na tabuli (sekund)', ODKAZ_APLIKACE: 'Odkaz aplikace do e-mailů'
+};
+const ROLE_HELP = { '': 'běžný uživatel', 'VEDOUCÍ': 'vedoucí / TL', 'MANAŽER': 'manažer – uzavírá QRAP', 'ADMIN': 'admin – Správa',
+  'KIOSK': 'sdílený účet kiosku' };
+
+function fillPeopleList() {
+  fill(document.getElementById('people-list'), S.people.filter(p => p.role !== 'KIOSK').map(p => h('option', { value: p.name })));
+}
+
+function adminPage() {
+  const box = h('div', null, note('Načítám…'));
+  const draw = () => fill(box, peopleCard(), listsCard(), settingsCard());
+  const saved = res => {
+    S.adm = res;
+    Object.assign(S, { people: res.boot.people, lists: res.boot.lists, cfg: res.boot.cfg });
+    fillPeopleList();
+    S.edit = null;
+    draw();
+    toast('Uloženo ✓');
+  };
+  const call = async (btn, fn, args) => {
+    const label = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Ukládám…';
+    try { saved(await api(fn, ...args)); } catch (e) { toast(errText(e), true); btn.disabled = false; btn.textContent = label; }
+  };
+  function personForm(p) {
+    const F = makeForm(p ? Object.assign({}, p, { active: p.active ? 'ANO' : '' }) : { active: 'ANO' });
+    const b = h('button', { class: 'btn primary', onclick: () => {
+      const d = F.read(); if (!d) return;
+      call(b, 'apiSavePerson', [{ row: p ? p.row : '', name: d.name, email: d.email, role: d.role, area: d.area, active: d.active === 'ANO' }]);
+    } }, p ? 'Uložit' : 'Přidat osobu');
+    return h('div', { class: 'act-form' }, h('div', { class: 'grid' },
+      F.input('name', 'Jméno', { req: true }), F.input('email', 'E-mail (firemní účet Google)', { req: true, type: 'email' }),
+      F.select('role', 'Role', S.adm.roles.map(r => ({ value: r, label: r + ' – ' + ROLE_HELP[r] })), { ph: '— bez role (běžný uživatel) —' }),
+      F.select('area', 'Zóna', S.lists.zones || [], { ph: '— všechny zóny —' }),
+      F.toggle('active', 'Aktivní (neaktivní osoba se nemůže přihlásit s rolí, historie zůstává)', { wide: true })),
+    h('div', { class: 'form-btns' }, b, h('button', { class: 'btn ghost', onclick: () => { S.edit = null; draw(); } }, 'Zrušit')));
+  }
+  function peopleCard() {
+    const people = S.adm.people.slice().sort((a, b) => (b.active - a.active) || a.name.localeCompare(b.name, 'cs'));
+    return h('div', { class: 'card' },
+      h('div', { class: 'sec-head' }, h('h2', null, 'LIDÉ A ROLE (' + people.length + ')'), h('div', { class: 'grow' }),
+        S.edit === 'person:new' ? null : h('button', { class: 'btn small primary', onclick: () => { S.edit = 'person:new'; draw(); } }, '+ Přidat osobu')),
+      S.edit === 'person:new' ? personForm(null) : null,
+      h('div', { class: 'slots-wrap' }, h('table', { class: 'people' },
+        h('tr', null, ['Jméno', 'E-mail', 'Role', 'Zóna', 'Stav', ''].map(x => h('th', null, x))),
+        people.map(p => (S.edit === 'person:' + p.row ? h('tr', null, h('td', { colspan: 6 }, personForm(p)))
+          : h('tr', { class: p.active ? '' : 'inactive' }, h('td', null, h('b', null, p.name)), h('td', null, p.email),
+            h('td', null, p.role ? h('span', { class: 'tag' }, roleName(p.role)) : h('span', { class: 'sub' }, 'bez role')),
+            h('td', null, p.area || h('span', { class: 'sub' }, 'všechny')), h('td', null, p.active ? 'aktivní' : 'neaktivní'),
+            h('td', null, h('button', { class: 'btn small ghost', onclick: () => { S.edit = 'person:' + p.row; draw(); } }, 'Upravit'))))))),
+      h('p', { class: 'sub' }, 'Lidé se nemažou – nastavte „neaktivní“. Role: VEDOUCÍ (③ ④ ⑤ ⑥ ⑦), MANAŽER (navíc uzavírá QRAP a Přehled), ADMIN (navíc Správa), KIOSK (sdílený účet kiosku).'));
+  }
+  function listsCard() {
+    return h('div', { class: 'card' }, h('h2', null, 'SEZNAMY VE FORMULÁŘI'),
+      h('p', { class: 'sub' }, 'Jedna položka na řádek. Staré QRAP si ponechají původní hodnoty.'),
+      h('div', { class: 'cols3' }, S.adm.lists.map(l => {
+        const ta = h('textarea', { rows: Math.max(4, l.values.length + 1) });
+        ta.value = l.values.join('\n');
+        const b = h('button', { class: 'btn small', onclick: () => call(b, 'apiSaveList', [l.key, ta.value.split('\n')]) }, 'Uložit');
+        return h('div', { class: 'fld' }, h('span', { class: 'fld-l' }, l.title), ta, h('div', { style: 'margin-top:6px' }, b));
+      })));
+  }
+  function settingsCard() {
+    const inputs = {};
+    const b = h('button', { class: 'btn primary', onclick: () => {
+      const o = {};
+      Object.keys(inputs).forEach(k => { o[k] = inputs[k].value.trim(); });
+      call(b, 'apiSaveSettings', [o]);
+    } }, 'Uložit nastavení');
+    return h('div', { class: 'card' }, h('h2', null, 'NASTAVENÍ'),
+      h('div', { class: 'grid' }, S.adm.settings.map(x => {
+        const el = x.key === 'EMAILY' ? h('select', null, h('option', { value: 'ANO' }, 'ANO'), h('option', { value: 'NE' }, 'NE'))
+          : h('input', { type: /^(LHUTA|ZOBRAZIT|KIOSK)/.test(x.key) ? 'number' : 'text', min: 1 });
+        el.value = x.value === undefined ? '' : x.value;
+        inputs[x.key] = el;
+        return h('label', { class: 'fld' }, h('span', { class: 'fld-l' }, SETTING_LABELS[x.key] || x.key), el, h('small', null, x.help));
+      })),
+      h('div', { class: 'form-btns' }, b));
+  }
+  if (S.adm) draw();
+  else api('apiAdminData').then(res => { S.adm = res; draw(); }).catch(e => { fill(box, note(errText(e))); });
+  return h('div', null,
+    h('div', { class: 'hero' }, h('div', null, h('h1', null, 'Správa'),
+      h('div', { class: 'sub' }, 'Lidé, seznamy a nastavení aplikace. Změny platí hned (ostatní uživatelé po obnovení stránky).'))),
+    box);
+}
+
 function helpPage() {
   const yes = '✓', no = '–';
   const rows = [
-    ['① ② ③ Nový QRAP (③ stačí odpověď na riziko)', yes, yes, yes, yes],
-    ['③ Doplnit okamžitá opatření (do rozhodnutí)', yes, yes, yes, yes],
-    ['④ Informované směny, rozhodnutí a podpis', no, no, yes, yes],
-    ['⑤ 5 Proč, ⑥ konečné akce', no, yes, yes, yes],
-    ['⑥ Označit svou akci jako hotovou', yes, yes, yes, yes],
-    ['⑥ Efektivita 5 směn (zápis slotu)', yes, yes, yes, yes],
-    ['⑥ Podepsat uzavření, ⑦ hodnocení QRQC', no, no, yes, yes],
-    ['Zrušit / znovu otevřít / odemknout ①–④', no, no, no, yes]
+    ['① ② nahlásit problém + ③ otázka na riziko', yes, yes, yes, yes],
+    ['③ doplnit okamžitá opatření (do 24 h)', yes, yes, yes, yes],
+    ['④ informované směny, rozhodnutí a podpis', no, yes, yes, yes],
+    ['⑤ 5 Proč, ⑥ konečné akce (piloti vybraní v ④)', 'pilot', yes, yes, yes],
+    ['⑥ označit svou akci, zapsat kontrolu směny', yes, yes, yes, yes],
+    ['⑦ hodnocení QRQC', no, yes, yes, yes],
+    ['Uzavřít QRAP (i „vyřešeno bez 5 Proč“)', no, no, yes, yes],
+    ['Zrušit / znovu otevřít / odemknout ①–④, Přehled', no, no, yes, yes],
+    ['Správa: lidé, seznamy, nastavení', no, no, no, yes]
   ];
   return h('div', { class: 'narrow' },
-    h('div', { class: 'page-head' }, h('div', null, h('h1', null, 'Jak to funguje'),
+    h('div', { class: 'hero' }, h('div', null, h('h1', null, 'Jak to funguje'),
       h('div', { class: 'sub' }, 'Elektronická verze formuláře QRAP V3.0 pro sklad a expedici – stejné otázky ① až ⑦.'))),
     h('div', { class: 'flow' },
-      h('div', null, h('b', null, 'QR (operátor / TL)'), h('span', { class: 'sub' }, '① popis + fotky, ② kdo byl upozorněn, ③ okamžitá opatření do ' + hours3() + ' h.')),
-      h('div', null, h('b', null, 'Rozhodnutí OJT'), h('span', { class: 'sub' }, '④ směny informovány, vedoucí podepíše: 5 Proč / vyřešeno / eskalace.')),
-      h('div', null, h('b', null, '5 Proč (piloti)'), h('span', { class: 'sub' }, '⑤ proč vzniklo, proč nebylo zachyceno, kořenová příčina, poučení.')),
-      h('div', null, h('b', null, 'Konečné akce'), h('span', { class: 'sub' }, '⑥ každá akce odstraňuje krok 5 Proč, má pilota a plán.')),
-      h('div', null, h('b', null, 'Ověření a uzavření'), h('span', { class: 'sub' }, '⑥ efektivní na 5 různých směnách → vedoucí podepíše uzavření. ⑦ hodnocení QRQC.'))),
+      h('div', null, h('b', null, 'Operátor'), h('span', { class: 'sub' }, '① popis + fotky, ② kdo byl upozorněn, ③ riziko ano/ne → Odeslat. Vedoucí zóny dostane e-mail.')),
+      h('div', null, h('b', null, 'TL / vedoucí'), h('span', { class: 'sub' }, '③ doplní okamžitá opatření do ' + hours3() + ' h, ④ informuje směny a podepíše rozhodnutí.')),
+      h('div', null, h('b', null, 'Piloti'), h('span', { class: 'sub' }, '⑤ 5 Proč a kořenová příčina, ⑥ konečné akce s termínem.')),
+      h('div', null, h('b', null, 'Ověření'), h('span', { class: 'sub' }, '⑥ efektivní na 5 různých směnách (zapisuje TL u tabule).')),
+      h('div', null, h('b', null, 'Manažer'), h('span', { class: 'sub' }, 'uzavře QRAP. ⑦ hodnocení QRQC.'))),
     h('div', { class: 'card', style: 'margin-top:14px' }, h('h2', null, 'KDO CO MŮŽE'),
       h('div', { class: 'slots-wrap' }, h('table', { class: 'roles' },
-        h('tr', null, h('th', null, ''), h('th', null, 'Kdokoli'), h('th', null, 'Pilot'), h('th', null, 'Vedoucí'), h('th', null, 'Manažer')),
+        h('tr', null, h('th', null, ''), h('th', null, 'Kdokoli'), h('th', null, 'Vedoucí'), h('th', null, 'Manažer'), h('th', null, 'Admin')),
         rows.map(r => h('tr', null, r.map(c => h('td', null, c)))))),
-      h('p', { class: 'sub', style: 'margin-top:10px' }, 'Vaše role: ' + (roleName(S.me.role) || 'běžný uživatel') +
-        '. Role nastavuje správce v Google tabulce na listu „Lidé“. Piloty vybírá vedoucí v ④.')),
-    h('div', { class: 'card' }, h('h2', null, 'TIPY'),
-      h('p', null, '• Na tabuli klikněte na „Moje úkoly“ – uvidíte jen to, co čeká na vás.'),
-      h('p', null, '• Tlačítko „Tisk / PDF“ v detailu vytiskne celý formulář QRAP.'),
-      h('p', null, '• Kiosk: přidejte k adrese aplikace ?kiosk=1 – obrazovka se po chvíli sama vrátí na tabuli.')));
+      h('p', { class: 'sub', style: 'margin-top:10px' }, 'Vaše role: ' + (roleName(S.me.role) || 'běžný uživatel') + '.')),
+    h('div', { class: 'card' }, h('h2', null, 'KIOSK'),
+      h('p', null, 'Na kiosku se dá udělat všechno. Kde je potřeba podpis (④, uzavření, ⑤ ⑥, ⑦), aplikace se zeptá „Kdo podepisuje?“ – napište své jméno a vyberte ho z nabídky. Aplikace ověří vaši roli a do historie zapíše vaše jméno a čas.'),
+      h('p', null, 'Po chvíli bez dotyku se kiosk sám vrátí na tabuli.')));
 }
 
 async function refresh(quiet, btn, all) {
@@ -1540,7 +1888,7 @@ function startKiosk() {
   let last = Date.now();
   ['click', 'keydown', 'touchstart', 'input'].forEach(ev => document.addEventListener(ev, () => { last = Date.now(); }, true));
   setInterval(() => {
-    const limit = S.view === 'done' ? 20000 : (Number(S.cfg.KIOSK_NAVRAT_SEKUND) || 120) * 1000;
+    const limit = (Number(S.cfg.KIOSK_NAVRAT_SEKUND) || 120) * 1000;
     if (S.view !== 'board' && Date.now() - last > limit) go('board');
   }, 5000);
 }
@@ -1552,7 +1900,7 @@ function start() {
       h('p', { class: 'muted' }, 'Kontaktujte správce aplikace.'))));
     return;
   }
-  fill(document.getElementById('people-list'), S.people.map(p => h('option', { value: p.name })));
+  fillPeopleList();
   const p = BOOT.params || {};
   S.view = p.id ? 'detail' : (['new', 'help'].includes(p.view) ? p.view : 'board');
   S.id = p.id || null;

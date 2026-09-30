@@ -11,6 +11,15 @@
  *   Code.gs      = reads/writes the Sheet, checks who may do what, sends e-mails
  *   Index.html   = the whole screen; it receives all data when the page opens, so clicking around is instant
  *
+ * ROLES (tab Lidé, column Role)
+ *   (empty)   operators and anyone: report ①②, the ③ risk question, finish ③, 5-shift check, own action done
+ *   VEDOUCÍ   TL / leaders: ③, sign ④, choose pilots, ⑤ ⑥, ⑦
+ *   MANAŽER   any number of people, all with the same rights: like VEDOUCÍ + close QRAPs, cancel / reopen /
+ *             unlock, escalations, dashboard
+ *   ADMIN     like MANAŽER + the page "Správa" (people, lists, settings). The owner of the script is always ADMIN.
+ *   KIOSK     the shared kiosk account. On the kiosk a person types their name at every signature;
+ *             the app then acts with that person's role (never with admin rights).
+ *
  * SECTIONS
  *   1. Tabs, columns, defaults     5. Permissions (who may do what)
  *   2. Web app entry (doGet)       6. Sheet helpers and form checks
@@ -36,11 +45,11 @@ const COLS = {
     ['when', '① KDY?'], ['zone', '① KDE? – zóna'], ['location', '① KDE? – lokace'], ['originZone', '① Kde vzniklo?'],
     ['qty', '① KOLIK?'], ['unit', '① Jednotka'], ['nokSituation', '① NOK situace bez kusů'],
     ['repeat7', '① Stejný problém v posledních 7 dnech?'], ['repeatRef', '① Opakovaný QRAP'],
-    ['finder', '① JMÉNO'], ['badge', '① Číslo odznaku'],
+    ['finder', '① JMÉNO'],
     ['materialNo', '① Číslo materiálu'], ['huNo', '① Číslo HU / dodacího listu'], ['supplier', '① Dodavatel'],
     ['photoWrong', '① Foto ŠPATNĚ'], ['photoRight', '① Foto SPRÁVNĚ'], ['photoException', '① Výjimka – proč nejsou fotky'],
     // ② KDO BYL UPOZORNĚN?
-    ['notified', '② Upozorněni'], ['notifiedOther', '② Jiné – kdo'],
+    ['notified', '② Upozorněni'], ['notifiedOther', '② Jiné – kdo'], ['notifyPeople', '② Informovat e-mailem'],
     // ③ OKAMŽITÁ OPATŘENÍ <24h (the actions themselves are rows in the tab Akce, part ③)
     ['risk', '③ Riziko u zboží na skladě / expedovaného?'], ['checked', '③ Zkontrolováno ks'],
     ['wrong', '③ Nalezeno špatně ks'], ['checkRunning', '③ Kontrola probíhá'],
@@ -110,7 +119,7 @@ const EXAMPLE_PEOPLE = [
   ['Petr Svoboda', 'petr.svoboda@example.com', 'VEDOUCÍ', 'Sklad', 'ANO'],
   ['Eva Dvořáková', 'eva.dvorakova@example.com', 'MANAŽER', '', 'ANO'],
   ['Tomáš Černý', 'tomas.cerny@example.com', '', 'Expedice', 'ANO'],
-  ['Kiosk Expedice', 'kiosk.expedice@example.com', '', 'Expedice', 'ANO']
+  ['Kiosk Expedice', 'kiosk.expedice@example.com', 'KIOSK', 'Expedice', 'ANO']
 ];
 
 const DECISIONS = {
@@ -119,17 +128,19 @@ const DECISIONS = {
   'ESKALACE': 'Eskalace na vyšší úroveň (manažer)'
 };
 const EFF_RESULTS = ['EFEKTIVNÍ', 'NEOVĚŘENO', 'NEEFEKTIVNÍ'];
+const ROLES = ['VEDOUCÍ', 'MANAŽER', 'ADMIN', 'KIOSK'];
 const ASSESS_VALUES = ['OK', 'NOK', 'N/A'];
 const FEEDBACK_TYPES = ['pochvala', 'silná stránka', 'ke zlepšení'];
 const NEXT_STEP = {
   'OPATŘENÍ': '③ okamžitá opatření', 'ROZHODNUTÍ': '④ rozhodnutí', 'ANALÝZA': '⑤ 5 Proč a ⑥ konečné akce',
-  'AKCE': '⑥ konečné akce', 'OVĚŘENÍ': '⑥ efektivita 5 směn a uzavření'
+  'AKCE': '⑥ konečné akce', 'OVĚŘENÍ': '⑥ efektivita 5 směn a uzavření manažerem', 'SCHVÁLENÍ': 'uzavření manažerem'
 };
 
 // Per-request memory (each server call starts with empty values).
 let MEMO_ = {};
 let CFG_ = null;
 let ME_ = null;
+let REAL_ = null; // the Google account of this request, when ME_ is a person signing on the kiosk
 let NO_MAIL_ = false;
 
 // =====================================================================================
@@ -153,13 +164,11 @@ function doGet(e) {
 
 function startData_(params) {
   const c = cfg_();
-  const settings = Object.assign({}, c.settings);
-  delete settings.FOTKY_SLOZKA_ID;
   return Object.assign(listData_(false), {
     me: me_(),
-    cfg: settings,
+    cfg: publicSettings_(c.settings),
     lists: c.lists,
-    people: c.people.filter(p => p.active).map(p => ({ name: p.name, email: p.email, role: p.role })),
+    people: c.people.filter(p => p.active && p.role !== 'KIOSK').map(p => ({ name: p.name, email: p.email, role: p.role })),
     params: { id: String(params.id || ''), view: String(params.view || ''), kiosk: String(params.kiosk || '') }
   });
 }
@@ -214,7 +223,7 @@ function apiCreate(f) {
 function apiSave(id, part, f) {
   f = f || {};
   return lock_(() => {
-    const me = me_();
+    const me = signAs_(f.signer);
     const q = find_(id);
     q.status = statusOf_(q, actionsOf_(id), effectsOf_(id));
     let text;
@@ -261,7 +270,7 @@ function apiSave(id, part, f) {
       if (d === 'POKRAČOVAT') need_(pilots.length, 'Vyberte alespoň jednoho pilota pro analýzu 5 Proč.');
       if (f.shifts !== undefined) q.shifts = onlyFrom_(f.shifts, cfg_().lists.shifts);
       Object.assign(q, { decision: d, decisionNote: note, pilots: pilots.join(','), decisionBy: me.name, decisionAt: nowIso_() });
-      if (d === 'VYŘEŠENO') { q.closedAt = q.decisionAt; q.closedBy = me.name; }
+      if (d === 'VYŘEŠENO' && me.manager) { q.closedAt = q.decisionAt; q.closedBy = me.name; } // else: waits for a manager
       text = '④ Rozhodnutí podepsáno: ' + DECISIONS[d] + (pilots.length ? ' · piloti: ' + pilots.join(', ') : '');
       if (pilots.length) mailPilots_(q, pilots);
       if (d === 'ESKALACE') mailEscalated_(q);
@@ -282,9 +291,11 @@ function apiSave(id, part, f) {
       text = '⑤ Analýza 5 Proč uložena';
 
     } else if (part === 'uzavreni') {
-      need_(me.lead, 'Uzavření podepisuje vedoucí nebo manažer.');
-      const miss = checklist_(q, actionsOf_(id), effState_(effectsOf_(id))).filter(c => !c.ok).map(c => c.label);
-      need_(!miss.length, 'QRAP zatím nelze uzavřít. Chybí: ' + miss.join(', ') + '.');
+      need_(me.manager, 'QRAP uzavírá manažer.');
+      if (q.status !== 'SCHVÁLENÍ') {
+        const miss = checklist_(q, actionsOf_(id), effState_(effectsOf_(id))).filter(c => !c.ok).map(c => c.label);
+        need_(!miss.length, 'QRAP zatím nelze uzavřít. Chybí: ' + miss.join(', ') + '.');
+      }
       q.closedAt = nowIso_();
       q.closedBy = me.name;
       text = '⑥ Uzavření QRAP podepsáno';
@@ -306,7 +317,7 @@ function apiSave(id, part, f) {
 function apiSaveAction(id, a) {
   a = a || {};
   return lock_(() => {
-    const me = me_();
+    const me = signAs_(a.signer);
     const q = find_(id);
     const acts = actionsOf_(id);
     q.status = statusOf_(q, acts, effectsOf_(id));
@@ -387,7 +398,7 @@ function apiSaveEffect(id, p) {
 function apiAssess(id, f) {
   f = f || {};
   return lock_(() => {
-    const me = me_();
+    const me = signAs_(f.signer);
     const q = find_(id);
     q.status = statusOf_(q, actionsOf_(id), effectsOf_(id));
     need_(canAssess_(me, q), 'Hodnotí vedoucí nebo manažer.');
@@ -435,9 +446,9 @@ function apiHistory(id) {
  * Manager only (reason always required):
  *   'cancel' an open problem · 'reopen' a closed / cancelled one · 'unlock' ①–④ (cancels the decision)
  */
-function apiAdmin(id, op, reason) {
+function apiAdmin(id, op, reason, signer) {
   return lock_(() => {
-    const me = me_();
+    const me = signAs_(signer);
     need_(me.manager, 'Tuto akci může provést jen manažer.');
     const q = find_(id);
     q.status = statusOf_(q, actionsOf_(id), effectsOf_(id));
@@ -466,6 +477,113 @@ function apiAdmin(id, op, reason) {
   });
 }
 
+// ---- Správa (ADMIN only): people, lists and settings from the web page instead of the Sheet
+
+/** Everything the page "Správa" shows. */
+function apiAdminData() {
+  need_(me_().admin, 'Správa je jen pro admina.');
+  clearCache();
+  const c = cfg_();
+  return {
+    people: c.people.map(p => ({ row: p.row, name: p.name, email: p.email, role: p.role, area: p.area, active: p.active })),
+    lists: LISTS.map(l => ({ key: l[0], title: l[1], values: c.lists[l[0]] })),
+    settings: SETTINGS.filter(x => x[0] !== 'FOTKY_SLOZKA_ID').map(x => ({ key: x[0], value: c.settings[x[0]], help: x[2] })),
+    roles: ROLES,
+    boot: { people: c.people.filter(p => p.active).map(p => ({ name: p.name, email: p.email, role: p.role })), lists: c.lists,
+      cfg: publicSettings_(c.settings) }
+  };
+}
+
+/** Add a person (no row) or change one (row = the row number in Lidé). People are never deleted – set active false. */
+function apiSavePerson(p) {
+  p = p || {};
+  need_(me_().admin, 'Správa je jen pro admina.');
+  return lock_(() => {
+    clearCache();
+    const people = cfg_().people;
+    const v = [txt_(p.name, 100), txt_(p.email, 100).toLowerCase(), p.role ? oneOf_(p.role, ROLES, 'Neplatná role.') : '',
+      txt_(p.area, 100), p.active === false ? 'NE' : 'ANO'];
+    need_(v[0], 'Vyplňte jméno.');
+    need_(/^[^@\s]+@[^@\s]+$/.test(v[1]), 'Vyplňte platný e-mail.');
+    const row = Number(p.row) || 0;
+    need_(!people.some(x => x.email === v[1] && x.row !== row), 'Tento e-mail už v seznamu je.');
+    const sh = sheet_(TAB.people);
+    if (row) {
+      need_(people.some(x => x.row === row), 'Osoba nenalezena.');
+      sh.getRange(row, 1, 1, 5).setValues([v.map(x => "'" + x)]);
+    } else {
+      sh.appendRow(v.map(x => "'" + x));
+    }
+    log_('SPRÁVA', 'Lidé: ' + v[0] + ' <' + v[1] + '> ' + (v[2] || 'bez role') + (v[4] === 'NE' ? ' (neaktivní)' : ''));
+    clearCache();
+    return apiAdminData();
+  });
+}
+
+/** Replace one list of the tab Seznamy (one value per item, empty values dropped). */
+function apiSaveList(key, values) {
+  need_(me_().admin, 'Správa je jen pro admina.');
+  const l = LISTS.filter(x => x[0] === key)[0];
+  need_(l, 'Neznámý seznam.');
+  const vals = (Array.isArray(values) ? values : []).map(v => txt_(v, 100)).filter((v, i, a) => v && a.indexOf(v) === i);
+  need_(vals.length, 'Seznam nesmí být prázdný.');
+  return lock_(() => {
+    const sh = sheet_(TAB.lists);
+    const head = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), 1)).getValues()[0].map(v => String(v).trim());
+    let col = head.indexOf(l[1]) + 1;
+    if (!col) {
+      col = head.filter(String).length + 1;
+      if (sh.getMaxColumns() < col) sh.insertColumnsAfter(sh.getMaxColumns(), col - sh.getMaxColumns());
+      sh.getRange(1, col).setValue(l[1]);
+    }
+    const n = Math.max(vals.length, sh.getLastRow() - 1, 1);
+    if (sh.getMaxRows() < n + 1) sh.insertRowsAfter(sh.getMaxRows(), n + 1 - sh.getMaxRows());
+    const out = [];
+    for (let i = 0; i < n; i++) out.push([vals[i] ? "'" + vals[i] : '']);
+    sh.getRange(2, col, n, 1).setValues(out);
+    log_('SPRÁVA', 'Seznam „' + l[1] + '“: ' + vals.join(', '));
+    clearCache();
+    return apiAdminData();
+  });
+}
+
+/** Change settings (only the keys of the tab Nastavení, checked). */
+function apiSaveSettings(obj) {
+  obj = obj || {};
+  need_(me_().admin, 'Správa je jen pro admina.');
+  const numbers = ['LHUTA_OPATRENI_HODIN', 'ZOBRAZIT_UZAVRENE_DNI', 'KIOSK_NAVRAT_SEKUND'];
+  const clean = {};
+  Object.keys(obj).forEach(k => {
+    need_(SETTINGS.some(x => x[0] === k) && k !== 'FOTKY_SLOZKA_ID', 'Neznámé nastavení ' + k);
+    let v = txt_(obj[k], 300);
+    if (numbers.indexOf(k) >= 0) { need_(/^\d+$/.test(v) && Number(v) > 0, k + ': zadejte kladné číslo.'); v = Number(v); }
+    if (k === 'EMAILY') v = oneOf_(v, ['ANO', 'NE'], 'EMAILY: ANO nebo NE.');
+    if (k === 'EMAIL_KVALITA' || k === 'EMAIL_BOZP') need_(!v || /^[^@\s]+@[^@\s]+$/.test(v), k + ': neplatný e-mail.');
+    if (k === 'ODKAZ_APLIKACE') need_(!v || /^https:\/\//.test(v), 'Odkaz aplikace musí začínat https://');
+    if (k === 'NAZEV') need_(v, 'Název nesmí být prázdný.');
+    clean[k] = v;
+  });
+  return lock_(() => {
+    const sh = sheet_(TAB.settings);
+    const rows = sh.getDataRange().getValues();
+    Object.keys(clean).forEach(k => {
+      const i = rows.findIndex(r => String(r[0]).trim() === k);
+      const val = typeof clean[k] === 'number' ? clean[k] : "'" + clean[k];
+      if (i >= 0) sh.getRange(i + 1, 2).setValue(val);
+      else sh.appendRow([k, val, (SETTINGS.filter(x => x[0] === k)[0] || [])[2] || '']);
+    });
+    log_('SPRÁVA', 'Nastavení: ' + Object.keys(clean).map(k => k + ' = ' + clean[k]).join(', '));
+    clearCache();
+    return apiAdminData();
+  });
+}
+
+function publicSettings_(settings) {
+  const o = Object.assign({}, settings);
+  delete o.FOTKY_SLOZKA_ID;
+  return o;
+}
+
 function clearDecision_(q) {
   Object.assign(q, { decision: '', decisionNote: '', decisionBy: '', decisionAt: '', closedAt: '', closedBy: '' });
 }
@@ -475,7 +593,7 @@ function clearDecision_(q) {
 // =====================================================================================
 
 /**
- * OPATŘENÍ → ROZHODNUTÍ → (VYŘEŠENO = UZAVŘENO) | ANALÝZA → AKCE → OVĚŘENÍ → UZAVŘENO
+ * OPATŘENÍ → ROZHODNUTÍ → (VYŘEŠENO → SCHVÁLENÍ) | ANALÝZA → AKCE → OVĚŘENÍ → UZAVŘENO (only a manager closes)
  * ANALÝZA: root cause not marked or no action yet (after "neefektivní" a NEW action is needed).
  */
 function statusOf_(q, acts, effs) {
@@ -483,6 +601,7 @@ function statusOf_(q, acts, effs) {
   if (q.closedAt) return 'UZAVŘENO';
   if (!q.s3Done) return 'OPATŘENÍ';
   if (!q.decision) return 'ROZHODNUTÍ';
+  if (q.decision === 'VYŘEŠENO') return 'SCHVÁLENÍ'; // signed by a leader: a manager approves the closure
   const defs = defActions_(acts);
   const eff = effState_(effs);
   const thisRound = eff.reopenAt ? defs.filter(a => a.created > eff.reopenAt) : defs;
@@ -545,7 +664,7 @@ function finish_(q, text, isNew) {
   const before = q.status;
   q.status = statusOf_(q, acts, effectsOf_(q.id));
   q.updated = nowIso_();
-  q.updatedBy = me_().email;
+  q.updatedBy = who_();
   if (isNew) insert_(TAB.qraps, q); else update_(TAB.qraps, q);
   log_(q.id, text);
   if (!isNew && before !== q.status) log_(q.id, 'Stav: ' + q.status);
@@ -555,8 +674,10 @@ function finish_(q, text, isNew) {
 // 5. PERMISSIONS
 //    Anyone in the company: report ①②③, edit ③ until ④, record a 5-shift check, mark own action done.
 //    Pilots (chosen in ④):  ⑤ 5 Proč and ⑥ actions.
-//    VEDOUCÍ:               everything in ①–⑦ (sign ④, sign closure, ⑦).
-//    MANAŽER:               like a leader + cancel / reopen / unlock. The owner of the script is always MANAŽER.
+//    VEDOUCÍ:               ③, sign ④, ⑤ ⑥, ⑦.
+//    MANAŽER:               like a leader + close QRAPs, cancel / reopen / unlock, dashboard.
+//    ADMIN:                 like a manager + page Správa. The owner of the script is always ADMIN.
+//    KIOSK account:         acts as the person whose name is typed at a signature (see signAs_).
 // =====================================================================================
 
 function me_() {
@@ -565,16 +686,42 @@ function me_() {
   try { email = String(Session.getActiveUser().getEmail() || '').toLowerCase(); } catch (e) { email = ''; }
   const p = cfg_().people.filter(x => x.active && x.email && x.email === email)[0];
   let role = p ? p.role : '';
-  if (email && email === ownerEmail_()) role = 'MANAŽER';
-  ME_ = {
-    email: email,
-    name: p ? p.name : (email ? email.split('@')[0] : ''),
-    role: role,
-    area: p ? p.area : '',
-    lead: role === 'VEDOUCÍ' || role === 'MANAŽER',
-    manager: role === 'MANAŽER'
-  };
+  if (email && email === ownerEmail_()) role = 'ADMIN';
+  ME_ = person_(email, p ? p.name : (email ? email.split('@')[0] : ''), role, p ? p.area : '');
   return ME_;
+}
+
+function person_(email, name, role, area) {
+  return {
+    email: email, name: name, role: role, area: area,
+    lead: role === 'VEDOUCÍ' || role === 'MANAŽER' || role === 'ADMIN',
+    manager: role === 'MANAŽER' || role === 'ADMIN',
+    admin: role === 'ADMIN'
+  };
+}
+
+/**
+ * On the kiosk account the person types their name at a signature. The name must be an active person
+ * in Lidé; from then on this request acts with that person's role (a manager at most, never admin).
+ * On a personal account the typed name is ignored – the Google account decides.
+ */
+function signAs_(signer) {
+  const real = me_();
+  const name = txt_(signer, 100);
+  if (real.role !== 'KIOSK' || !name) return real;
+  const key = plain_(name);
+  const p = cfg_().people.filter(x => x.active && x.email && x.role !== 'KIOSK' &&
+    (plain_(x.name) === key || x.email === name.toLowerCase()))[0];
+  need_(p, 'Jméno „' + name + '“ není v seznamu Lidé. Vyberte své jméno ze seznamu.');
+  REAL_ = real;
+  ME_ = person_(p.email, p.name, p.role === 'ADMIN' ? 'MANAŽER' : p.role, p.area);
+  ME_.viaKiosk = true;
+  return ME_;
+}
+
+/** What the kiosk may offer on screen: every step, because the name is checked at saving. */
+function screenMe_(me) {
+  return me.role === 'KIOSK' ? Object.assign({}, me, { lead: true, manager: true, admin: false }) : me;
 }
 
 function ownerEmail_() {
@@ -588,7 +735,7 @@ function canShifts_(me, q) { return me.lead && isOpen_(q) && !q.decision; }
 function canDecide_(me, q) { return me.lead && q.status === 'ROZHODNUTÍ'; }
 function canAnalyze_(me, q) { return isAnalysis_(q) && (me.lead || isPilot_(me, q)); }
 function canEffect_(me, q) { return q.status === 'OVĚŘENÍ'; }
-function canClose_(me, q) { return me.lead && q.status === 'OVĚŘENÍ'; }
+function canClose_(me, q) { return me.manager && (q.status === 'OVĚŘENÍ' || q.status === 'SCHVÁLENÍ'); }
 function canAssess_(me, q) { return me.lead && q.status !== 'ZRUŠENO'; }
 
 /** A problem as the page gets it, including what the current user may do with it. */
@@ -599,15 +746,17 @@ function pubQ_(q, me, acts, effs) {
   o.s3Missing = s3Missing_(q, iaActions_(acts));
   o.eff = { round: eff.round, ok: eff.okCount, allOk: eff.allOk };
   o.checklist = checklist_(q, acts, eff);
+  me = screenMe_(me);
   o.can = {
     popis: canPopis_(me, q), opatreni: canOpatreni_(me, q), shifts: canShifts_(me, q), decide: canDecide_(me, q),
     analyze: canAnalyze_(me, q), pilots: me.lead && isAnalysis_(q), effect: canEffect_(me, q), close: canClose_(me, q),
-    assess: canAssess_(me, q), admin: me.manager
+    assess: canAssess_(me, q), manage: me.manager
   };
   return o;
 }
 
 function pubA_(a, me, q) {
+  me = screenMe_(me);
   const o = pub_(TAB.actions, a);
   const analyst = canAnalyze_(me, q);
   o.canEdit = a.part === '⑥' && analyst && !a.removed;
@@ -621,8 +770,11 @@ function pub_(tab, row) {
   return o;
 }
 
+/** The account the page is shown to (the kiosk stays the kiosk after a signature). */
+function viewer_() { return REAL_ || me_(); }
+
 function pack_(id) {
-  const me = me_();
+  const me = viewer_();
   const q = find_(id);
   const acts = actionsOf_(id);
   const effs = effectsOf_(id);
@@ -637,7 +789,7 @@ function pack_(id) {
 
 /** Open problems + problems closed in the last N days (or everything when all = true). */
 function listData_(all) {
-  const me = me_();
+  const me = viewer_();
   const since = Date.now() - (Number(setting_('ZOBRAZIT_UZAVRENE_DNI')) || 60) * 864e5;
   const group = tab => {
     const g = {};
@@ -743,8 +895,11 @@ function effectsOf_(id) { return table_(TAB.effects).rows.filter(r => r.qrapId =
 function nextNo_(acts) { return acts.reduce((m, x) => Math.max(m, x.no || 0), 0) + 1; }
 
 function log_(id, text) {
-  sheet_(TAB.log).appendRow([new Date(), me_().email || '(neznámý účet)', "'" + id, "'" + text]);
+  sheet_(TAB.log).appendRow([new Date(), who_() || '(neznámý účet)', "'" + id, "'" + text]);
 }
+
+/** Who did it, for the history: the e-mail, plus " (kiosk)" when signed by name on the kiosk. */
+function who_() { const me = me_(); return me.email + (me.viaKiosk ? ' (kiosk)' : ''); }
 
 function nextId_(rows) {
   const prefix = 'Q-' + Utilities.formatDate(new Date(), tz_(), 'yyyy') + '-';
@@ -795,21 +950,24 @@ function readLists_() {
 
 function readPeople_() {
   return sheet_(TAB.people).getDataRange().getValues().slice(1)
-    .filter(r => String(r[0]).trim() || String(r[1]).trim())
-    .map(r => ({
+    .map((r, i) => ({
+      row: i + 2,
       name: String(r[0]).trim(),
       email: String(r[1]).trim().toLowerCase(),
       role: roleOf_(r[2]),
       area: String(r[3]).trim(),
       active: plain_(r[4]) !== 'NE'
-    }));
+    }))
+    .filter(p => p.name || p.email);
 }
 
-/** "Vedoucí", "VEDOUCI", "leader" … → 'VEDOUCÍ'; "Manažer", "manager", "admin" → 'MANAŽER'; else ''. */
+/** "Vedoucí", "leader" … → 'VEDOUCÍ'; "Manažer", "manager" → 'MANAŽER'; "admin", "správce" → 'ADMIN'; "kiosk" → 'KIOSK'. */
 function roleOf_(v) {
   const r = plain_(v);
   if (['VEDOUCI', 'LEADER', 'LEAD', 'TL', 'SUPERVIZOR', 'SUPERVISOR', 'MISTR'].indexOf(r) >= 0) return 'VEDOUCÍ';
-  if (['MANAZER', 'MANAGER', 'ADMIN'].indexOf(r) >= 0) return 'MANAŽER';
+  if (['MANAZER', 'MANAGER'].indexOf(r) >= 0) return 'MANAŽER';
+  if (['ADMIN', 'SPRAVCE'].indexOf(r) >= 0) return 'ADMIN';
+  if (r === 'KIOSK') return 'KIOSK';
   return '';
 }
 
@@ -872,7 +1030,7 @@ function emailsOf_(v) {
   return list_(multi_(v)).map(x => {
     const k = x.toLowerCase();
     const p = people.filter(y => y.email === k || y.name.toLowerCase() === k)[0];
-    need_(p, 'Pilot „' + x + '“ není na listu Lidé.');
+    need_(p, 'Osoba „' + x + '“ není na listu Lidé.');
     return p.email;
   }).filter((e, i, a) => a.indexOf(e) === i);
 }
@@ -883,9 +1041,10 @@ function popisFrom_(f) {
     safety: yn_(f.safety), what: txt_(f.what), how: txt_(f.how, 100), howOther: txt_(f.howOther, 200),
     when: iso_(f.when), zone: txt_(f.zone, 100), location: txt_(f.location, 100), originZone: txt_(f.originZone, 100),
     qty: num_(f.qty, 'KOLIK'), unit: txt_(f.unit, 50), nokSituation: f.nokSituation === true || f.nokSituation === 'ANO' ? 'ANO' : '',
-    repeat7: yn_(f.repeat7), repeatRef: txt_(f.repeatRef, 40).toUpperCase(), finder: txt_(f.finder, 100), badge: txt_(f.badge, 40),
+    repeat7: yn_(f.repeat7), repeatRef: txt_(f.repeatRef, 40).toUpperCase(), finder: txt_(f.finder, 100),
     materialNo: txt_(f.materialNo, 60), huNo: txt_(f.huNo, 60), supplier: txt_(f.supplier, 100),
-    photoException: txt_(f.photoException, 500), notified: multi_(f.notified), notifiedOther: txt_(f.notifiedOther, 200)
+    photoException: txt_(f.photoException, 500), notified: multi_(f.notified), notifiedOther: txt_(f.notifiedOther, 200),
+    notifyPeople: emailsOf_(f.notifyPeople).join(',')
   };
   if (!isOther_(q.how)) q.howOther = '';
   if (q.repeat7 !== 'ANO') q.repeatRef = '';
@@ -899,7 +1058,7 @@ function popisFrom_(f) {
   if (!q.location) miss.push('KDE? – lokace');
   if (q.qty === '') miss.push('KOLIK?');
   if (!q.repeat7) miss.push('Stejný problém v posledních 7 dnech?');
-  if (!q.finder && !q.badge) miss.push('JMÉNO nebo číslo odznaku');
+  if (!q.finder) miss.push('JMÉNO');
   if (!q.notified) miss.push('② Kdo byl upozorněn?');
   else if (list_(q.notified).some(isOther_) && !q.notifiedOther) miss.push('② Jiné – kdo');
   need_(!miss.length, 'Vyplňte prosím: ' + miss.join(', ') + '.');
@@ -1041,16 +1200,17 @@ function leaders_(zone) {
 }
 
 function managers_() {
-  return cfg_().people.filter(p => p.active && p.role === 'MANAŽER').map(p => p.email);
+  const m = cfg_().people.filter(p => p.active && p.role === 'MANAŽER').map(p => p.email);
+  return m.length ? m : cfg_().people.filter(p => p.active && p.role === 'ADMIN').map(p => p.email);
 }
 
 function facts_(q) {
   return ['CO: ' + q.what, 'KDE: ' + [q.zone, q.location].filter(String).join(' / '), 'KDY: ' + fmt_(q.when),
-    'KOLIK: ' + (q.qty === '' ? '–' : q.qty + ' ' + q.unit), 'JMÉNO: ' + (q.finder || q.badge)];
+    'KOLIK: ' + (q.qty === '' ? '–' : q.qty + ' ' + q.unit), 'JMÉNO: ' + q.finder];
 }
 
 function mailNew_(q) {
-  send_(leaders_(q.zone), q.id + ' – nový problém (' + q.zone + ')', ['Byl nahlášen nový QRAP.', ''].concat(facts_(q), ['',
+  send_(leaders_(q.zone).concat(list_(q.notifyPeople)), q.id + ' – nový problém (' + q.zone + ')', ['Byl nahlášen nový QRAP.', ''].concat(facts_(q), ['',
     q.s3Done ? 'Okamžitá opatření ③ jsou kompletní. Další krok: ④ rozhodnutí.'
       : 'Další krok: ③ okamžitá opatření do ' + setting_('LHUTA_OPATRENI_HODIN') + ' h, potom ④ rozhodnutí.']), q.id);
   if (q.safety === 'ANO') mailSafety_(q);
@@ -1126,7 +1286,7 @@ function dailyReminder(e) {
     return isOpen_(q);
   });
   const today = Utilities.formatDate(new Date(), tz_(), 'yyyy-MM-dd');
-  cfg_().people.filter(p => p.active && p.role).forEach(p => {
+  cfg_().people.filter(p => p.active && p.role && p.role !== 'KIOSK').forEach(p => {
     const mine = open.filter(q => !p.area || p.area === q.zone);
     if (!mine.length) return;
     send_([p.email], 'otevřené problémy: ' + mine.length, ['Dobré ráno, tyto QRAP jsou otevřené:', '']
@@ -1195,11 +1355,11 @@ function setup() {
 
   if (!ss.getSheetByName(TAB.people)) {
     const sh = makeTab_(ss, TAB.people, ['Jméno', 'E-mail', 'Role', 'Oblast', 'Aktivní']);
-    const rows = [['Správce aplikace', Session.getEffectiveUser().getEmail(), 'MANAŽER', '', 'ANO']].concat(EXAMPLE_PEOPLE);
+    const rows = [['Správce aplikace', Session.getEffectiveUser().getEmail(), 'ADMIN', '', 'ANO']].concat(EXAMPLE_PEOPLE);
     sh.getRange(2, 1, rows.length, 5).setValues(rows);
     sh.getRange(2, 3, 500, 1).setDataValidation(SpreadsheetApp.newDataValidation()
-      .requireValueInList(['VEDOUCÍ', 'MANAŽER'], true).setAllowInvalid(false)
-      .setHelpText('Prázdné = běžný uživatel. VEDOUCÍ = podepisuje rozhodnutí a uzavření. MANAŽER = navíc eskalace a správa.').build());
+      .requireValueInList(ROLES, true).setAllowInvalid(false)
+      .setHelpText('Prázdné = běžný uživatel. VEDOUCÍ = ③ ④ ⑤ ⑥ ⑦. MANAŽER = navíc uzavírá QRAP. ADMIN = navíc Správa. KIOSK = sdílený účet kiosku.').build());
     sh.getRange(2, 5, 500, 1).setDataValidation(SpreadsheetApp.newDataValidation()
       .requireValueInList(['ANO', 'NE'], true).build());
   }
