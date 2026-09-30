@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+/* ===== Colours: one blue accent, grey for everything else, green / amber / red only in small labels ===== */
+:root {
+  --bg: #f3f4f6; --card: #fff; --line: #e5e7eb; --line2: #d1d5db; --text: #111827; --muted: #6b7280;
+  --accent: #1d4ed8; --accent-d: #1e40af; --accent-s: #eef3ff;
+  --ok: #15803d; --ok-s: #ecfdf3; --warn: #b45309; --warn-s: #fff7e6; --bad: #b91c1c; --bad-s: #fef2f2; --r: 10px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+button { font: inherit; cursor: pointer; }
+h1 { font-size: 24px; line-height: 1.25; margin: 0 0 4px; }
+h2 { font-size: 14px; letter-spacing: .03em; margin: 0; }
+p { margin: 0 0 8px; }
+.muted { color: var(--muted); }
+.sub { color: var(--muted); font-size: 13px; }
+.grow { flex: 1; }
+
+/* header */
+.top { background: #fff; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; }
+.top-in { max-width: 1180px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 0; font-weight: 700; font-size: 16px; color: var(--text); }
+.logo { width: 30px; height: 30px; border-radius: 8px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 15px; }
+nav { display: flex; gap: 4px; }
+.nav { background: none; border: 0; padding: 7px 12px; border-radius: 8px; color: var(--muted); font-weight: 600; }
+.nav:hover { background: #f3f4f6; color: var(--text); }
+.nav.on { background: var(--accent-s); color: var(--accent); }
+.who { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+.role { background: #f3f4f6; border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 700; color: #374151; }
+main { max-width: 1180px; margin: 0 auto; padding: 24px 20px 64px; }
+.narrow { max-width: 860px; margin: 0 auto; }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line2); background: #fff; color: var(--text); border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 14px; white-space: nowrap; }
+.btn:hover { background: #f9fafb; }
+.btn:disabled { opacity: .6; cursor: wait; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { background: var(--accent-d); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--accent); }
+.btn.ghost:hover { background: var(--accent-s); }
+.btn.danger { color: var(--bad); border-color: #f3c4c4; }
+.btn.small { padding: 4px 10px; font-size: 13px; }
+.btn.big { padding: 12px 24px; font-size: 16px; }
+.link { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 600; }
+
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+
+/* board */
+.tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
+.tile { background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; text-align: left; color: var(--text); }
+.tile b { display: block; font-size: 24px; line-height: 1.2; }
+.tile span { font-size: 13px; color: var(--muted); font-weight: 600; }
+.tile:hover { border-color: var(--line2); }
+.tile.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.tile.alert b { color: var(--bad); }
+.toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.toolbar select { width: auto; min-width: 200px; }
+.toolbar input[type=search] { width: 360px; max-width: 100%; }
+.list { background: #fff; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.row { display: grid; grid-template-columns: 130px minmax(0, 1fr) 150px 210px 100px; gap: 14px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--line); cursor: pointer; }
+.row:first-child { border-top: 0; }
+.row:hover { background: #f9fafb; }
+.row.head { background: #f9fafb; cursor: default; padding: 9px 16px; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.row.late { box-shadow: inset 3px 0 0 var(--bad); }
+.c-id { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.c-what b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.empty { padding: 30px; text-align: center; color: var(--muted); }
+.more { text-align: center; margin-top: 12px; }
+
+/* labels */
+.badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #f3f4f6; color: #374151; white-space: nowrap; vertical-align: middle; }
+.badge.warn { background: var(--warn-s); color: var(--warn); }
+.badge.info { background: var(--accent-s); color: var(--accent); }
+.badge.ok { background: var(--ok-s); color: var(--ok); }
+.badge.bad { background: var(--bad-s); color: var(--bad); }
+.badge.muted { color: var(--muted); }
+.late-txt { color: var(--bad); font-weight: 600; }
+
+/* cards and form sections */
+.card { background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 18px 20px; margin-bottom: 14px; }
+.card h2 { margin-bottom: 10px; }
+.sec-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; min-height: 30px; }
+.sec-head h2 { margin: 0; }
+.num { width: 28px; height: 28px; flex: none; border-radius: 50%; border: 2px solid var(--line2); display: grid; place-items: center; font-weight: 700; font-size: 14px; color: var(--muted); }
+.sec.done .num { background: var(--ok); border-color: var(--ok); color: #fff; }
+.sec.now { border-color: #bcd0fb; }
+.sec.now .num { border-color: var(--accent); color: var(--accent); }
+.sec.wait h2, .sec.skip h2, .sec.wait .sec-body, .sec.skip .sec-body { color: var(--muted); }
+.kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px 22px; margin: 12px 0 0; }
+.kv span { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
+.big-text { font-size: 17px; font-weight: 600; margin: 0 0 4px; white-space: pre-wrap; }
+.pre { white-space: pre-wrap; }
+.by { color: var(--muted); font-size: 13px; margin-top: 10px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { background: #f3f4f6; border-radius: 999px; padding: 3px 10px; font-size: 13px; font-weight: 600; }
+
+/* forms */
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; align-items: start; }
+.wide { grid-column: 1 / -1; }
+.fld { display: block; }
+.fld-l { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #374151; }
+.req { color: var(--bad); }
+.fld small { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
+input, select, textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--line2); border-radius: 8px; font: inherit; background: #fff; color: var(--text); }
+textarea { resize: vertical; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-s); }
+.fld.invalid input, .fld.invalid select, .fld.invalid textarea { border-color: var(--bad); }
+.fld.invalid .fld-l { color: var(--bad); }
+.checks { display: flex; flex-wrap: wrap; gap: 8px; }
+.check { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line2); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-size: 14px; background: #fff; }
+.check input, .check-line input, .choice input { width: auto; margin: 0; box-shadow: none; }
+.check.on { border-color: var(--accent); background: var(--accent-s); color: var(--accent-d); }
+.fld.invalid .check, .fld.invalid .choice { border-color: #f0b4b4; }
+.check-line { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+.choices { display: grid; gap: 8px; }
+.choice { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line2); border-radius: 8px; padding: 10px 12px; cursor: pointer; }
+.choice input { margin-top: 3px; }
+.choice small { display: block; color: var(--muted); font-weight: 400; }
+.choice.on { border-color: var(--accent); background: var(--accent-s); }
+.choices.inline { display: flex; gap: 6px; flex-wrap: wrap; }
+.choices.inline .choice { padding: 5px 12px; }
+.form-btns { display: flex; gap: 10px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
+.sub-h { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
+
+/* detail */
+.d-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin: 6px 0 16px; }
+.next { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: var(--accent-s); border: 1px solid #cddcfb; border-radius: var(--r); padding: 12px 16px; margin-bottom: 14px; }
+.next.ok { background: var(--ok-s); border-color: #bfe5cf; }
+.next.bad { background: var(--bad-s); border-color: #f3c4c4; }
+.next.grey { background: #f9fafb; border-color: var(--line); }
+.steps { display: flex; margin: 0 0 16px; }
+.step { flex: 1; position: relative; padding-top: 20px; text-align: center; font-size: 12px; color: var(--muted); }
+.step::before { content: ''; position: absolute; top: 6px; left: 0; right: 0; height: 3px; background: var(--line); }
+.step::after { content: ''; position: absolute; top: 0; left: 50%; width: 15px; height: 15px; margin-left: -7px; border-radius: 50%; background: #fff; border: 2px solid var(--line2); }
+.step.done::before, .step.done::after { background: var(--ok); border-color: var(--ok); }
+.step.now { color: var(--accent); font-weight: 700; }
+.step.now::after { background: var(--accent); border-color: var(--accent); }
+.whys { list-style: none; margin: 0; padding: 0; }
+.whys li { padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.whys li b { color: var(--muted); font-size: 12px; display: inline-block; width: 60px; }
+.root { background: var(--warn-s); border-radius: 8px; padding: 10px 12px; margin-top: 10px; }
+.act { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.act:first-child { border-top: 0; }
+.act-no { font-weight: 700; color: var(--muted); }
+.act.done .act-text { color: var(--muted); text-decoration: line-through; }
+.act-btns { display: flex; gap: 6px; }
+.act-form { background: #f9fafb; border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin: 10px 0; }
+.box { margin-top: 14px; padding: 12px 14px; border-radius: 8px; background: #f9fafb; border: 1px solid var(--line); }
+.box.ok { background: var(--ok-s); border-color: #bfe5cf; }
+.box.bad { background: var(--bad-s); border-color: #f3c4c4; }
+.crit { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; align-items: center; }
+.photos { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.ph { width: 120px; height: 90px; border-radius: 8px; border: 1px solid var(--line); background: #f3f4f6; display: grid; place-items: center; font-size: 12px; color: var(--muted); overflow: hidden; position: relative; cursor: pointer; padding: 0; }
+.ph img { width: 100%; height: 100%; object-fit: cover; }
+.ph.add { border-style: dashed; background: #fff; color: var(--accent); font-weight: 600; font-size: 14px; }
+.ph .x { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff; line-height: 1; }
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: grid; place-items: center; z-index: 50; cursor: zoom-out; }
+.lightbox img { max-width: 94vw; max-height: 94vh; }
+.timeline { list-style: none; margin: 0; padding: 0; }
+.timeline li { padding: 6px 0 6px 14px; border-left: 2px solid var(--line); }
+.inline-form { display: flex; gap: 10px; flex-wrap: wrap; }
+.inline-form input { flex: 1; min-width: 220px; }
+
+/* help */
+.flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; counter-reset: f; }
+.flow div { background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 14px; }
+.flow b { display: block; margin-bottom: 4px; }
+.flow b::before { counter-increment: f; content: counter(f) '. '; color: var(--accent); }
+table.roles { width: 100%; border-collapse: collapse; font-size: 14px; }
+.roles th, .roles td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.roles td:not(:first-child), .roles th:not(:first-child) { text-align: center; width: 110px; }
+.roles th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+
+/* kiosk "thank you" */
+.done-page { text-align: center; padding: 48px 20px; }
+.done-page .tick { width: 72px; height: 72px; border-radius: 50%; background: var(--ok); color: #fff; font-size: 40px; display: grid; place-items: center; margin: 0 auto 18px; }
+body.kiosk { font-size: 16px; }
+
+.toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: #111827; color: #fff; padding: 10px 18px; border-radius: 8px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,.2); z-index: 60; max-width: 92vw; }
+.toast.bad { background: var(--bad); }
+[hidden] { display: none !important; }
+
+/* phones and small tablets */
+@media (max-width: 820px) {
+  .top-in { padding: 8px 16px; gap: 10px; }
+  nav { order: 3; width: 100%; }
+  .who { display: none; }
+  main { padding: 16px 16px 48px; }
+  h1 { font-size: 21px; }
+  .tiles { grid-template-columns: repeat(2, 1fr); }
+  .tiles .tile:first-child { grid-column: 1 / -1; }
+  .toolbar select, .toolbar input[type=search] { flex: 1 1 100%; width: 100%; min-width: 0; }
+  .toolbar .grow { display: none; }
+  .row { grid-template-columns: 1fr auto; gap: 4px 12px; }
+  .row.head { display: none; }
+  .c-id { order: 1; } .c-st { order: 2; text-align: right; } .c-what { order: 3; grid-column: 1 / -1; }
+  .c-area { order: 4; } .c-age { order: 5; text-align: right; }
+  .grid { grid-template-columns: 1fr; }
+  .kv { grid-template-columns: 1fr 1fr; }
+  .flow { grid-template-columns: 1fr; }
+  .act { grid-template-columns: 24px minmax(0, 1fr); }
+  .act-st, .act-btns { grid-column: 2; }
+  .d-head { flex-direction: column; }
+  .steps .step { font-size: 0; }
+  .card { padding: 16px; }
+}
+@media print {
+  .top, .no-print, .btn, .toast { display: none !important; }
+  body { background: #fff; }
+  main { padding: 0; }
+  .card { break-inside: avoid; border-color: #999; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast" hidden></div>
+<script>const BOOT = <?!= boot ?>;</script>
+<script>
+'use strict';
+/* =====================================================================================
+   eQRAP Expedice (Lite) – the whole screen.
+   All data arrives together with the page (BOOT), so moving around is instant.
+   The server is called only when something is saved, and for a quiet refresh.
+
+   1. State and texts      4. Board (Přehled)          7. Section forms
+   2. Small helpers        5. New problem (Nahlásit)   8. Photos
+   3. Header and routing   6. Problem detail ①–⑦      9. Help, kiosk, refresh, start
+   ===================================================================================== */
+
+// ------------------------------------------------------------------ 1. STATE AND TEXTS
+const S = {
+  me: BOOT.me || {}, cfg: BOOT.cfg || {}, lists: BOOT.lists || {}, people: BOOT.people || [],
+  qraps: BOOT.qraps || [], actions: BOOT.actions || [], all: false,
+  kiosk: !!(BOOT.params && BOOT.params.kiosk === '1'),
+  view: 'board', id: null, edit: null, filter: 'open', area: '', search: '', history: {}
+};
+
+const STATUS = {
+  'OPATŘENÍ':   { label: '③ Opatření', cls: 'warn', next: '③ Okamžitá opatření', who: 'kdokoli ze směny' },
+  'ROZHODNUTÍ': { label: '④ Rozhodnutí', cls: 'warn', next: '④ Rozhodnutí vedoucího', who: 'vedoucí' },
+  'ANALÝZA':    { label: '⑤⑥ Analýza', cls: 'info', next: '⑤ Příčina a ⑥ konečné akce', who: 'vedoucí a odpovědní za akce' },
+  'OVĚŘENÍ':    { label: '⑥ Ověření', cls: 'info', next: '⑥ Ověřit účinnost a uzavřít', who: 'vedoucí' },
+  'UZAVŘENO':   { label: 'Uzavřeno', cls: 'ok' },
+  'ZRUŠENO':    { label: 'Zrušeno', cls: 'muted' }
+};
+const DECISIONS = [
+  { value: 'VYŘEŠENO', label: 'Problém vyřešen – uzavřít bez 5× Proč', sub: 'Okamžitá opatření stačila a příčina je jasná.' },
+  { value: 'ANALÝZA', label: 'Pokračovat analýzou 5× Proč', sub: 'Příčina není jasná nebo je potřeba trvalé opatření.' },
+  { value: 'ESKALACE', label: 'Eskalovat na manažera', sub: 'Přesahuje možnosti oblasti. Manažer dostane e-mail, analýza pokračuje.' }
+];
+const CRITERIA = [
+  ['a1', '1 RED BOX', 'popis problému'], ['a2', '2 ROZDĚLENÍ', 'třídění, ochrana a rozdělení úkolů'],
+  ['a3', '3 POROVNÁNÍ', 'dobrý a špatný stav'], ['a4', '4 POUČENÍ A SDÍLENÍ', 'komunikace a sdílení'],
+  ['a5', '5 ON JOB TRAINING', 'OJT provedené managementem']
+];
+const SECTION_TITLES = ['', 'POPIS PROBLÉMU', 'KDO BYL UPOZORNĚN?', 'OKAMŽITÁ OPATŘENÍ', 'ROZHODNUTÍ OJT',
+  'PŘÍČINA – 5× PROČ?', 'KONEČNÉ AKCE', 'HODNOCENÍ QRQC'];
+
+// ------------------------------------------------------------------ 2. SMALL HELPERS
+/** Creates an element. Text is always inserted as text (never as HTML), so nothing typed can break the page. */
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  let value;
+  Object.entries(attrs || {}).forEach(([k, v]) => {
+    if (v === null || v === undefined || v === false) return;
+    if (k === 'class') el.className = v;
+    else if (k === 'value') value = v;
+    else if (k.slice(0, 2) === 'on') el.addEventListener(k.slice(2), v);
+    else if (k === 'checked' || k === 'disabled' || k === 'hidden') el[k] = true;
+    else el.setAttribute(k, v === true ? '' : v);
+  });
+  kids.flat(Infinity).forEach(k => {
+    if (k !== null && k !== undefined && k !== false && k !== '') el.append(k instanceof Node ? k : String(k));
+  });
+  if (value !== undefined) el.value = value;
+  return el;
+}
+
+/** Replaces the content of an element (same rules as h: lists are flattened, empty values skipped). */
+function fill(el, ...kids) {
+  el.replaceChildren(...kids.flat(Infinity).filter(k => k !== null && k !== undefined && k !== false && k !== ''));
+  return el;
+}
+
+/** Calls a server function from Code.gs and returns a Promise. */
+function api(fn, ...args) {
+  return new Promise((resolve, reject) => {
+    google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
+  });
+}
+
+function errText(e) {
+  const m = String((e && e.message) || e || '');
+  if (/NetworkError|Failed to fetch|network/i.test(m)) return 'Nepodařilo se spojit se serverem. Zkontrolujte připojení a zkuste to znovu.';
+  return m.replace(/^(Exception|Error|Výjimka):\s*/, '');
+}
+
+let toastTimer = null;
+function toast(msg, bad) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (bad ? ' bad' : '');
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, bad ? 7000 : 2500);
+}
+
+/** Saves: disables the button while waiting, stores the answer, shows "Uloženo". Returns the answer or null. */
+async function save(btn, fn, args) {
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Ukládám…';
+  try {
+    const res = await api(fn, ...args);
+    store(res);
+    toast('Uloženo ✓');
+    return res;
+  } catch (e) {
+    toast(errText(e), true);
+    btn.disabled = false;
+    btn.textContent = label;
+    return null;
+  }
+}
+
+/** Save from inside the detail page, then close the form and show the section again. */
+async function submit(btn, fn, args, secNo) {
+  const res = await save(btn, fn, args);
+  if (!res) return null;
+  S.edit = null;
+  render();
+  const el = document.getElementById('sec' + secNo);
+  if (el) el.scrollIntoView({ block: 'nearest' });
+  return res;
+}
+
+function store(res) {
+  if (!res || !res.qrap) return;
+  const i = S.qraps.findIndex(q => q.id === res.qrap.id);
+  if (i >= 0) S.qraps[i] = res.qrap; else S.qraps.unshift(res.qrap);
+  S.actions = S.actions.filter(a => a.qrapId !== res.qrap.id).concat(res.actions);
+  delete S.history[res.qrap.id];
+}
+
+const pad = n => String(n).padStart(2, '0');
+function fmtDT(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const y = d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : '';
+  return d.getDate() + '. ' + (d.getMonth() + 1) + '.' + y + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+function fmtD(v) {
+  if (!v) return '';
+  const d = v.length === 10 ? new Date(v + 'T00:00') : new Date(v);
+  return d.getDate() + '. ' + (d.getMonth() + 1) + '. ' + d.getFullYear();
+}
+function ago(iso) {
+  const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (min < 60) return 'před ' + min + ' min';
+  if (min < 48 * 60) return 'před ' + Math.round(min / 60) + ' h';
+  return 'před ' + Math.round(min / 1440) + ' dny';
+}
+function localInput(iso) {
+  const d = iso ? new Date(iso) : new Date();
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+function today() { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+const split = s => String(s || '').split(',').map(x => x.trim()).filter(Boolean);
+const byId = id => S.qraps.find(q => q.id === id);
+const actsOf = id => S.actions.filter(a => a.qrapId === id).sort((a, b) => a.no - b.no);
+const isOpen = q => q.status !== 'UZAVŘENO' && q.status !== 'ZRUŠENO';
+const hours3 = () => Number(S.cfg.LHUTA_OPATRENI_HODIN) || 24;
+const deadline3 = q => new Date(new Date(q.when || q.created).getTime() + hours3() * 3600e3);
+const actLate = a => !a.done && a.due && a.due < today();
+const isLate = q => isOpen(q) && ((q.status === 'OPATŘENÍ' && deadline3(q) < new Date()) || actsOf(q.id).some(actLate));
+const roleName = r => (r === 'MANAŽER' ? 'Manažer' : r === 'VEDOUCÍ' ? 'Vedoucí' : '');
+function personName(email) { const p = S.people.find(x => x.email === email); return p ? p.name : email; }
+function badge(q) { const st = STATUS[q.status] || { label: q.status, cls: '' }; return h('span', { class: 'badge ' + st.cls }, st.label); }
+function kv(pairs) {
+  return h('div', { class: 'kv' }, pairs.filter(p => p[1] !== '' && p[1] !== null && p[1] !== undefined)
+    .map(p => h('div', null, h('span', null, p[0]), p[1])));
+}
+
+// ------------------------------------------------------------------ 3. HEADER AND ROUTING
+/** Show another page. replace = true: do not keep the current page in the browser's Back history. */
+function go(view, id, replace) {
+  S.view = view;
+  S.id = id || null;
+  S.edit = null;
+  const p = {};
+  if (id) p.id = id; else if (view !== 'board') p.view = view;
+  if (S.kiosk) p.kiosk = '1';
+  try { google.script.history[replace ? 'replace' : 'push']({ view: view, id: id || null }, p); } catch (e) { /* ignore */ }
+  render();
+  window.scrollTo(0, 0);
+  if (view === 'detail') refreshOne(id);
+}
+
+function edit(key) {
+  S.edit = key;
+  render();
+  const form = document.querySelector('.editing');
+  if (form) {
+    form.scrollIntoView({ block: 'nearest' });
+    const first = form.querySelector('input:not([type=checkbox]):not([type=radio]), textarea, select');
+    if (first) first.focus({ preventScroll: true });
+  }
+}
+
+function render() {
+  const pages = { board: boardPage, new: newPage, detail: detailPage, help: helpPage, done: donePage };
+  fill(document.getElementById('app'), header(), h('main', null, (pages[S.view] || boardPage)()));
+}
+
+function header() {
+  const nav = (label, view) => h('button', { class: 'nav' + (S.view === view ? ' on' : ''), onclick: () => go(view) }, label);
+  const who = S.kiosk ? h('span', { class: 'who' }, 'Kiosk')
+    : h('span', { class: 'who', title: S.me.email }, S.me.name || S.me.email || '', S.me.role ? h('span', { class: 'role' }, roleName(S.me.role)) : null);
+  return h('header', { class: 'top' }, h('div', { class: 'top-in' },
+    h('button', { class: 'brand', onclick: () => go('board') }, h('span', { class: 'logo' }, 'Q'), S.cfg.NAZEV || 'eQRAP'),
+    h('nav', null, nav('Přehled', 'board'), nav('Jak to funguje', 'help')),
+    h('div', { class: 'grow' }),
+    h('button', { class: 'btn primary', onclick: () => go('new') }, '+ Nahlásit problém'),
+    who));
+}
+
+// ------------------------------------------------------------------ 4. BOARD (PŘEHLED)
+const FILTERS = {
+  open:   { label: 'Otevřené', test: isOpen },
+  mine:   { label: 'Moje úkoly', test: q => isMine(q) },
+  decide: { label: 'Čeká na rozhodnutí', test: q => q.status === 'ROZHODNUTÍ' },
+  late:   { label: 'Po termínu', test: isLate, alert: true },
+  closed: { label: 'Uzavřené', test: q => !isOpen(q) }
+};
+
+/** "My tasks": leaders see what waits for them in their area, everybody sees their own actions. */
+function isMine(q) {
+  if (!isOpen(q)) return false;
+  if (S.actions.some(a => a.qrapId === q.id && a.canDone && a.ownerEmail === S.me.email)) return true;
+  if (S.me.role && (!S.me.area || S.me.area === q.area) && q.status !== 'OPATŘENÍ') return true;
+  return !!S.me.email && q.createdBy === S.me.email && q.status === 'OPATŘENÍ';
+}
+
+let redrawBoard = null;
+function boardPage() {
+  const keys = S.kiosk ? ['open', 'decide', 'late', 'closed'] : ['open', 'mine', 'decide', 'late', 'closed'];
+  if (!keys.includes(S.filter)) S.filter = 'open';
+  const tiles = h('div', { class: 'tiles' });
+  const listBox = h('div', { class: 'list' });
+  const countEl = h('span', { class: 'sub' });
+  const inArea = q => !S.area || q.area === S.area;
+
+  const drawList = () => {
+    const words = S.search.trim().toLowerCase();
+    const test = FILTERS[S.filter].test;
+    const rows = S.qraps.filter(q => inArea(q) && (words ? haystack(q).includes(words) : test(q))).sort(order);
+    countEl.textContent = words ? 'Nalezeno: ' + rows.length : rows.length + ' ' + (rows.length === 1 ? 'problém' : 'problémů');
+    fill(listBox,
+      h('div', { class: 'row head' }, h('div', null, 'ID'), h('div', null, 'Problém'), h('div', null, 'Oblast'),
+        h('div', null, 'Stav'), h('div', null, 'Zjištěno')),
+      rows.length ? rows.map(rowEl) : h('div', { class: 'empty' }, words ? 'Nic nenalezeno.' : 'Tady nic není.'));
+  };
+  const drawTiles = () => fill(tiles, keys.map(k => {
+    const n = S.qraps.filter(q => inArea(q) && FILTERS[k].test(q)).length;
+    return h('button', { class: 'tile' + (S.filter === k && !S.search ? ' on' : '') + (FILTERS[k].alert && n ? ' alert' : ''),
+      onclick: () => { S.filter = k; S.search = ''; search.value = ''; draw(); } }, h('b', null, n), h('span', null, FILTERS[k].label));
+  }));
+  const draw = () => { drawTiles(); drawList(); };
+  redrawBoard = draw;
+
+  const areaSel = h('select', { onchange: e => { S.area = e.target.value; draw(); } },
+    h('option', { value: '' }, 'Všechny oblasti'), (S.lists.areas || []).map(a => h('option', { value: a }, a)));
+  areaSel.value = S.area;
+  const search = h('input', { type: 'search', placeholder: 'Hledat: číslo, díl, zákazník, dodací list…', value: S.search,
+    oninput: e => { S.search = e.target.value; draw(); } });
+  draw();
+
+  return h('div', null,
+    h('div', { class: 'page-head' },
+      h('div', null, h('h1', null, 'Přehled problémů'), h('div', { class: 'sub' }, 'Kliknutím na řádek otevřete celý formulář QRAP.')),
+      h('button', { class: 'btn ghost', onclick: e => refresh(false, e.currentTarget) }, '⟳ Obnovit')),
+    myActions(),
+    tiles,
+    h('div', { class: 'toolbar' }, areaSel, search, h('div', { class: 'grow' }), countEl),
+    listBox,
+    S.all ? null : h('div', { class: 'more' }, h('button', { class: 'link', onclick: e => refresh(false, e.currentTarget, true) },
+      'Zobrazit i starší uzavřené problémy')));
+}
+
+function haystack(q) {
+  return [q.id, q.what, q.where, q.customer, q.partNo, q.delivery, q.reporter, q.type, q.area].join(' ').toLowerCase();
+}
+
+/** Open before closed; late and safety first; newest first. */
+function order(a, b) {
+  const rank = q => (isOpen(q) ? 0 : 4) - (isLate(q) ? 2 : 0) - (q.safety ? 1 : 0);
+  return rank(a) - rank(b) || String(b.when || b.created).localeCompare(String(a.when || a.created));
+}
+
+function rowEl(q) {
+  const st = STATUS[q.status] || {};
+  const open = () => go('detail', q.id);
+  return h('div', { class: 'row' + (isLate(q) ? ' late' : ''), tabindex: 0, onclick: open, onkeydown: e => { if (e.key === 'Enter') open(); } },
+    h('div', { class: 'c-id' }, q.id, q.safety ? h('div', null, h('span', { class: 'badge bad' }, 'BOZP')) : null),
+    h('div', { class: 'c-what' }, h('b', null, q.what), h('div', { class: 'sub' }, [q.type, q.where, q.customer, q.partNo].filter(Boolean).join(' · '))),
+    h('div', { class: 'c-area sub' }, q.area),
+    h('div', { class: 'c-st' }, badge(q), h('div', { class: 'sub' },
+      isLate(q) ? h('span', { class: 'late-txt' }, 'po termínu') : (st.who ? 'čeká: ' + st.who : ''))),
+    h('div', { class: 'c-age sub' }, ago(q.when || q.created)));
+}
+
+function myActions() {
+  if (S.kiosk || !S.me.email) return null;
+  const mine = S.actions.filter(a => a.canDone && a.ownerEmail === S.me.email);
+  if (!mine.length) return null;
+  return h('div', { class: 'card' }, h('h2', null, 'MOJE AKCE (' + mine.length + ')'),
+    mine.map(a => h('div', { class: 'act' },
+      h('div', { class: 'act-no' }, '⑥'),
+      h('div', null, h('div', null, a.text), h('div', { class: 'sub' }, a.qrapId + ' · termín ',
+        h('span', { class: actLate(a) ? 'late-txt' : '' }, fmtD(a.due)))),
+      h('div', null),
+      h('button', { class: 'btn small', onclick: () => go('detail', a.qrapId) }, 'Otevřít'))));
+}
+
+// ------------------------------------------------------------------ 5. NEW PROBLEM (NAHLÁSIT)
+function newPage() {
+  const pf = popisForm({ reporter: S.kiosk ? '' : S.me.name, when: localInput(), area: S.me.area || '' });
+  const of = opatreniForm({ s3By: S.kiosk ? '' : S.me.name });
+  const s3Box = h('div', { hidden: true, style: 'margin-top:14px' }, of.el);
+  const s3On = h('input', { type: 'checkbox', onchange: e => { s3Box.hidden = !e.target.checked; } });
+  const photos = photoPicker();
+  const send = h('button', { class: 'btn primary big', onclick: async () => {
+    const data = pf.read();
+    if (!data) return;
+    if (s3On.checked) { const s3 = of.read(); if (!s3) return; data.s3 = s3; }
+    data.photos = photos.get();
+    const res = await save(send, 'apiCreate', [data]);
+    if (res) go(S.kiosk ? 'done' : 'detail', res.qrap.id, true);
+  } }, 'Odeslat hlášení');
+
+  return h('div', { class: 'narrow' },
+    h('div', { class: 'page-head' }, h('div', null, h('h1', null, 'Nahlásit problém'),
+      h('div', { class: 'sub' }, 'Vyplňte, co se stalo. Povinné údaje jsou označené hvězdičkou *. Zabere to asi 2 minuty.'))),
+    section(1, 'now', h('div', null, pf.one, h('div', { class: 'fld', style: 'margin-top:14px' },
+      h('span', { class: 'fld-l' }, 'Fotky (nepovinné)'), photos.el))),
+    section(2, 'now', pf.two),
+    section(3, 'wait', h('div', null,
+      h('label', { class: 'check-line' }, s3On, 'Okamžitá opatření už jsou hotová – vyplním je teď'),
+      h('div', { class: 'sub' }, 'Jinak je doplní vedoucí nebo kdokoli ze směny do ' + hours3() + ' h.'), s3Box)),
+    h('div', { class: 'form-btns' }, send, h('button', { class: 'btn ghost', onclick: () => go('board') }, 'Zrušit')));
+}
+
+function donePage() {
+  const q = byId(S.id) || {};
+  return h('div', { class: 'narrow card done-page' },
+    h('div', { class: 'tick' }, '✓'),
+    h('h1', null, 'Děkujeme, problém ' + (q.id || '') + ' je nahlášený.'),
+    h('p', { class: 'muted' }, 'Vedoucí dostal e-mail. Stav najdete na přehledu.'),
+    h('div', { class: 'form-btns', style: 'justify-content:center' },
+      h('button', { class: 'btn primary big', onclick: () => go('new') }, '+ Nahlásit další'),
+      h('button', { class: 'btn big', onclick: () => go('board') }, 'Zpět na přehled')));
+}
+
+// ------------------------------------------------------------------ 6. PROBLEM DETAIL ①–⑦
+/** One numbered block of the QRAP form. state: done | now | wait | skip */
+function section(n, state, body, button) {
+  return h('section', { class: 'card sec ' + state, id: 'sec' + n },
+    h('div', { class: 'sec-head' }, h('span', { class: 'num' }, n),
+      h('h2', null, SECTION_TITLES[n] + (n === 3 ? ' < ' + hours3() + ' h' : '')), h('div', { class: 'grow' }), button || null),
+    h('div', { class: 'sec-body' }, body));
+}
+const editBtn = (key, label) => h('button', { class: 'btn small ghost no-print', onclick: () => edit(key) }, label || 'Upravit');
+const startBtn = (key, label) => h('button', { class: 'btn small primary no-print', onclick: () => edit(key) }, label);
+const note = text => h('p', { class: 'muted' }, text);
+function formButtons(label, onSave) {
+  const b = h('button', { class: 'btn primary', onclick: () => onSave(b) }, label);
+  return h('div', { class: 'form-btns' }, b, h('button', { class: 'btn ghost', onclick: () => edit(null) }, 'Zrušit'));
+}
+
+function detailPage() {
+  const q = byId(S.id);
+  if (!q) return h('div', { class: 'narrow card' }, 'Načítám ' + (S.id || '') + '…');
+  const acts = actsOf(q.id);
+  const pf = S.edit === 'popis' ? popisForm(Object.assign({}, q, { when: localInput(q.when) })) : null;
+  return h('div', { class: 'narrow' },
+    h('button', { class: 'link no-print', onclick: () => go('board') }, '← Přehled'),
+    h('div', { class: 'd-head' },
+      h('div', null, h('h1', null, q.id, ' ', badge(q), q.safety ? [' ', h('span', { class: 'badge bad' }, 'BOZP')] : null),
+        h('div', { class: 'sub' }, [q.type, q.area, 'nahlášeno ' + fmtDT(q.created)].filter(Boolean).join(' · '))),
+      h('button', { class: 'btn no-print', onclick: () => window.print() }, 'Tisk / PDF')),
+    steps(q), nextBox(q, acts),
+    sec1(q, pf), sec2(q, pf), sec3(q), sec4(q), sec5(q), sec6(q, acts), sec7(q),
+    historyBox(q), adminBox(q));
+}
+
+function steps(q) {
+  if (q.status === 'ZRUŠENO') return null;
+  const names = ['Nahlášeno', 'Opatření', 'Rozhodnutí', 'Příčina a akce', 'Ověření', 'Uzavřeno'];
+  const at = { 'OPATŘENÍ': 1, 'ROZHODNUTÍ': 2, 'ANALÝZA': 3, 'OVĚŘENÍ': 4, 'UZAVŘENO': 6 }[q.status] || 0;
+  return h('div', { class: 'steps no-print' }, names.map((n, i) =>
+    h('div', { class: 'step ' + (i < at ? 'done' : i === at ? 'now' : '') }, n)));
+}
+
+function nextBox(q, acts) {
+  if (q.status === 'UZAVŘENO') return h('div', { class: 'next ok' }, h('b', null, '✓ Uzavřeno ' + fmtDT(q.closedAt)));
+  if (q.status === 'ZRUŠENO') return h('div', { class: 'next grey' }, h('b', null, 'Zrušeno: '), q.cancelReason);
+  const st = STATUS[q.status];
+  const late = isLate(q);
+  let extra = '';
+  if (q.status === 'OPATŘENÍ') extra = 'termín ' + fmtDT(deadline3(q).toISOString());
+  if (q.status === 'ANALÝZA') {
+    const open = acts.filter(a => !a.done).length;
+    extra = !q.rootCause ? 'chybí příčina' : !acts.length ? 'chybí akce' : q.effective === 'NE' ? 'doplňte další akci' : 'otevřené akce: ' + open;
+  }
+  return h('div', { class: 'next' + (late ? ' bad' : '') },
+    h('span', null, 'Další krok:'), h('b', null, st.next), h('span', { class: 'sub' }, '· dělá: ' + st.who),
+    extra ? h('span', { class: late ? 'late-txt' : 'sub' }, '· ' + extra + (late ? ' – po termínu!' : '')) : null);
+}
+
+function sec1(q, pf) {
+  if (pf) return h('div', { class: 'editing' }, section(1, 'now', pf.one));
+  return section(1, 'done', h('div', null,
+    h('p', { class: 'big-text' }, q.what),
+    kv([['Kdo hlásí', q.reporter], ['Oblast', q.area], ['Typ problému', q.type], ['Kdy zjištěno', fmtDT(q.when)],
+      ['Kde přesně', q.where], ['Jak zjištěno', q.how], ['Zákazník', q.customer], ['Číslo dílu', q.partNo],
+      ['Dodací list / zásilka', q.delivery], ['Množství NOK', q.qty === '' ? '' : q.qty + ' ks'],
+      ['Bezpečnost', q.safety ? 'ANO – týká se BOZP' : '']]),
+    photosRow(q)), q.can.popis ? editBtn('popis', 'Upravit ① ②') : null);
+}
+
+function sec2(q, pf) {
+  if (pf) {
+    return section(2, 'now', h('div', null, pf.two, formButtons('Uložit ① a ②', b => {
+      const d = pf.read();
+      if (d) submit(b, 'apiSave', [q.id, 'popis', d], 1);
+    })));
+  }
+  return section(2, 'done', h('div', { class: 'tags' }, split(q.notified).map(x => h('span', { class: 'tag' }, x))));
+}
+
+function sec3(q) {
+  if (S.edit === 'opatreni') {
+    const f = opatreniForm(q.s3Done ? q : { s3By: S.me.name });
+    return h('div', { class: 'editing' }, section(3, 'now', h('div', null, f.el,
+      formButtons('Uložit – opatření jsou hotová', b => { const d = f.read(); if (d) submit(b, 'apiSave', [q.id, 'opatreni', d], 3); }))));
+  }
+  if (!q.s3Done) {
+    return section(3, isOpen(q) ? 'now' : 'wait', h('p', { class: isLate(q) ? 'late-txt' : 'muted' },
+      'Zatím nevyplněno. Termín: ' + fmtDT(deadline3(q).toISOString()) + (isLate(q) ? ' – po termínu!' : '')),
+    q.can.opatreni ? startBtn('opatreni', 'Vyplnit ③') : null);
+  }
+  return section(3, 'done', h('div', null,
+    h('p', { class: 'pre' }, q.s3Action),
+    kv([['Kde zkontrolováno', q.s3Places], ['Zkontrolováno', q.s3Checked === '' ? '' : q.s3Checked + ' ks'],
+      ['Nalezeno NOK', q.s3Nok === '' ? '' : q.s3Nok + ' ks'], ['Zákazník informován', q.s3Customer],
+      ['Kdo', q.s3By], ['Hotovo', fmtDT(q.s3Done)]])), q.can.opatreni ? editBtn('opatreni') : null);
+}
+
+function sec4(q) {
+  if (S.edit === 'rozhodnuti') {
+    const F = makeForm(q);
+    return h('div', { class: 'editing' }, section(4, 'now', h('div', null,
+      F.radio('decision', 'Jak dál?', DECISIONS, { req: true }),
+      h('div', { style: 'margin-top:12px' }, F.input('decisionNote', 'Poznámka (nepovinné)', { rows: 2 })),
+      formButtons('Potvrdit rozhodnutí', b => { const d = F.read(); if (d) submit(b, 'apiSave', [q.id, 'rozhodnuti', d], 4); }))));
+  }
+  if (q.decision) {
+    const d = DECISIONS.find(x => x.value === q.decision) || { label: q.decision };
+    return section(4, 'done', h('div', null, h('p', null, h('b', null, d.label)),
+      q.decisionNote ? h('p', { class: 'pre' }, q.decisionNote) : null,
+      h('div', { class: 'by' }, 'Rozhodl(a) ' + q.decisionBy + ' · ' + fmtDT(q.decisionAt))),
+    q.can.decide ? editBtn('rozhodnuti', 'Změnit') : null);
+  }
+  if (!q.s3Done) return section(4, 'wait', note('Rozhoduje vedoucí, až budou hotová ③ okamžitá opatření.'));
+  return section(4, isOpen(q) ? 'now' : 'wait', note(q.can.decide ? 'Rozhodněte, jak s problémem dál.' : 'Čeká na rozhodnutí vedoucího.'),
+    q.can.decide ? startBtn('rozhodnuti', 'Rozhodnout') : null);
+}
+
+const needsAnalysis = q => q.decision === 'ANALÝZA' || q.decision === 'ESKALACE';
+
+function sec5(q) {
+  if (q.decision === 'VYŘEŠENO') return section(5, 'skip', note('Není potřeba – vyřešeno okamžitými opatřeními.'));
+  if (!needsAnalysis(q)) return section(5, 'wait', note('Vyplňuje vedoucí, pokud rozhodne o analýze.'));
+  if (S.edit === 'pricina') {
+    const F = makeForm(q);
+    return h('div', { class: 'editing' }, section(5, 'now', h('div', { class: 'grid' },
+      [1, 2, 3, 4, 5].map(i => F.input('why' + i, 'Proč ' + i + '?', { req: i === 1, wide: true,
+        ph: i === 1 ? 'Proč se problém stal?' : 'Proč se stalo to předchozí?' })),
+      F.input('rootCause', 'Hlavní příčina', { req: true, rows: 2, wide: true }),
+      F.select('causeType', 'Kategorie příčiny', S.lists.causes || []),
+      h('div', { class: 'wide' }, formButtons('Uložit příčinu', b => { const d = F.read(); if (d) submit(b, 'apiSave', [q.id, 'pricina', d], 5); })))));
+  }
+  if (!q.rootCause) {
+    return section(5, isOpen(q) ? 'now' : 'wait', note('Zatím nevyplněno.'), q.can.analyze ? startBtn('pricina', 'Vyplnit ⑤') : null);
+  }
+  return section(5, 'done', h('div', null,
+    h('ol', { class: 'whys' }, [1, 2, 3, 4, 5].filter(i => q['why' + i]).map(i => h('li', null, h('b', null, 'Proč ' + i), q['why' + i]))),
+    h('div', { class: 'root' }, h('b', null, 'Hlavní příčina: '), q.rootCause, q.causeType ? h('span', { class: 'sub' }, ' · ' + q.causeType) : null)),
+  q.can.analyze ? editBtn('pricina') : null);
+}
+
+function sec6(q, acts) {
+  if (q.decision === 'VYŘEŠENO') return section(6, 'skip', note('Není potřeba – vyřešeno okamžitými opatřeními.'));
+  if (!needsAnalysis(q)) return section(6, 'wait', note('Akce zadává vedoucí po rozhodnutí o analýze.'));
+  const state = !isOpen(q) || (acts.length && acts.every(a => a.done) && q.status !== 'OVĚŘENÍ') ? 'done' : q.rootCause ? 'now' : 'wait';
+  const add = q.can.analyze && S.edit !== 'akce:new' ? h('button', { class: 'btn small primary no-print', onclick: () => edit('akce:new') }, '+ Přidat akci') : null;
+  return section(6, state, h('div', null,
+    acts.length ? h('div', null, acts.map(a => (S.edit === 'akce:' + a.no ? actionForm(q, a) : actionRow(q, a))))
+      : note(q.can.analyze ? 'Zatím žádné akce. Přidejte trvalé opatření s odpovědnou osobou a termínem.' : 'Zatím žádné akce.'),
+    S.edit === 'akce:new' ? actionForm(q, null) : null,
+    verifyBox(q)), add);
+}
+
+function actionRow(q, a) {
+  const late = actLate(a);
+  return h('div', { class: 'act' + (a.done ? ' done' : '') },
+    h('div', { class: 'act-no' }, a.no + '.'),
+    h('div', null, h('div', { class: 'act-text' }, a.text),
+      h('div', { class: 'sub' }, a.owner, ' · termín ', h('span', { class: late ? 'late-txt' : '' }, fmtD(a.due)), a.note ? ' · ' + a.note : '')),
+    h('div', { class: 'act-st' }, a.done ? h('span', { class: 'badge ok' }, '✓ ' + fmtD(a.done))
+      : h('span', { class: 'badge ' + (late ? 'bad' : '') }, late ? 'Po termínu' : 'Otevřená')),
+    h('div', { class: 'act-btns no-print' },
+      a.canDone ? h('button', { class: 'btn small', onclick: e => submit(e.currentTarget, 'apiSaveAction', [q.id, { no: a.no, done: true }], 6) }, '✓ Hotovo') : null,
+      a.canEdit ? h('button', { class: 'btn small ghost', onclick: () => edit('akce:' + a.no) }, 'Upravit') : null));
+}
+
+function verifyBox(q) {
+  if (q.effective === 'ANO') {
+    return h('div', { class: 'box ok' }, h('b', null, '✓ Ověřeno – akce jsou účinné. '), q.effectiveNote,
+      h('div', { class: 'by' }, q.effectiveBy + ' · ' + fmtDT(q.effectiveAt)));
+  }
+  if (S.edit === 'overeni') {
+    const F = makeForm({});
+    return h('div', { class: 'box editing' }, h('b', null, 'Ověření účinnosti'),
+      h('div', { style: 'margin-top:10px' }, F.radio('effective', 'Opakoval se problém od dokončení akcí?', [
+        { value: 'ANO', label: 'Neopakoval – akce jsou účinné', sub: 'Problém se uzavře.' },
+        { value: 'NE', label: 'Opakoval se – akce nestačí', sub: 'Problém zůstane otevřený, přidejte další akci.' }], { req: true })),
+      h('div', { style: 'margin-top:12px' }, F.input('effectiveNote', 'Poznámka (co jste kontrolovali / co se opakovalo)', { rows: 2 })),
+      formButtons('Uložit ověření', b => { const d = F.read(); if (d) submit(b, 'apiSave', [q.id, 'overeni', d], 6); }));
+  }
+  if (q.status === 'OVĚŘENÍ') {
+    return h('div', { class: 'box' }, h('b', null, 'Ověření účinnosti'),
+      h('p', { class: 'muted' }, 'Všechny akce jsou hotové. Po několika směnách ověřte, že se problém neopakuje, a problém uzavřete.'),
+      q.can.verify ? startBtn('overeni', 'Ověřit a uzavřít') : null);
+  }
+  if (q.effective === 'NE') {
+    return h('div', { class: 'box bad' }, h('b', null, 'Poslední ověření: akce nebyly účinné. '), q.effectiveNote,
+      h('div', { class: 'by' }, 'Přidejte další akci. ' + q.effectiveBy + ' · ' + fmtDT(q.effectiveAt)));
+  }
+  return null;
+}
+
+function sec7(q) {
+  if (S.edit === 'hodnoceni') {
+    const F = makeForm(q);
+    const opts = ['OK', 'NOK', 'N/A'].map(v => ({ value: v, label: v }));
+    return h('div', { class: 'editing' }, section(7, 'now', h('div', { class: 'grid' },
+      CRITERIA.map(c => F.radio(c[0], c[1] + ' – ' + c[2], opts, { req: true, inline: true, wide: true })),
+      F.input('aNote', 'Komentář (pochvala / co zlepšit)', { rows: 2, wide: true }),
+      h('div', { class: 'wide' }, formButtons('Uložit hodnocení', b => { const d = F.read(); if (d) submit(b, 'apiSave', [q.id, 'hodnoceni', d], 7); })))));
+  }
+  if (!q.aAt) {
+    return section(7, 'wait', note('Nepovinné. Vedoucí nebo manažer ohodnotí, jak tým postupoval (RED BOX, rozdělení, porovnání, sdílení, OJT).'),
+      q.can.assess ? editBtn('hodnoceni', 'Ohodnotit') : null);
+  }
+  const cls = v => (v === 'OK' ? 'ok' : v === 'NOK' ? 'bad' : '');
+  return section(7, 'done', h('div', null,
+    h('div', { class: 'crit' }, CRITERIA.map(c => [h('div', null, h('b', null, c[1]), h('span', { class: 'sub' }, ' – ' + c[2])),
+      h('span', { class: 'badge ' + cls(q[c[0]]) }, q[c[0]])])),
+    q.aNote ? h('p', { class: 'pre', style: 'margin-top:10px' }, q.aNote) : null,
+    h('div', { class: 'by' }, 'Hodnotil(a) ' + q.aBy + ' · ' + fmtDT(q.aAt))), q.can.assess ? editBtn('hodnoceni') : null);
+}
+
+function historyBox(q) {
+  const box = h('div', { class: 'card no-print' });
+  const load = async e => {
+    e.currentTarget.disabled = true;
+    e.currentTarget.textContent = 'Načítám…';
+    try { S.history[q.id] = await api('apiHistory', q.id); } catch (err) { toast(errText(err), true); }
+    draw();
+  };
+  const draw = () => {
+    const rows = S.history[q.id];
+    fill(box, h('div', { class: 'sec-head' }, h('h2', null, 'HISTORIE ZMĚN'), h('div', { class: 'grow' }),
+      rows ? null : h('button', { class: 'btn small ghost', onclick: load }, 'Zobrazit')),
+    rows ? (rows.length ? h('ul', { class: 'timeline' }, rows.map(r => h('li', null,
+      h('div', { class: 'sub' }, fmtDT(r.at) + ' · ' + personName(r.by)), h('div', null, r.text)))) : note('Žádné záznamy.')) : null);
+  };
+  draw();
+  return box;
+}
+
+function adminBox(q) {
+  if (!q.can.admin) return null;
+  const open = isOpen(q);
+  const reason = h('input', { placeholder: open ? 'Důvod zrušení (např. duplicita, omyl)' : 'Důvod znovuotevření (nepovinné)' });
+  const btn = h('button', { class: 'btn ' + (open ? 'danger' : ''),
+    onclick: () => submit(btn, 'apiAdmin', [q.id, open ? 'cancel' : 'reopen', reason.value], 1) }, open ? 'Zrušit problém' : 'Znovu otevřít');
+  return h('div', { class: 'card no-print' }, h('h2', null, 'SPRÁVA (JEN MANAŽER)'), h('div', { class: 'inline-form' }, reason, btn));
+}
+
+// ------------------------------------------------------------------ 7. SECTION FORMS
+/** A tiny form builder: every field remembers how to read its value and whether it is required. */
+function makeForm(values) {
+  const items = {};
+  const wrap = (key, label, control, o) => {
+    const el = h(o.group ? 'div' : 'label', { class: 'fld' + (o.wide ? ' wide' : '') },
+      h('span', { class: 'fld-l' }, label, o.req ? h('span', { class: 'req' }, ' *') : null), control, o.hint ? h('small', null, o.hint) : null);
+    items[key].box = el;
+    const ok = () => el.classList.remove('invalid');
+    el.addEventListener('input', ok);
+    el.addEventListener('change', ok);
+    return el;
+  };
+  const val = key => (values[key] === null || values[key] === undefined ? '' : values[key]);
+  return {
+    input(key, label, o = {}) {
+      const el = o.rows ? h('textarea', { rows: o.rows, placeholder: o.ph, maxlength: 2000 })
+        : h('input', { type: o.type || 'text', placeholder: o.ph, min: o.min, list: o.list, maxlength: o.type ? null : 200 });
+      el.value = val(key);
+      items[key] = { label, req: o.req, get: () => el.value.trim(), focus: () => el.focus() };
+      return wrap(key, label, el, o);
+    },
+    select(key, label, options, o = {}) {
+      const opts = options.slice();
+      if (val(key) && !opts.includes(val(key))) opts.push(val(key));
+      const el = h('select', null, h('option', { value: '' }, '— vyberte —'), opts.map(x => h('option', { value: x }, x)));
+      el.value = val(key);
+      items[key] = { label, req: o.req, get: () => el.value, focus: () => el.focus() };
+      return wrap(key, label, el, o);
+    },
+    checks(key, label, options, o = {}) {
+      const cur = split(val(key));
+      const boxes = options.concat(cur.filter(x => !options.includes(x))).map(x => {
+        const cb = h('input', { type: 'checkbox', checked: cur.includes(x) });
+        const lb = h('label', { class: 'check' + (cb.checked ? ' on' : '') }, cb, x);
+        cb.addEventListener('change', () => lb.classList.toggle('on', cb.checked));
+        return { cb, x, lb };
+      });
+      items[key] = { label, req: o.req, get: () => boxes.filter(b => b.cb.checked).map(b => b.x).join(', '), focus: () => boxes[0] && boxes[0].cb.focus() };
+      return wrap(key, label, h('div', { class: 'checks' }, boxes.map(b => b.lb)), Object.assign({ group: true }, o));
+    },
+    radio(key, label, options, o = {}) {
+      const name = 'r' + Math.random().toString(36).slice(2);
+      const rows = options.map(x => {
+        const r = h('input', { type: 'radio', name, value: x.value, checked: val(key) === x.value });
+        return { r, el: h('label', { class: 'choice' + (r.checked ? ' on' : '') }, r, h('span', null, h('b', null, x.label), x.sub ? h('small', null, x.sub) : null)) };
+      });
+      rows.forEach(x => x.r.addEventListener('change', () => rows.forEach(y => y.el.classList.toggle('on', y.r.checked))));
+      items[key] = { label, req: o.req, get: () => { const c = rows.find(x => x.r.checked); return c ? c.r.value : ''; }, focus: () => rows[0].r.focus() };
+      return wrap(key, label, h('div', { class: 'choices' + (o.inline ? ' inline' : '') }, rows.map(x => x.el)), Object.assign({ group: true }, o));
+    },
+    toggle(key, label, o = {}) {
+      const cb = h('input', { type: 'checkbox', checked: !!val(key) });
+      items[key] = { label, get: () => (cb.checked ? 'ANO' : ''), focus: () => cb.focus() };
+      const el = h('label', { class: 'check-line' + (o.wide ? ' wide' : '') }, cb, label);
+      items[key].box = el;
+      return el;
+    },
+    /** Returns all values, or null (and marks the missing fields red) when something required is empty. */
+    read() {
+      Object.values(items).forEach(i => i.box.classList.remove('invalid'));
+      const missing = Object.values(items).filter(i => i.req && !i.get());
+      if (missing.length) {
+        missing.forEach(i => i.box.classList.add('invalid'));
+        missing[0].focus();
+        toast('Vyplňte prosím: ' + missing.map(i => i.label.replace(/[?:]$/, '')).join(', '), true);
+        return null;
+      }
+      const out = {};
+      Object.keys(items).forEach(k => { out[k] = items[k].get(); });
+      return out;
+    }
+  };
+}
+
+/** ① and ② – used on the "Nahlásit" page and when editing. */
+function popisForm(v) {
+  const F = makeForm(v);
+  const one = h('div', { class: 'grid' },
+    F.input('reporter', 'Kdo hlásí', { req: true, ph: 'Jméno a příjmení' }),
+    F.input('when', 'Kdy zjištěno', { req: true, type: 'datetime-local' }),
+    F.select('area', 'Oblast', S.lists.areas || [], { req: true }),
+    F.select('type', 'Typ problému', S.lists.types || [], { req: true }),
+    F.input('what', 'Co se stalo?', { req: true, rows: 3, wide: true, ph: 'Stručně a konkrétně: co je špatně, u jakého dílu nebo zásilky.' }),
+    F.input('where', 'Kde přesně?', { ph: 'např. rampa 3, regál B-12' }),
+    F.select('how', 'Jak zjištěno?', S.lists.how || []),
+    h('div', { class: 'sub-h wide' }, 'Údaje o zásilce (nepovinné)'),
+    F.input('customer', 'Zákazník'),
+    F.input('partNo', 'Číslo dílu'),
+    F.input('delivery', 'Dodací list / zásilka'),
+    F.input('qty', 'Množství NOK (ks)', { type: 'number', min: 0 }),
+    F.toggle('safety', 'Týká se bezpečnosti (úraz nebo riziko úrazu) – upozorní i manažera', { wide: true }));
+  const two = F.checks('notified', 'Koho jste o problému informovali?', S.lists.notify || [], { req: true, hint: 'Označte všechny, kdo už o problému ví.' });
+  return {
+    one, two,
+    read() {
+      const d = F.read();
+      if (d) d.when = d.when ? new Date(d.when).toISOString() : '';
+      return d;
+    }
+  };
+}
+
+/** ③ */
+function opatreniForm(v) {
+  const F = makeForm(v);
+  const el = h('div', { class: 'grid' },
+    F.input('s3Action', 'Co bylo okamžitě uděláno?', { req: true, rows: 3, wide: true,
+      ph: 'např. zásilka zastavena, díly přebaleny, etikety vyměněny, sklad zkontrolován' }),
+    F.checks('s3Places', 'Kde se kontrolovalo, jestli problém není i jinde?', S.lists.places || [], { wide: true }),
+    F.input('s3Checked', 'Zkontrolováno ks', { type: 'number', min: 0 }),
+    F.input('s3Nok', 'Z toho NOK ks', { type: 'number', min: 0 }),
+    F.select('s3Customer', 'Zákazník informován?', ['ANO', 'NE', 'NENÍ POTŘEBA'], { req: true }),
+    F.input('s3By', 'Kdo opatření provedl', { req: true }));
+  return { el, read: F.read };
+}
+
+/** ⑥ one action (new or edit) */
+function actionForm(q, a) {
+  const F = makeForm(a || {});
+  const done = a ? h('input', { type: 'checkbox', checked: !!a.done }) : null;
+  return h('div', { class: 'act-form editing' },
+    h('div', { class: 'grid' },
+      F.input('text', 'Co se udělá (trvalé opatření)', { req: true, rows: 2, wide: true }),
+      F.input('owner', 'Odpovědná osoba', { req: true, list: 'people-list', ph: 'Začněte psát jméno' }),
+      F.input('due', 'Termín', { req: true, type: 'date', min: a ? null : today() }),
+      F.input('note', 'Poznámka', { wide: true }),
+      done ? h('label', { class: 'check-line wide' }, done, 'Akce je hotová') : null),
+    h('datalist', { id: 'people-list' }, S.people.map(p => h('option', { value: p.name }))),
+    formButtons(a ? 'Uložit akci' : 'Přidat akci', b => {
+      const d = F.read();
+      if (!d) return;
+      if (a) { d.no = a.no; d.done = done.checked; }
+      submit(b, 'apiSaveAction', [q.id, d], 6);
+    }));
+}
+
+// ------------------------------------------------------------------ 8. PHOTOS
+const PHOTOS = {}; // fileId → image, so each photo is downloaded only once
+
+function photosRow(q) {
+  const ids = split(q.photos);
+  if (!ids.length && !q.can.popis) return null;
+  const box = h('div', { class: 'photos' });
+  ids.forEach(id => {
+    const tile = h('button', { class: 'ph', type: 'button' }, 'Načítám…');
+    box.append(tile);
+    const show = url => { fill(tile, h('img', { src: url, alt: 'Fotka' })); tile.onclick = () => zoom(url); };
+    if (PHOTOS[id]) show(PHOTOS[id]);
+    else api('apiPhoto', q.id, id).then(url => { PHOTOS[id] = url; show(url); }).catch(() => { tile.textContent = 'Fotku nelze načíst'; });
+  });
+  if (q.can.popis && ids.length < 5) {
+    const input = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      add.textContent = 'Nahrávám…';
+      try {
+        const url = await shrink(file);
+        store(await api('apiAddPhoto', q.id, url));
+        toast('Fotka přidána ✓');
+      } catch (err) { toast(errText(err), true); }
+      render();
+    } });
+    const add = h('button', { class: 'ph add no-print', type: 'button', onclick: () => input.click() }, '+ Fotka');
+    box.append(add, input);
+  }
+  return h('div', { style: 'margin-top:14px' }, h('span', { class: 'fld-l' }, 'Fotky'), box);
+}
+
+/** Photo picker for the new-problem page: photos are shrunk in the browser, so upload is quick. */
+function photoPicker() {
+  const urls = [];
+  const box = h('div', { class: 'photos' });
+  const input = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true, onchange: async e => {
+    for (const file of Array.from(e.target.files).slice(0, 5 - urls.length)) {
+      try { urls.push(await shrink(file)); } catch (err) { toast(errText(err), true); }
+    }
+    input.value = '';
+    draw();
+  } });
+  const draw = () => fill(box,
+    urls.map((u, i) => h('div', { class: 'ph' }, h('img', { src: u, alt: 'Fotka' }),
+      h('button', { class: 'x', type: 'button', title: 'Odebrat', onclick: () => { urls.splice(i, 1); draw(); } }, '×'))),
+    urls.length < 5 ? h('button', { class: 'ph add', type: 'button', onclick: () => input.click() }, '+ Fotka') : null, input);
+  draw();
+  return { el: box, get: () => urls.slice() };
+}
+
+function shrink(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src);
+      resolve(c.toDataURL('image/jpeg', 0.8));
+    };
+    img.onerror = () => reject(new Error('Soubor není obrázek.'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function zoom(url) {
+  const lb = h('div', { class: 'lightbox', onclick: () => lb.remove() }, h('img', { src: url, alt: 'Fotka' }));
+  document.body.append(lb);
+}
+
+// ------------------------------------------------------------------ 9. HELP, KIOSK, REFRESH, START
+function helpPage() {
+  const yes = '✓', no = '–';
+  const rows = [
+    ['① ② Nahlásit problém', yes, yes, yes],
+    ['③ Okamžitá opatření (do rozhodnutí)', yes, yes, yes],
+    ['④ Rozhodnout, jak dál', no, yes, yes],
+    ['⑤ Příčina 5× Proč, ⑥ zadat akce', no, yes, yes],
+    ['⑥ Označit svou akci jako hotovou', yes, yes, yes],
+    ['⑥ Ověřit účinnost a uzavřít, ⑦ hodnocení', no, yes, yes],
+    ['Zrušit nebo znovu otevřít problém', no, no, yes],
+    ['Dostává e-mail', 'o své akci', 'nový problém v oblasti', 'eskalace a BOZP']
+  ];
+  return h('div', { class: 'narrow' },
+    h('div', { class: 'page-head' }, h('div', null, h('h1', null, 'Jak to funguje'),
+      h('div', { class: 'sub' }, 'Aplikace je elektronická verze formuláře QRAP pro sklad a expedici.'))),
+    h('div', { class: 'flow' },
+      h('div', null, h('b', null, 'Nahlásit'), h('span', { class: 'sub' }, '① co, kde, kdy + ② kdo ví. Kdokoli, i na kiosku. Asi 2 minuty.')),
+      h('div', null, h('b', null, 'Opatření'), h('span', { class: 'sub' }, '③ do ' + hours3() + ' h: zastavit zásilku, přebalit, zkontrolovat sklad.')),
+      h('div', null, h('b', null, 'Rozhodnutí'), h('span', { class: 'sub' }, '④ vedoucí: vyřešeno / analýza / eskalace.')),
+      h('div', null, h('b', null, 'Příčina a akce'), h('span', { class: 'sub' }, '⑤ 5× Proč, ⑥ akce s odpovědnou osobou a termínem.')),
+      h('div', null, h('b', null, 'Ověření'), h('span', { class: 'sub' }, '⑥ neopakuje se? → uzavřeno. ⑦ hodnocení je nepovinné.'))),
+    h('div', { class: 'card', style: 'margin-top:14px' }, h('h2', null, 'KDO CO MŮŽE'),
+      h('table', { class: 'roles' },
+        h('tr', null, h('th', null, ''), h('th', null, 'Kdokoli'), h('th', null, 'Vedoucí'), h('th', null, 'Manažer')),
+        rows.map(r => h('tr', null, r.map(c => h('td', null, c))))),
+      h('p', { class: 'sub', style: 'margin-top:10px' }, 'Vaše role: ' + (roleName(S.me.role) || 'běžný uživatel') +
+        '. Role nastavuje správce v Google tabulce na listu „Lidé“.')),
+    h('div', { class: 'card' }, h('h2', null, 'TIPY'),
+      h('p', null, '• Na přehledu klikněte na „Moje úkoly“ – uvidíte jen to, co čeká na vás.'),
+      h('p', null, '• Tlačítko „Tisk / PDF“ v detailu vytiskne celý formulář QRAP.'),
+      h('p', null, '• Kiosk: přidejte k adrese aplikace ?kiosk=1 – obrazovka se po chvíli sama vrátí na přehled.')));
+}
+
+async function refresh(quiet, btn, all) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Načítám…'; }
+  try {
+    const res = await api('apiRefresh', all || S.all);
+    S.qraps = res.qraps;
+    S.actions = res.actions;
+    S.all = res.all;
+    if (!quiet) toast('Aktualizováno ✓');
+  } catch (e) {
+    if (!quiet) toast(errText(e), true);
+  }
+  if (S.view === 'board') { if (btn || all) render(); else if (redrawBoard) redrawBoard(); }
+}
+
+/** When a problem is opened, fetch its latest version in the background (someone else may have changed it). */
+function refreshOne(id) {
+  api('apiGet', id).then(res => {
+    const before = JSON.stringify([byId(id), actsOf(id)]);
+    store(res);
+    if (before !== JSON.stringify([byId(id), actsOf(id)]) && S.view === 'detail' && S.id === id && !S.edit) render();
+  }).catch(e => {
+    if (!byId(id)) { toast(errText(e), true); go('board'); }
+  });
+}
+
+function startKiosk() {
+  document.body.classList.add('kiosk');
+  let last = Date.now();
+  ['click', 'keydown', 'touchstart', 'input'].forEach(ev => document.addEventListener(ev, () => { last = Date.now(); }, true));
+  setInterval(() => {
+    const limit = S.view === 'done' ? 20000 : (Number(S.cfg.KIOSK_NAVRAT_SEKUND) || 120) * 1000;
+    if (S.view !== 'board' && Date.now() - last > limit) go('board');
+  }, 5000);
+}
+
+function start() {
+  if (BOOT.error) {
+    fill(document.getElementById('app'), h('main', null, h('div', { class: 'narrow card' },
+      h('h1', null, 'Aplikaci se nepodařilo spustit'), h('p', null, BOOT.error),
+      h('p', { class: 'muted' }, 'Kontaktujte správce aplikace.'))));
+    return;
+  }
+  const p = BOOT.params || {};
+  S.view = p.id ? 'detail' : (['new', 'help'].includes(p.view) ? p.view : 'board');
+  S.id = p.id || null;
+  try {
+    google.script.history.setChangeHandler(e => {
+      const st = (e && e.state) || {};
+      const prm = (e && e.location && e.location.parameter) || {};
+      S.view = st.view || (prm.id ? 'detail' : (prm.view || 'board'));
+      S.id = st.id || prm.id || null;
+      S.edit = null;
+      render();
+    });
+  } catch (e) { /* ignore */ }
+  render();
+  if (S.view === 'detail') refreshOne(S.id);
+  if (S.kiosk) startKiosk();
+  setInterval(() => { if (S.view === 'board' && !document.hidden) refresh(true); }, 90000);
+}
+
+start();
+</script>
+</body>
+</html>
