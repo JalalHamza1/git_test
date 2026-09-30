@@ -604,6 +604,14 @@
       link: () => pb.send('/api/tm/calendar', {}).then(r => location.origin + r.path),
       reset: () => pb.send('/api/tm/calendar/reset', { method: 'POST' }).then(r => location.origin + r.path),
     },
+    claude: {
+      // Funnel serves the connector on port 8443 of the same address.
+      url: path => 'https://' + location.hostname + ':8443' + path,
+      status: () => pb.send('/api/tm/claude', {}),
+      enable: () => pb.send('/api/tm/claude/enable', { method: 'POST' }),
+      reset: () => pb.send('/api/tm/claude/reset', { method: 'POST' }),
+      disable: () => pb.send('/api/tm/claude/disable', { method: 'POST' }),
+    },
     google: {
       redirectUri: () => location.origin + '/api/tm/google/callback',
       status: () => pb.send('/api/tm/google', {}),

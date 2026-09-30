@@ -2412,6 +2412,8 @@
           } }))),
       h('div', { class: 'set-title', text: 'Google Calendar' }),
       googleSettings(row),
+      h('div', { class: 'set-title', text: 'Claude' }),
+      claudeSettings(row),
       h('div', { class: 'set-title', text: 'Account' }),
       h('div', { class: 'set-group' },
         row('Signed in as ' + TM.auth.email(), 'Your tasks stay on this device until you sign out.',
@@ -2462,6 +2464,38 @@
     const refresh = () => TM.google.status().then(render,
       () => { box.replaceChildren(h('div', { class: 'set-row' }, h('div', { class: 'set-desc', text: 'Connect to your NAS to set this up.' }))); });
     refresh();
+    return box;
+  }
+
+  // Lets Claude read and manage tasks through a connector address with a secret key in it.
+  function claudeSettings(row) {
+    const box = h('div', { class: 'set-group' }, h('div', { class: 'set-row' }, h('div', { class: 'set-desc', text: 'Loading…' })));
+    if (!TM.claude) return box;
+    const render = st => {
+      box.replaceChildren();
+      if (!st.enabled) {
+        box.append(row('Let Claude manage your tasks', 'Creates a private connector address to add in Claude (Settings → Connectors). See the setup guide, step 10.',
+          h('button', { class: 'btn primary', type: 'button', text: 'Turn on', onclick: () => TM.claude.enable().then(render, e => snack(explain(e))) })));
+        return;
+      }
+      const field = h('input', { class: 'input', readonly: true, value: TM.claude.url(st.path), 'aria-label': 'Claude connector address' });
+      box.append(
+        h('div', { class: 'set-row', style: 'display:block' },
+          h('div', { class: 'set-label', text: 'Connector address' }),
+          h('div', { class: 'set-desc', text: 'Paste this into Claude → Settings → Connectors → Add custom connector. Keep it private: anyone with it can change your tasks.' }),
+          h('div', { class: 'feed' }, field, h('button', { class: 'btn', type: 'button', text: 'Copy', onclick: async () => {
+            try { await navigator.clipboard.writeText(field.value); snack('Address copied'); } catch (e) { field.select(); snack('Selected. Copy it from the box.'); }
+          } }))),
+        row('New address', 'The old one stops working. Update the connector in Claude afterwards.',
+          h('button', { class: 'btn', type: 'button', text: 'Reset', onclick: async () => {
+            if (await confirmDlg('Make a new address?', 'Claude can\'t reach your tasks until you paste the new address into the connector.', 'Reset')) TM.claude.reset().then(r => { render(r); snack('New address created'); }, e => snack(explain(e)));
+          } })),
+        row('Turn off', 'Claude can no longer reach your tasks.',
+          h('button', { class: 'btn danger', type: 'button', text: 'Turn off', onclick: async () => {
+            if (await confirmDlg('Turn off the Claude connector?', 'The address stops working right away.', 'Turn off')) TM.claude.disable().then(r => { render(r); snack('Claude connector turned off'); }, e => snack(explain(e)));
+          } })));
+    };
+    TM.claude.status().then(render, () => box.replaceChildren(h('div', { class: 'set-row' }, h('div', { class: 'set-desc', text: 'Connect to your NAS to set this up.' }))));
     return box;
   }
 

@@ -105,6 +105,30 @@ your own "ID card" for talking to Google.
 Edit tasks in the app; changes made to these events in Google are overwritten. If the NAS
 can't reach Google for a while it catches up within 10 minutes, or right away with **Sync now**.
 
+## 8. Let Claude manage your tasks (optional)
+
+A small connector on the NAS lets Claude (claude.ai or the Claude app) list, add, change,
+complete and delete tasks. Tailscale Funnel makes only the connector public, on port 8443;
+the app itself stays private. The connector address contains a long secret key.
+
+1. Upload `pb_hooks`, `pb_migrations` and `pb_public` again (overwrite) and restart the NAS.
+2. Over SSH, check Funnel is available:
+   `sudo /var/packages/Tailscale/target/bin/tailscale funnel --help`
+3. Open only the connector to the internet (approve Funnel in the link it prints, if asked, then run it again):
+
+   ```
+   sudo /var/packages/Tailscale/target/bin/tailscale funnel --bg --https=8443 --set-path /mcp http://127.0.0.1:8090/mcp
+   ```
+
+4. In the app: **Settings → Claude → Turn on**, then **Copy** the connector address
+   (`https://your-nas.….ts.net:8443/mcp/<key>`). Keep it private; **Reset** makes a new one.
+5. Test it with Tailscale off on your phone: opening the address shows "Your Claude connector is working".
+6. In Claude: **Settings → Connectors → Add custom connector**, name it `My Tasks`, paste the address, **Add**.
+7. In a chat, switch **My Tasks** on in the tools menu and ask "what's on my list today?".
+
+To stop: **Settings → Claude → Turn off**, and
+`sudo /var/packages/Tailscale/target/bin/tailscale funnel --https=8443 --set-path /mcp off`.
+
 ---
 
 ## Backups

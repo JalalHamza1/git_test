@@ -106,3 +106,15 @@ routerAdd("POST", "/api/tm/google/disconnect", (e) => {
   require(`${__hooks}/lib/google.js`).disconnect(e.app, e.auth);
   return e.json(200, { ok: true });
 }, $apis.requireAuth("users"));
+
+// ---- Claude connector ----
+// Claude reaches this through Tailscale Funnel, which makes only /mcp public (on port 8443).
+// The long random key in the address is the lock; without it the path doesn't exist.
+routerAdd("POST", "/mcp/{key}", (e) => require(`${__hooks}/lib/mcp.js`).httpPost(e));
+routerAdd("GET", "/mcp/{key}", (e) => require(`${__hooks}/lib/mcp.js`).httpGet(e));
+routerAdd("DELETE", "/mcp/{key}", (e) => e.noContent(405));
+
+routerAdd("GET", "/api/tm/claude", (e) => e.json(200, require(`${__hooks}/lib/mcp.js`).info(e.auth)), $apis.requireAuth("users"));
+routerAdd("POST", "/api/tm/claude/enable", (e) => e.json(200, require(`${__hooks}/lib/mcp.js`).setKey(e.app, e.auth, "enable")), $apis.requireAuth("users"));
+routerAdd("POST", "/api/tm/claude/reset", (e) => e.json(200, require(`${__hooks}/lib/mcp.js`).setKey(e.app, e.auth, "reset")), $apis.requireAuth("users"));
+routerAdd("POST", "/api/tm/claude/disable", (e) => e.json(200, require(`${__hooks}/lib/mcp.js`).setKey(e.app, e.auth, "disable")), $apis.requireAuth("users"));
