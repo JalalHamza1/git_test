@@ -3,7 +3,7 @@
 These files only run on a developer computer. You never paste them into Apps Script.
 
 ```
-TZ=Europe/Prague node lite_server_test.js   # 108 checks of Code.gs against a fake Google Sheet
+TZ=Europe/Prague node lite_server_test.js   # 176 checks of Code.gs against a fake Google Sheet
 TZ=Europe/Prague node lite_e2e.js           # opens Index.html in Chromium (needs Playwright) and clicks through the whole flow
 ```
 

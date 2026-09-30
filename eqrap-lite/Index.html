@@ -185,6 +185,36 @@ body.kiosk { font-size: 16px; }
 .toast.bad { background: var(--bad); }
 [hidden] { display: none !important; }
 
+/* form parts of the QRAP (③ actions, ⑤ chains, ⑥ 5-shift check, photos) */
+.note { background: #f9fafb; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #374151; }
+.note.warn { background: var(--warn-s); border-color: #f5d7a1; color: var(--warn); }
+.ia-row { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 10px; background: #fcfcfd; }
+.ia-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.with-btn { display: flex; gap: 6px; }
+.with-btn input { flex: 1; min-width: 0; }
+.why-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; margin-bottom: 8px; }
+.why-root { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); padding-bottom: 10px; white-space: nowrap; cursor: pointer; }
+.why-root input { width: auto; margin: 0; }
+.whys li.root-step { background: var(--warn-s); border-radius: 6px; padding-left: 8px; }
+.slots-wrap { overflow-x: auto; }
+.slots { width: 100%; border-collapse: collapse; font-size: 14px; }
+.slots td, .slots th { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+.slots th { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.slots input, .slots select { padding: 6px 8px; min-width: 110px; }
+.checklist { list-style: none; padding: 0; margin: 8px 0; }
+.checklist li { padding: 3px 0; }
+.checklist .ok { color: var(--ok); font-weight: 700; }
+.checklist .no { color: var(--bad); font-weight: 700; }
+.photo-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pslot { border: 1px dashed var(--line2); border-radius: 8px; padding: 10px; text-align: center; }
+.pslot > b { display: block; font-size: 13px; margin-bottom: 6px; }
+.pslot .ph { width: 100%; height: 150px; margin: 0 0 8px; }
+.pslot.wrong > b { color: var(--bad); }
+.pslot.right > b { color: var(--ok); }
+.assess-item { border-top: 1px solid var(--line); padding: 10px 0; }
+.assess-item:first-child { border-top: 0; }
+.assess-item .badge { margin-right: 4px; }
+
 /* phones and small tablets */
 @media (max-width: 820px) {
   .top-in { padding: 8px 16px; gap: 10px; }
@@ -220,15 +250,17 @@ body.kiosk { font-size: 16px; }
 <body>
 <div id="app"></div>
 <div id="toast" class="toast" hidden></div>
+<datalist id="people-list"></datalist>
 <script>const BOOT = <?!= boot ?>;</script>
 <script>
 'use strict';
 /* =====================================================================================
    eQRAP Expedice (Lite) – the whole screen.
+   The questions are the ones of the firm's QRAP V3.0 form (logistics version), ① to ⑦.
    All data arrives together with the page (BOOT), so moving around is instant.
    The server is called only when something is saved, and for a quiet refresh.
 
-   1. State and texts      4. Board (Přehled)          7. Section forms
+   1. State and texts      4. Board (Přehled)          7. Forms (① … ⑦)
    2. Small helpers        5. New problem (Nahlásit)   8. Photos
    3. Header and routing   6. Problem detail ①–⑦      9. Help, kiosk, refresh, start
    ===================================================================================== */
@@ -236,31 +268,33 @@ body.kiosk { font-size: 16px; }
 // ------------------------------------------------------------------ 1. STATE AND TEXTS
 const S = {
   me: BOOT.me || {}, cfg: BOOT.cfg || {}, lists: BOOT.lists || {}, people: BOOT.people || [],
-  qraps: BOOT.qraps || [], actions: BOOT.actions || [], all: false,
+  qraps: BOOT.qraps || [], actions: BOOT.actions || [], effects: BOOT.effects || [], assess: BOOT.assess || [], all: false,
   kiosk: !!(BOOT.params && BOOT.params.kiosk === '1'),
   view: 'board', id: null, edit: null, filter: 'open', area: '', search: '', history: {}
 };
 
 const STATUS = {
-  'OPATŘENÍ':   { label: '③ Opatření', cls: 'warn', next: '③ Okamžitá opatření', who: 'kdokoli ze směny' },
-  'ROZHODNUTÍ': { label: '④ Rozhodnutí', cls: 'warn', next: '④ Rozhodnutí vedoucího', who: 'vedoucí' },
-  'ANALÝZA':    { label: '⑤⑥ Analýza', cls: 'info', next: '⑤ Příčina a ⑥ konečné akce', who: 'vedoucí a odpovědní za akce' },
-  'OVĚŘENÍ':    { label: '⑥ Ověření', cls: 'info', next: '⑥ Ověřit účinnost a uzavřít', who: 'vedoucí' },
+  'OPATŘENÍ':   { label: '③ Opatření', cls: 'warn', next: '③ Okamžitá opatření', who: 'kdokoli ze směny (TL)' },
+  'ROZHODNUTÍ': { label: '④ Rozhodnutí', cls: 'warn', next: '④ Rozhodnutí OJT', who: 'vedoucí' },
+  'ANALÝZA':    { label: '⑤ 5 Proč', cls: 'info', next: '⑤ 5 Proč a ⑥ konečné akce', who: 'piloti' },
+  'AKCE':       { label: '⑥ Akce', cls: 'info', next: '⑥ Konečné akce', who: 'piloti akcí' },
+  'OVĚŘENÍ':    { label: '⑥ Ověření 5 směn', cls: 'info', next: '⑥ Efektivita 5 směn a uzavření', who: 'TL a vedoucí' },
   'UZAVŘENO':   { label: 'Uzavřeno', cls: 'ok' },
   'ZRUŠENO':    { label: 'Zrušeno', cls: 'muted' }
 };
 const DECISIONS = [
-  { value: 'VYŘEŠENO', label: 'Problém vyřešen – uzavřít bez 5× Proč', sub: 'Okamžitá opatření stačila a příčina je jasná.' },
-  { value: 'ANALÝZA', label: 'Pokračovat analýzou 5× Proč', sub: 'Příčina není jasná nebo je potřeba trvalé opatření.' },
-  { value: 'ESKALACE', label: 'Eskalovat na manažera', sub: 'Přesahuje možnosti oblasti. Manažer dostane e-mail, analýza pokračuje.' }
+  { value: 'POKRAČOVAT', label: 'Pokračovat s analýzou a 5 Proč', sub: 'Příčina není známá nebo je co se naučit → piloti dostanou e-mail.' },
+  { value: 'VYŘEŠENO', label: 'Problém vyřešen: ŽÁDNÉ 5 Proč', sub: 'Opatření a OJT problém vyřešily. QRAP se uzavře.' },
+  { value: 'ESKALACE', label: 'Eskalace na vyšší úroveň (manažer)', sub: 'Přesahuje oblast → manažer dostane e-mail, analýza pokračuje.' }
 ];
 const CRITERIA = [
-  ['a1', '1 RED BOX', 'popis problému'], ['a2', '2 ROZDĚLENÍ', 'třídění, ochrana a rozdělení úkolů'],
-  ['a3', '3 POROVNÁNÍ', 'dobrý a špatný stav'], ['a4', '4 POUČENÍ A SDÍLENÍ', 'komunikace a sdílení'],
-  ['a5', '5 ON JOB TRAINING', 'OJT provedené managementem']
+  ['c1', '1 RED BOX', 'Popis problému'], ['c2', '2 ROZDĚLENÍ', 'Třídění, ochrana a rozdělení úkolů'],
+  ['c3', '3 POROVNÁNÍ', 'Dobrý a špatný'], ['c4', '4 POUČENÍ A SDÍLENÍ', 'Komunikace a transversalizace'],
+  ['c5', '5 ON JOB TRAINING', 'OJT provedené managementem']
 ];
 const SECTION_TITLES = ['', 'POPIS PROBLÉMU', 'KDO BYL UPOZORNĚN?', 'OKAMŽITÁ OPATŘENÍ', 'ROZHODNUTÍ OJT',
-  'PŘÍČINA – 5× PROČ?', 'KONEČNÉ AKCE', 'HODNOCENÍ QRQC'];
+  'PŘÍČINA 5 Proč?', 'KONEČNÉ AKCE', 'HODNOCENÍ QRQC'];
+const YES_NO = [{ value: 'ANO', label: 'ano' }, { value: 'NE', label: 'ne' }];
 
 // ------------------------------------------------------------------ 2. SMALL HELPERS
 /** Creates an element. Text is always inserted as text (never as HTML), so nothing typed can break the page. */
@@ -340,12 +374,16 @@ async function submit(btn, fn, args, secNo) {
   return res;
 }
 
+/** Puts a fresh problem (from the server) into the page's data. */
 function store(res) {
   if (!res || !res.qrap) return;
-  const i = S.qraps.findIndex(q => q.id === res.qrap.id);
+  const id = res.qrap.id;
+  const i = S.qraps.findIndex(q => q.id === id);
   if (i >= 0) S.qraps[i] = res.qrap; else S.qraps.unshift(res.qrap);
-  S.actions = S.actions.filter(a => a.qrapId !== res.qrap.id).concat(res.actions);
-  delete S.history[res.qrap.id];
+  S.actions = S.actions.filter(a => a.qrapId !== id).concat(res.actions);
+  S.effects = S.effects.filter(a => a.qrapId !== id).concat(res.effects);
+  S.assess = S.assess.filter(a => a.qrapId !== id).concat(res.assess);
+  delete S.history[id];
 }
 
 const pad = n => String(n).padStart(2, '0');
@@ -370,18 +408,22 @@ function localInput(iso) {
   const d = iso ? new Date(iso) : new Date();
   return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
-function today() { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function dayOf(iso) { const d = iso ? new Date(iso) : new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+const today = () => dayOf();
 const split = s => String(s || '').split(',').map(x => x.trim()).filter(Boolean);
+const isOther = v => String(v || '').trim().toLowerCase() === 'jiné';
 const byId = id => S.qraps.find(q => q.id === id);
-const actsOf = id => S.actions.filter(a => a.qrapId === id).sort((a, b) => a.no - b.no);
+const actsOf = (id, part) => S.actions.filter(a => a.qrapId === id && a.part === part && !a.removed).sort((a, b) => a.no - b.no);
 const isOpen = q => q.status !== 'UZAVŘENO' && q.status !== 'ZRUŠENO';
 const hours3 = () => Number(S.cfg.LHUTA_OPATRENI_HODIN) || 24;
 const deadline3 = q => new Date(new Date(q.when || q.created).getTime() + hours3() * 3600e3);
 const actLate = a => !a.done && a.due && a.due < today();
-const isLate = q => isOpen(q) && ((q.status === 'OPATŘENÍ' && deadline3(q) < new Date()) || actsOf(q.id).some(actLate));
+const isLate = q => isOpen(q) && ((q.status === 'OPATŘENÍ' && deadline3(q) < new Date()) || actsOf(q.id, '⑥').some(actLate));
 const roleName = r => (r === 'MANAŽER' ? 'Manažer' : r === 'VEDOUCÍ' ? 'Vedoucí' : '');
 function personName(email) { const p = S.people.find(x => x.email === email); return p ? p.name : email; }
+const pilotNames = q => split(q.pilots).map(personName).join(', ');
 function badge(q) { const st = STATUS[q.status] || { label: q.status, cls: '' }; return h('span', { class: 'badge ' + st.cls }, st.label); }
+const ynText = v => (v === 'ANO' ? 'ano' : v === 'NE' ? 'ne' : '');
 function kv(pairs) {
   return h('div', { class: 'kv' }, pairs.filter(p => p[1] !== '' && p[1] !== null && p[1] !== undefined)
     .map(p => h('div', null, h('span', null, p[0]), p[1])));
@@ -439,11 +481,12 @@ const FILTERS = {
   closed: { label: 'Uzavřené', test: q => !isOpen(q) }
 };
 
-/** "My tasks": leaders see what waits for them in their area, everybody sees their own actions. */
+/** "My tasks": leaders see what waits for them, pilots their analysis, everybody their own actions. */
 function isMine(q) {
   if (!isOpen(q)) return false;
   if (S.actions.some(a => a.qrapId === q.id && a.canDone && a.ownerEmail === S.me.email)) return true;
-  if (S.me.role && (!S.me.area || S.me.area === q.area) && q.status !== 'OPATŘENÍ') return true;
+  if (q.can.analyze && q.status === 'ANALÝZA') return true;
+  if (S.me.role && (!S.me.area || S.me.area === q.zone) && q.status !== 'OPATŘENÍ') return true;
   return !!S.me.email && q.createdBy === S.me.email && q.status === 'OPATŘENÍ';
 }
 
@@ -454,7 +497,7 @@ function boardPage() {
   const tiles = h('div', { class: 'tiles' });
   const listBox = h('div', { class: 'list' });
   const countEl = h('span', { class: 'sub' });
-  const inArea = q => !S.area || q.area === S.area;
+  const inArea = q => !S.area || q.zone === S.area;
 
   const drawList = () => {
     const words = S.search.trim().toLowerCase();
@@ -462,8 +505,8 @@ function boardPage() {
     const rows = S.qraps.filter(q => inArea(q) && (words ? haystack(q).includes(words) : test(q))).sort(order);
     countEl.textContent = words ? 'Nalezeno: ' + rows.length : rows.length + ' ' + (rows.length === 1 ? 'problém' : 'problémů');
     fill(listBox,
-      h('div', { class: 'row head' }, h('div', null, 'ID'), h('div', null, 'Problém'), h('div', null, 'Oblast'),
-        h('div', null, 'Stav'), h('div', null, 'Zjištěno')),
+      h('div', { class: 'row head' }, h('div', null, 'Číslo'), h('div', null, 'CO · JAK'), h('div', null, 'KDE'),
+        h('div', null, 'Stav'), h('div', null, 'KDY')),
       rows.length ? rows.map(rowEl) : h('div', { class: 'empty' }, words ? 'Nic nenalezeno.' : 'Tady nic není.'));
   };
   const drawTiles = () => fill(tiles, keys.map(k => {
@@ -475,15 +518,15 @@ function boardPage() {
   redrawBoard = draw;
 
   const areaSel = h('select', { onchange: e => { S.area = e.target.value; draw(); } },
-    h('option', { value: '' }, 'Všechny oblasti'), (S.lists.areas || []).map(a => h('option', { value: a }, a)));
+    h('option', { value: '' }, 'Všechny zóny'), (S.lists.zones || []).map(a => h('option', { value: a }, a)));
   areaSel.value = S.area;
-  const search = h('input', { type: 'search', placeholder: 'Hledat: číslo, díl, zákazník, dodací list…', value: S.search,
+  const search = h('input', { type: 'search', placeholder: 'Hledat: číslo QRAP, materiál, HU, dodací list, text…', value: S.search,
     oninput: e => { S.search = e.target.value; draw(); } });
   draw();
 
   return h('div', null,
     h('div', { class: 'page-head' },
-      h('div', null, h('h1', null, 'Přehled problémů'), h('div', { class: 'sub' }, 'Kliknutím na řádek otevřete celý formulář QRAP.')),
+      h('div', null, h('h1', null, 'Tabule QRAP'), h('div', { class: 'sub' }, 'Kliknutím na řádek otevřete celý formulář QRAP.')),
       h('button', { class: 'btn ghost', onclick: e => refresh(false, e.currentTarget) }, '⟳ Obnovit')),
     myActions(),
     tiles,
@@ -494,12 +537,12 @@ function boardPage() {
 }
 
 function haystack(q) {
-  return [q.id, q.what, q.where, q.customer, q.partNo, q.delivery, q.reporter, q.type, q.area].join(' ').toLowerCase();
+  return [q.id, q.what, q.zone, q.location, q.materialNo, q.huNo, q.supplier, q.finder, q.how].join(' ').toLowerCase();
 }
 
-/** Open before closed; late and safety first; newest first. */
+/** Open before closed; late and SAFETY first; newest first. */
 function order(a, b) {
-  const rank = q => (isOpen(q) ? 0 : 4) - (isLate(q) ? 2 : 0) - (q.safety ? 1 : 0);
+  const rank = q => (isOpen(q) ? 0 : 4) - (isLate(q) ? 2 : 0) - (q.safety === 'ANO' ? 1 : 0);
   return rank(a) - rank(b) || String(b.when || b.created).localeCompare(String(a.when || a.created));
 }
 
@@ -507,9 +550,10 @@ function rowEl(q) {
   const st = STATUS[q.status] || {};
   const open = () => go('detail', q.id);
   return h('div', { class: 'row' + (isLate(q) ? ' late' : ''), tabindex: 0, onclick: open, onkeydown: e => { if (e.key === 'Enter') open(); } },
-    h('div', { class: 'c-id' }, q.id, q.safety ? h('div', null, h('span', { class: 'badge bad' }, 'BOZP')) : null),
-    h('div', { class: 'c-what' }, h('b', null, q.what), h('div', { class: 'sub' }, [q.type, q.where, q.customer, q.partNo].filter(Boolean).join(' · '))),
-    h('div', { class: 'c-area sub' }, q.area),
+    h('div', { class: 'c-id' }, q.id, q.safety === 'ANO' ? h('div', null, h('span', { class: 'badge bad' }, 'SAFETY')) : null),
+    h('div', { class: 'c-what' }, h('b', null, q.what), h('div', { class: 'sub' },
+      [q.how, q.qty === '' ? '' : q.qty + ' ' + q.unit, q.materialNo, q.huNo].filter(Boolean).join(' · '))),
+    h('div', { class: 'c-area sub' }, [q.zone, q.location].filter(Boolean).join(' / ')),
     h('div', { class: 'c-st' }, badge(q), h('div', { class: 'sub' },
       isLate(q) ? h('span', { class: 'late-txt' }, 'po termínu') : (st.who ? 'čeká: ' + st.who : ''))),
     h('div', { class: 'c-age sub' }, ago(q.when || q.created)));
@@ -519,10 +563,10 @@ function myActions() {
   if (S.kiosk || !S.me.email) return null;
   const mine = S.actions.filter(a => a.canDone && a.ownerEmail === S.me.email);
   if (!mine.length) return null;
-  return h('div', { class: 'card' }, h('h2', null, 'MOJE AKCE (' + mine.length + ')'),
+  return h('div', { class: 'card' }, h('h2', null, 'MOJE KONEČNÉ AKCE (' + mine.length + ')'),
     mine.map(a => h('div', { class: 'act' },
       h('div', { class: 'act-no' }, '⑥'),
-      h('div', null, h('div', null, a.text), h('div', { class: 'sub' }, a.qrapId + ' · termín ',
+      h('div', null, h('div', null, a.text), h('div', { class: 'sub' }, a.qrapId + ' · plán ',
         h('span', { class: actLate(a) ? 'late-txt' : '' }, fmtD(a.due)))),
       h('div', null),
       h('button', { class: 'btn small', onclick: () => go('detail', a.qrapId) }, 'Otevřít'))));
@@ -530,41 +574,38 @@ function myActions() {
 
 // ------------------------------------------------------------------ 5. NEW PROBLEM (NAHLÁSIT)
 function newPage() {
-  const pf = popisForm({ reporter: S.kiosk ? '' : S.me.name, when: localInput(), area: S.me.area || '' });
-  const of = opatreniForm({ s3By: S.kiosk ? '' : S.me.name });
-  const s3Box = h('div', { hidden: true, style: 'margin-top:14px' }, of.el);
-  const s3On = h('input', { type: 'checkbox', onchange: e => { s3Box.hidden = !e.target.checked; } });
-  const photos = photoPicker();
+  const pf = popisForm({ when: new Date().toISOString(), finder: S.kiosk ? '' : S.me.name, zone: S.me.area || '' }, true);
+  const of = opatreniForm({}, []);
   const send = h('button', { class: 'btn primary big', onclick: async () => {
     const data = pf.read();
     if (!data) return;
-    if (s3On.checked) { const s3 = of.read(); if (!s3) return; data.s3 = s3; }
-    data.photos = photos.get();
+    const s3 = of.read();
+    if (!s3) return;
+    data.s3 = s3;
     const res = await save(send, 'apiCreate', [data]);
     if (res) go(S.kiosk ? 'done' : 'detail', res.qrap.id, true);
-  } }, 'Odeslat hlášení');
+  } }, 'Odeslat');
 
   return h('div', { class: 'narrow' },
-    h('div', { class: 'page-head' }, h('div', null, h('h1', null, 'Nahlásit problém'),
-      h('div', { class: 'sub' }, 'Vyplňte, co se stalo. Povinné údaje jsou označené hvězdičkou *. Zabere to asi 2 minuty.'))),
-    section(1, 'now', h('div', null, pf.one, h('div', { class: 'fld', style: 'margin-top:14px' },
-      h('span', { class: 'fld-l' }, 'Fotky (nepovinné)'), photos.el))),
+    h('div', { class: 'page-head' }, h('div', null, h('h1', null, 'Nový QRAP'),
+      h('div', { class: 'sub' }, 'Vyplňte fakta. Povinné údaje jsou označené hvězdičkou *.'))),
+    section(1, 'now', pf.one),
     section(2, 'now', pf.two),
-    section(3, 'wait', h('div', null,
-      h('label', { class: 'check-line' }, s3On, 'Okamžitá opatření už jsou hotová – vyplním je teď'),
-      h('div', { class: 'sub' }, 'Jinak je doplní vedoucí nebo kdokoli ze směny do ' + hours3() + ' h.'), s3Box)),
-    h('div', { class: 'form-btns' }, send, h('button', { class: 'btn ghost', onclick: () => go('board') }, 'Zrušit')));
+    section(3, 'now', h('div', null, of.el, h('p', { class: 'sub', style: 'margin-top:12px' },
+      'Stačí odpověď na riziko – zbytek ③ může doplnit TL později (do ' + hours3() + ' h od KDY).'))),
+    h('div', { class: 'form-btns' }, send, h('button', { class: 'btn ghost', onclick: () => go('board') }, 'Zrušit')),
+    h('p', { class: 'sub' }, 'Po odeslání dostane vedoucí e-mail a QRAP se objeví na tabuli.'));
 }
 
 function donePage() {
   const q = byId(S.id) || {};
   return h('div', { class: 'narrow card done-page' },
     h('div', { class: 'tick' }, '✓'),
-    h('h1', null, 'Děkujeme, problém ' + (q.id || '') + ' je nahlášený.'),
-    h('p', { class: 'muted' }, 'Vedoucí dostal e-mail. Stav najdete na přehledu.'),
+    h('h1', null, 'QRAP ' + (q.id || '') + ' odeslán.'),
+    h('p', { class: 'muted' }, q.status === 'OPATŘENÍ' ? 'Vedoucí dostal e-mail. TL doplní okamžitá opatření ③.' : 'Vedoucí dostal e-mail.'),
     h('div', { class: 'form-btns', style: 'justify-content:center' },
       h('button', { class: 'btn primary big', onclick: () => go('new') }, '+ Nahlásit další'),
-      h('button', { class: 'btn big', onclick: () => go('board') }, 'Zpět na přehled')));
+      h('button', { class: 'btn big', onclick: () => go('board') }, 'Zpět na tabuli')));
 }
 
 // ------------------------------------------------------------------ 6. PROBLEM DETAIL ①–⑦
@@ -572,7 +613,7 @@ function donePage() {
 function section(n, state, body, button) {
   return h('section', { class: 'card sec ' + state, id: 'sec' + n },
     h('div', { class: 'sec-head' }, h('span', { class: 'num' }, n),
-      h('h2', null, SECTION_TITLES[n] + (n === 3 ? ' < ' + hours3() + ' h' : '')), h('div', { class: 'grow' }), button || null),
+      h('h2', null, SECTION_TITLES[n] + (n === 3 ? ' <' + hours3() + 'h' : '')), h('div', { class: 'grow' }), button || null),
     h('div', { class: 'sec-body' }, body));
 }
 const editBtn = (key, label) => h('button', { class: 'btn small ghost no-print', onclick: () => edit(key) }, label || 'Upravit');
@@ -582,44 +623,47 @@ function formButtons(label, onSave) {
   const b = h('button', { class: 'btn primary', onclick: () => onSave(b) }, label);
   return h('div', { class: 'form-btns' }, b, h('button', { class: 'btn ghost', onclick: () => edit(null) }, 'Zrušit'));
 }
+const saveSection = (q, part, read, n) => b => { const d = read(); if (d) submit(b, 'apiSave', [q.id, part, d], n); };
 
 function detailPage() {
   const q = byId(S.id);
   if (!q) return h('div', { class: 'narrow card' }, 'Načítám ' + (S.id || '') + '…');
-  const acts = actsOf(q.id);
-  const pf = S.edit === 'popis' ? popisForm(Object.assign({}, q, { when: localInput(q.when) })) : null;
+  const pf = S.edit === 'popis' ? popisForm(q, false) : null;
   return h('div', { class: 'narrow' },
-    h('button', { class: 'link no-print', onclick: () => go('board') }, '← Přehled'),
+    h('button', { class: 'link no-print', onclick: () => go('board') }, '← Tabule'),
     h('div', { class: 'd-head' },
-      h('div', null, h('h1', null, q.id, ' ', badge(q), q.safety ? [' ', h('span', { class: 'badge bad' }, 'BOZP')] : null),
-        h('div', { class: 'sub' }, [q.type, q.area, 'nahlášeno ' + fmtDT(q.created)].filter(Boolean).join(' · '))),
+      h('div', null, h('h1', null, q.id, ' ', badge(q), q.safety === 'ANO' ? [' ', h('span', { class: 'badge bad' }, 'SAFETY')] : null),
+        h('div', { class: 'sub' }, [q.zone, q.location, 'KDY ' + fmtDT(q.when)].filter(Boolean).join(' · '))),
       h('button', { class: 'btn no-print', onclick: () => window.print() }, 'Tisk / PDF')),
-    steps(q), nextBox(q, acts),
-    sec1(q, pf), sec2(q, pf), sec3(q), sec4(q), sec5(q), sec6(q, acts), sec7(q),
+    steps(q), nextBox(q),
+    sec1(q, pf), sec2(q, pf), sec3(q), sec4(q), sec5(q), sec6(q), sec7(q),
     historyBox(q), adminBox(q));
 }
 
 function steps(q) {
   if (q.status === 'ZRUŠENO') return null;
-  const names = ['Nahlášeno', 'Opatření', 'Rozhodnutí', 'Příčina a akce', 'Ověření', 'Uzavřeno'];
-  const at = { 'OPATŘENÍ': 1, 'ROZHODNUTÍ': 2, 'ANALÝZA': 3, 'OVĚŘENÍ': 4, 'UZAVŘENO': 6 }[q.status] || 0;
+  const names = ['Nahlášeno', 'Opatření', 'Rozhodnutí', '5 Proč', 'Akce', 'Ověření 5 směn', 'Uzavřeno'];
+  const at = { 'OPATŘENÍ': 1, 'ROZHODNUTÍ': 2, 'ANALÝZA': 3, 'AKCE': 4, 'OVĚŘENÍ': 5, 'UZAVŘENO': 7 }[q.status] || 0;
   return h('div', { class: 'steps no-print' }, names.map((n, i) =>
     h('div', { class: 'step ' + (i < at ? 'done' : i === at ? 'now' : '') }, n)));
 }
 
-function nextBox(q, acts) {
-  if (q.status === 'UZAVŘENO') return h('div', { class: 'next ok' }, h('b', null, '✓ Uzavřeno ' + fmtDT(q.closedAt)));
+function nextBox(q) {
+  if (q.status === 'UZAVŘENO') {
+    return h('div', { class: 'next ok' }, h('b', null, '✓ Uzavřeno ' + fmtDT(q.closedAt)),
+      h('span', { class: 'sub' }, q.decision === 'VYŘEŠENO' ? '· vyřešeno bez 5 Proč' : '· uzavření schválil(a) ' + q.closedBy));
+  }
   if (q.status === 'ZRUŠENO') return h('div', { class: 'next grey' }, h('b', null, 'Zrušeno: '), q.cancelReason);
   const st = STATUS[q.status];
   const late = isLate(q);
+  let who = st.who;
   let extra = '';
-  if (q.status === 'OPATŘENÍ') extra = 'termín ' + fmtDT(deadline3(q).toISOString());
-  if (q.status === 'ANALÝZA') {
-    const open = acts.filter(a => !a.done).length;
-    extra = !q.rootCause ? 'chybí příčina' : !acts.length ? 'chybí akce' : q.effective === 'NE' ? 'doplňte další akci' : 'otevřené akce: ' + open;
-  }
+  if (q.status === 'OPATŘENÍ') extra = 'chybí: ' + q.s3Missing.join(', ') + ' · termín ' + fmtDT(deadline3(q).toISOString());
+  if (q.status === 'ANALÝZA' || q.status === 'AKCE') who = 'piloti: ' + (pilotNames(q) || 'vedoucí');
+  if (q.status === 'AKCE') extra = 'otevřené akce: ' + actsOf(q.id, '⑥').filter(a => !a.done).length;
+  if (q.status === 'OVĚŘENÍ') extra = 'efektivní na ' + q.eff.ok + ' z 5 směn';
   return h('div', { class: 'next' + (late ? ' bad' : '') },
-    h('span', null, 'Další krok:'), h('b', null, st.next), h('span', { class: 'sub' }, '· dělá: ' + st.who),
+    h('span', null, 'Další krok:'), h('b', null, st.next), h('span', { class: 'sub' }, '· dělá: ' + who),
     extra ? h('span', { class: late ? 'late-txt' : 'sub' }, '· ' + extra + (late ? ' – po termínu!' : '')) : null);
 }
 
@@ -627,154 +671,192 @@ function sec1(q, pf) {
   if (pf) return h('div', { class: 'editing' }, section(1, 'now', pf.one));
   return section(1, 'done', h('div', null,
     h('p', { class: 'big-text' }, q.what),
-    kv([['Kdo hlásí', q.reporter], ['Oblast', q.area], ['Typ problému', q.type], ['Kdy zjištěno', fmtDT(q.when)],
-      ['Kde přesně', q.where], ['Jak zjištěno', q.how], ['Zákazník', q.customer], ['Číslo dílu', q.partNo],
-      ['Dodací list / zásilka', q.delivery], ['Množství NOK', q.qty === '' ? '' : q.qty + ' ks'],
-      ['Bezpečnost', q.safety ? 'ANO – týká se BOZP' : '']]),
-    photosRow(q)), q.can.popis ? editBtn('popis', 'Upravit ① ②') : null);
+    kv([['SAFETY', ynText(q.safety)], ['JAK byl objeven?', isOther(q.how) ? 'jiné: ' + q.howOther : q.how], ['KDY?', fmtDT(q.when)],
+      ['KDE?', [q.zone, q.location].filter(Boolean).join(' / ')], ['Kde vzniklo?', q.originZone || 'nevím / stejné'],
+      ['KOLIK?', q.qty === '' ? '' : q.qty + ' ' + q.unit + (q.nokSituation ? ' · NOK situace bez kusů' : '')],
+      ['Stejný problém v posledních 7 dnech?', q.repeat7 === 'ANO' ? 'ANO → ' + q.repeatRef : ynText(q.repeat7)],
+      ['JMÉNO', [q.finder, q.badge].filter(Boolean).join(' · ')], ['Číslo materiálu', q.materialNo],
+      ['Číslo HU / dodacího listu', q.huNo], ['Dodavatel', q.supplier]]),
+    photosView(q)), q.can.popis ? editBtn('popis', 'Upravit ① ②') : null);
 }
 
 function sec2(q, pf) {
-  if (pf) {
-    return section(2, 'now', h('div', null, pf.two, formButtons('Uložit ① a ②', b => {
-      const d = pf.read();
-      if (d) submit(b, 'apiSave', [q.id, 'popis', d], 1);
-    })));
-  }
-  return section(2, 'done', h('div', { class: 'tags' }, split(q.notified).map(x => h('span', { class: 'tag' }, x))));
+  if (pf) return section(2, 'now', h('div', null, pf.two, formButtons('Uložit ① a ②', saveSection(q, 'popis', pf.read, 1))));
+  return section(2, 'done', h('div', null,
+    h('div', { class: 'tags' }, split(q.notified).map(x => h('span', { class: 'tag' }, isOther(x) && q.notifiedOther ? 'jiné: ' + q.notifiedOther : x)))));
 }
 
 function sec3(q) {
+  const ia = actsOf(q.id, '③');
   if (S.edit === 'opatreni') {
-    const f = opatreniForm(q.s3Done ? q : { s3By: S.me.name });
-    return h('div', { class: 'editing' }, section(3, 'now', h('div', null, f.el,
-      formButtons('Uložit – opatření jsou hotová', b => { const d = f.read(); if (d) submit(b, 'apiSave', [q.id, 'opatreni', d], 3); }))));
+    const f = opatreniForm(q, ia);
+    return h('div', { class: 'editing' }, section(3, 'now', h('div', null, f.el, formButtons('Uložit ③', saveSection(q, 'opatreni', f.read, 3)))));
   }
-  if (!q.s3Done) {
-    return section(3, isOpen(q) ? 'now' : 'wait', h('p', { class: isLate(q) ? 'late-txt' : 'muted' },
-      'Zatím nevyplněno. Termín: ' + fmtDT(deadline3(q).toISOString()) + (isLate(q) ? ' – po termínu!' : '')),
-    q.can.opatreni ? startBtn('opatreni', 'Vyplnit ③') : null);
-  }
-  return section(3, 'done', h('div', null,
-    h('p', { class: 'pre' }, q.s3Action),
-    kv([['Kde zkontrolováno', q.s3Places], ['Zkontrolováno', q.s3Checked === '' ? '' : q.s3Checked + ' ks'],
-      ['Nalezeno NOK', q.s3Nok === '' ? '' : q.s3Nok + ' ks'], ['Zákazník informován', q.s3Customer],
-      ['Kdo', q.s3By], ['Hotovo', fmtDT(q.s3Done)]])), q.can.opatreni ? editBtn('opatreni') : null);
+  const state = q.s3Done ? 'done' : isOpen(q) ? 'now' : 'wait';
+  return section(3, state, h('div', null,
+    kv([['Je riziko u zboží už na skladě nebo už expedovaného?', ynText(q.risk)],
+      ['Kontrola (zkontrolováno / špatně)', q.risk !== 'ANO' ? '' : q.checkRunning ? 'kontrola probíhá'
+        : (q.checked === '' ? '?' : q.checked) + ' / ' + (q.wrong === '' ? '?' : q.wrong) + ' ks'],
+      ['Proces zastaven?', ynText(q.processStopped) + (q.restoredAt ? ' → obnoven ' + fmtDT(q.restoredAt) : '')]]),
+    h('div', { class: 'sub-h', style: 'margin-top:14px' }, 'Okamžitá opatření'),
+    ia.length ? ia.map((a, i) => h('div', { class: 'act' },
+      h('div', { class: 'act-no' }, (i + 1) + '.'),
+      h('div', null, h('div', null, a.text), h('div', { class: 'sub' }, a.kind + ' · ' + a.owner)),
+      h('div', { class: 'act-st' }, a.done ? h('span', { class: 'badge ok' }, '✓ ' + fmtDT(a.done)) : h('span', { class: 'badge' }, 'probíhá')),
+      h('div'))) : note('Zatím žádné opatření.'),
+    q.s3Done ? h('div', { class: 'box ok' }, '✓ Okamžitá opatření ③ jsou kompletní (' + fmtDT(q.s3Done) + ').')
+      : h('div', { class: 'box ' + (isLate(q) ? 'bad' : '') }, 'Opatření ③ ještě nejsou kompletní – chybí: ' + q.s3Missing.join(', ') +
+        '. Termín: ' + fmtDT(deadline3(q).toISOString()) + '.')),
+  q.can.opatreni ? (q.s3Done ? editBtn('opatreni') : startBtn('opatreni', 'Doplnit ③')) : null);
 }
 
 function sec4(q) {
-  if (S.edit === 'rozhodnuti') {
-    const F = makeForm(q);
-    return h('div', { class: 'editing' }, section(4, 'now', h('div', null,
-      F.radio('decision', 'Jak dál?', DECISIONS, { req: true }),
-      h('div', { style: 'margin-top:12px' }, F.input('decisionNote', 'Poznámka (nepovinné)', { rows: 2 })),
-      formButtons('Potvrdit rozhodnutí', b => { const d = F.read(); if (d) submit(b, 'apiSave', [q.id, 'rozhodnuti', d], 4); }))));
+  if (S.edit === 'rozhodnuti') return h('div', { class: 'editing' }, section(4, 'now', decisionForm(q)));
+  const shiftsAll = S.lists.shifts || [];
+  const informed = split(q.shifts);
+  let shiftsEl;
+  if (q.can.shifts) {
+    const F = makeForm({ shifts: q.shifts });
+    const b = h('button', { class: 'btn small', onclick: () => { const d = F.read(); if (d) submit(b, 'apiSave', [q.id, 'smeny', d], 4); } }, 'Uložit směny');
+    shiftsEl = h('div', null, F.checks('shifts', 'Informace všem směnám během 5\' meetingu', shiftsAll), h('div', { style: 'margin-top:8px' }, b));
+  } else {
+    shiftsEl = kv([['Informace všem směnám během 5\' meetingu', shiftsAll.map(s => (informed.includes(s) ? '✓ ' : '✗ ') + s).join('   ')]]);
   }
   if (q.decision) {
     const d = DECISIONS.find(x => x.value === q.decision) || { label: q.decision };
-    return section(4, 'done', h('div', null, h('p', null, h('b', null, d.label)),
-      q.decisionNote ? h('p', { class: 'pre' }, q.decisionNote) : null,
-      h('div', { class: 'by' }, 'Rozhodl(a) ' + q.decisionBy + ' · ' + fmtDT(q.decisionAt))),
-    q.can.decide ? editBtn('rozhodnuti', 'Změnit') : null);
+    return section(4, 'done', h('div', null, shiftsEl,
+      h('p', { style: 'margin-top:12px' }, h('b', null, d.label)),
+      q.decisionNote ? h('p', { class: 'pre' }, 'Komentář: ' + q.decisionNote) : null,
+      q.pilots ? kv([['Piloti', pilotNames(q)]]) : null,
+      h('div', { class: 'by' }, 'Podepsal(a) ' + q.decisionBy + ' · ' + fmtDT(q.decisionAt) + ' · zamčeno')));
   }
-  if (!q.s3Done) return section(4, 'wait', note('Rozhoduje vedoucí, až budou hotová ③ okamžitá opatření.'));
-  return section(4, isOpen(q) ? 'now' : 'wait', note(q.can.decide ? 'Rozhodněte, jak s problémem dál.' : 'Čeká na rozhodnutí vedoucího.'),
+  const msg = !q.s3Done ? 'Rozhodnutí je možné, až jsou okamžitá opatření ③ kompletní.'
+    : q.can.decide ? 'Rozhodněte a podepište.' : 'Čeká na rozhodnutí vedoucího.';
+  return section(4, q.status === 'ROZHODNUTÍ' ? 'now' : 'wait', h('div', null, shiftsEl, h('p', { class: 'muted', style: 'margin-top:12px' }, msg)),
     q.can.decide ? startBtn('rozhodnuti', 'Rozhodnout') : null);
 }
 
-const needsAnalysis = q => q.decision === 'ANALÝZA' || q.decision === 'ESKALACE';
+const needsAnalysis = q => q.decision === 'POKRAČOVAT' || q.decision === 'ESKALACE';
 
 function sec5(q) {
-  if (q.decision === 'VYŘEŠENO') return section(5, 'skip', note('Není potřeba – vyřešeno okamžitými opatřeními.'));
-  if (!needsAnalysis(q)) return section(5, 'wait', note('Vyplňuje vedoucí, pokud rozhodne o analýze.'));
-  if (S.edit === 'pricina') {
-    const F = makeForm(q);
-    return h('div', { class: 'editing' }, section(5, 'now', h('div', { class: 'grid' },
-      [1, 2, 3, 4, 5].map(i => F.input('why' + i, 'Proč ' + i + '?', { req: i === 1, wide: true,
-        ph: i === 1 ? 'Proč se problém stal?' : 'Proč se stalo to předchozí?' })),
-      F.input('rootCause', 'Hlavní příčina', { req: true, rows: 2, wide: true }),
-      F.select('causeType', 'Kategorie příčiny', S.lists.causes || []),
-      h('div', { class: 'wide' }, formButtons('Uložit příčinu', b => { const d = F.read(); if (d) submit(b, 'apiSave', [q.id, 'pricina', d], 5); })))));
+  if (q.decision === 'VYŘEŠENO') return section(5, 'skip', note('Není potřeba (rozhodnutí bez 5 Proč).'));
+  if (!needsAnalysis(q)) return section(5, 'wait', note('Vyplňují piloti po rozhodnutí ④ „Pokračovat s analýzou a 5 Proč“.'));
+  if (S.edit === 'pricina') return h('div', { class: 'editing' }, section(5, 'now', pricinaForm(q)));
+  if (S.edit === 'piloti') {
+    const F = makeForm({});
+    const have = split(q.pilots);
+    return h('div', { class: 'editing' }, section(5, 'now', h('div', null,
+      F.checks('pilots', 'Přidat piloty', S.people.filter(p => !have.includes(p.email)).map(p => p.name), { req: true }),
+      formButtons('Přidat', saveSection(q, 'piloti', F.read, 5)))));
   }
-  if (!q.rootCause) {
-    return section(5, isOpen(q) ? 'now' : 'wait', note('Zatím nevyplněno.'), q.can.analyze ? startBtn('pricina', 'Vyplnit ⑤') : null);
-  }
-  return section(5, 'done', h('div', null,
-    h('ol', { class: 'whys' }, [1, 2, 3, 4, 5].filter(i => q['why' + i]).map(i => h('li', null, h('b', null, 'Proč ' + i), q['why' + i]))),
-    h('div', { class: 'root' }, h('b', null, 'Hlavní příčina: '), q.rootCause, q.causeType ? h('span', { class: 'sub' }, ' · ' + q.causeType) : null)),
-  q.can.analyze ? editBtn('pricina') : null);
+  const filled = c => [1, 2, 3, 4, 5].filter(i => q[c + i]);
+  const chain = (c, title) => (filled(c).length ? h('div', { style: 'margin-bottom:12px' }, h('div', { class: 'sub-h' }, title),
+    h('ol', { class: 'whys' }, filled(c).map(i => h('li', { class: Number(q['root' + c.toUpperCase()]) === i ? 'root-step' : '' },
+      h('b', null, c.toUpperCase() + i), q[c + i], Number(q['root' + c.toUpperCase()]) === i ? h('span', { class: 'badge warn', style: 'margin-left:8px' }, 'kořenová příčina') : null)))) : null);
+  const empty = !filled('o').length;
+  const pilots = h('div', { class: 'sub', style: 'margin-bottom:10px' }, 'Piloti: ' + (pilotNames(q) || '–'),
+    q.can.pilots ? [' ', h('button', { class: 'link no-print', onclick: () => edit('piloti') }, '+ přidat pilota')] : null);
+  return section(5, empty ? (isOpen(q) ? 'now' : 'wait') : 'done', h('div', null, pilots,
+    empty ? note('Zatím nevyplněno.') : [chain('o', 'Proč to vzniklo?'), chain('n', 'Proč to nebylo zachyceno?'),
+      kv([['Co jsme se naučili z QR?', q.learned || '–'],
+        ['Příležitost k aktualizaci STANDARDU?', q.std === 'ANO' ? 'ANO → ' + q.stdRef : ynText(q.std) || '–']])]),
+  q.can.analyze ? (empty ? startBtn('pricina', 'Vyplnit 5 Proč') : editBtn('pricina')) : null);
 }
 
-function sec6(q, acts) {
-  if (q.decision === 'VYŘEŠENO') return section(6, 'skip', note('Není potřeba – vyřešeno okamžitými opatřeními.'));
-  if (!needsAnalysis(q)) return section(6, 'wait', note('Akce zadává vedoucí po rozhodnutí o analýze.'));
-  const state = !isOpen(q) || (acts.length && acts.every(a => a.done) && q.status !== 'OVĚŘENÍ') ? 'done' : q.rootCause ? 'now' : 'wait';
-  const add = q.can.analyze && S.edit !== 'akce:new' ? h('button', { class: 'btn small primary no-print', onclick: () => edit('akce:new') }, '+ Přidat akci') : null;
+function sec6(q) {
+  if (q.decision === 'VYŘEŠENO') return section(6, 'skip', note('Není potřeba (rozhodnutí bez 5 Proč).'));
+  if (!needsAnalysis(q)) return section(6, 'wait', note('Konečné akce zadávají piloti po analýze 5 Proč.'));
+  const acts = actsOf(q.id, '⑥');
+  const state = q.status === 'UZAVŘENO' ? 'done' : ['AKCE', 'OVĚŘENÍ'].includes(q.status) || q.status === 'ANALÝZA' ? 'now' : 'wait';
+  const canAdd = q.can.analyze && S.edit !== 'akce:new';
+  const addBtn = canAdd ? h('button', { class: 'btn small primary no-print', onclick: () => edit('akce:new') }, '+ Přidat konečnou akci') : null;
+  const hasWhy = !![1, 2, 3, 4, 5].some(i => q['o' + i] || q['n' + i]);
   return section(6, state, h('div', null,
     acts.length ? h('div', null, acts.map(a => (S.edit === 'akce:' + a.no ? actionForm(q, a) : actionRow(q, a))))
-      : note(q.can.analyze ? 'Zatím žádné akce. Přidejte trvalé opatření s odpovědnou osobou a termínem.' : 'Zatím žádné akce.'),
+      : note(q.can.analyze && !hasWhy ? 'Nejdříve vyplňte a uložte 5 Proč – každá akce odstraňuje jeden krok.' : 'Zatím žádné konečné akce.'),
     S.edit === 'akce:new' ? actionForm(q, null) : null,
-    verifyBox(q)), add);
+    effectBox(q), closureBox(q)), hasWhy ? addBtn : null);
 }
 
 function actionRow(q, a) {
   const late = actLate(a);
+  const step = a.kind === 'STD' ? 'aktualizace standardu' : 'odstraňuje ' + a.kind;
   return h('div', { class: 'act' + (a.done ? ' done' : '') },
-    h('div', { class: 'act-no' }, a.no + '.'),
+    h('div', { class: 'act-no' }, a.kind === 'STD' ? 'STD' : a.kind),
     h('div', null, h('div', { class: 'act-text' }, a.text),
-      h('div', { class: 'sub' }, a.owner, ' · termín ', h('span', { class: late ? 'late-txt' : '' }, fmtD(a.due)), a.note ? ' · ' + a.note : '')),
+      h('div', { class: 'sub' }, a.owner, ' · ', step, ' · plán ', h('span', { class: late ? 'late-txt' : '' }, fmtD(a.due)),
+        a.dueFirst && a.dueFirst !== a.due ? ' (původní plán ' + fmtD(a.dueFirst) + ')' : '', a.note ? ' · ' + a.note : '',
+        /^https?:\/\//i.test(a.evidence) ? [' · ', h('a', { href: a.evidence, target: '_blank', rel: 'noopener' }, 'důkaz')] : '')),
     h('div', { class: 'act-st' }, a.done ? h('span', { class: 'badge ok' }, '✓ ' + fmtD(a.done))
       : h('span', { class: 'badge ' + (late ? 'bad' : '') }, late ? 'Po termínu' : 'Otevřená')),
     h('div', { class: 'act-btns no-print' },
       a.canDone ? h('button', { class: 'btn small', onclick: e => submit(e.currentTarget, 'apiSaveAction', [q.id, { no: a.no, done: true }], 6) }, '✓ Hotovo') : null,
-      a.canEdit ? h('button', { class: 'btn small ghost', onclick: () => edit('akce:' + a.no) }, 'Upravit') : null));
+      a.canEdit || a.canDone ? h('button', { class: 'btn small ghost', onclick: () => edit('akce:' + a.no) }, 'Upravit') : null));
 }
 
-function verifyBox(q) {
-  if (q.effective === 'ANO') {
-    return h('div', { class: 'box ok' }, h('b', null, '✓ Ověřeno – akce jsou účinné. '), q.effectiveNote,
-      h('div', { class: 'by' }, q.effectiveBy + ' · ' + fmtDT(q.effectiveAt)));
+/** ⑥ Efektivita – 5 směn (only when all actions are done, or to show earlier rounds). */
+function effectBox(q) {
+  const rows = S.effects.filter(e => e.qrapId === q.id);
+  if (!rows.length && q.status !== 'OVĚŘENÍ') return null;
+  const round = q.eff.round;
+  const slot = n => rows.filter(e => e.round === round && e.slot === n).pop() || null;
+  const resultBadge = r => h('span', { class: 'badge ' + (r === 'EFEKTIVNÍ' ? 'ok' : r === 'NEEFEKTIVNÍ' ? 'bad' : '') }, r);
+  const tr = n => {
+    const cur = slot(n);
+    if (!q.can.effect || (cur && cur.result === 'EFEKTIVNÍ')) {
+      return h('tr', null, h('td', null, n), h('td', null, cur ? fmtD(cur.date) : '–'), h('td', null, cur ? cur.shift : ''),
+        h('td', null, cur ? resultBadge(cur.result) : ''), h('td', null, cur ? cur.by : ''), h('td'));
+    }
+    const date = h('input', { type: 'date', max: today(), value: cur ? cur.date : today() });
+    const shift = h('select', null, h('option', { value: '' }, '— směna —'), (S.lists.shifts || []).map(s => h('option', { value: s }, s)));
+    shift.value = cur ? cur.shift : '';
+    const result = h('select', null, h('option', { value: '' }, '— výsledek —'),
+      ['EFEKTIVNÍ', 'NEOVĚŘENO', 'NEEFEKTIVNÍ'].map(r => h('option', { value: r }, r)));
+    result.value = cur ? cur.result : '';
+    const by = h('input', { value: cur ? cur.by : (S.kiosk ? '' : S.me.name), placeholder: 'Kdo' });
+    const b = h('button', { class: 'btn small', onclick: () => {
+      if (result.value === 'NEEFEKTIVNÍ') toast('Chyba se znovu objevila → QRAP se vrátí do analýzy a počítání směn začne znovu.');
+      submit(b, 'apiSaveEffect', [q.id, { slot: n, date: date.value, shift: shift.value, result: result.value, by: by.value }], 6);
+    } }, 'Uložit');
+    return h('tr', null, h('td', null, n), h('td', null, date), h('td', null, shift), h('td', null, result), h('td', null, by), h('td', null, b));
+  };
+  const older = rows.filter(e => e.round < round);
+  return h('div', { class: 'box' },
+    h('b', null, 'Efektivita zkontrolována na 5 směnách bez chyb'),
+    h('span', { class: 'sub' }, ' · kolo ' + round + ' · efektivní na ' + q.eff.ok + ' z 5 různých směn'),
+    h('p', { class: 'sub', style: 'margin:4px 0 8px' }, 'Každý slot musí být jiná směna (datum + směna). „NEEFEKTIVNÍ“ vrátí QRAP do analýzy.'),
+    h('div', { class: 'slots-wrap' }, h('table', { class: 'slots' },
+      h('tr', null, ['Slot', 'Datum směny', 'Směna', 'Výsledek', 'Zkontroloval(a)', ''].map(x => h('th', null, x))),
+      [1, 2, 3, 4, 5].map(tr))),
+    older.length ? h('p', { class: 'sub', style: 'margin-top:8px' }, 'Předchozí kola: ' +
+      older.map(e => 'kolo ' + e.round + '/slot ' + e.slot + ' ' + e.result).join(', ')) : null);
+}
+
+/** ⑥ Uzavření QRAP – checklist and signature. */
+function closureBox(q) {
+  if (q.status === 'UZAVŘENO' && q.decision !== 'VYŘEŠENO') {
+    return h('div', { class: 'box ok' }, h('b', null, '✓ Uzavření QRAP schválil(a) ' + q.closedBy), ' · ' + fmtDT(q.closedAt));
   }
-  if (S.edit === 'overeni') {
-    const F = makeForm({});
-    return h('div', { class: 'box editing' }, h('b', null, 'Ověření účinnosti'),
-      h('div', { style: 'margin-top:10px' }, F.radio('effective', 'Opakoval se problém od dokončení akcí?', [
-        { value: 'ANO', label: 'Neopakoval – akce jsou účinné', sub: 'Problém se uzavře.' },
-        { value: 'NE', label: 'Opakoval se – akce nestačí', sub: 'Problém zůstane otevřený, přidejte další akci.' }], { req: true })),
-      h('div', { style: 'margin-top:12px' }, F.input('effectiveNote', 'Poznámka (co jste kontrolovali / co se opakovalo)', { rows: 2 })),
-      formButtons('Uložit ověření', b => { const d = F.read(); if (d) submit(b, 'apiSave', [q.id, 'overeni', d], 6); }));
-  }
-  if (q.status === 'OVĚŘENÍ') {
-    return h('div', { class: 'box' }, h('b', null, 'Ověření účinnosti'),
-      h('p', { class: 'muted' }, 'Všechny akce jsou hotové. Po několika směnách ověřte, že se problém neopakuje, a problém uzavřete.'),
-      q.can.verify ? startBtn('overeni', 'Ověřit a uzavřít') : null);
-  }
-  if (q.effective === 'NE') {
-    return h('div', { class: 'box bad' }, h('b', null, 'Poslední ověření: akce nebyly účinné. '), q.effectiveNote,
-      h('div', { class: 'by' }, 'Přidejte další akci. ' + q.effectiveBy + ' · ' + fmtDT(q.effectiveAt)));
-  }
-  return null;
+  if (q.status !== 'OVĚŘENÍ') return null;
+  const ok = q.checklist.every(c => c.ok);
+  const b = h('button', { class: 'btn primary', disabled: !ok, onclick: () => submit(b, 'apiSave', [q.id, 'uzavreni', {}], 6) }, 'Podepsat uzavření');
+  return h('div', { class: 'box' }, h('b', null, 'Podmínky uzavření'),
+    h('ul', { class: 'checklist' }, q.checklist.map(c => h('li', null, h('span', { class: c.ok ? 'ok' : 'no' }, c.ok ? '✓ ' : '✗ '), c.label))),
+    q.can.close ? h('div', null, b, h('span', { class: 'sub' }, '  Podpis = váš účet + čas.')) : note('Uzavření podepisuje vedoucí.'));
 }
 
 function sec7(q) {
-  if (S.edit === 'hodnoceni') {
-    const F = makeForm(q);
-    const opts = ['OK', 'NOK', 'N/A'].map(v => ({ value: v, label: v }));
-    return h('div', { class: 'editing' }, section(7, 'now', h('div', { class: 'grid' },
-      CRITERIA.map(c => F.radio(c[0], c[1] + ' – ' + c[2], opts, { req: true, inline: true, wide: true })),
-      F.input('aNote', 'Komentář (pochvala / co zlepšit)', { rows: 2, wide: true }),
-      h('div', { class: 'wide' }, formButtons('Uložit hodnocení', b => { const d = F.read(); if (d) submit(b, 'apiSave', [q.id, 'hodnoceni', d], 7); })))));
-  }
-  if (!q.aAt) {
-    return section(7, 'wait', note('Nepovinné. Vedoucí nebo manažer ohodnotí, jak tým postupoval (RED BOX, rozdělení, porovnání, sdílení, OJT).'),
-      q.can.assess ? editBtn('hodnoceni', 'Ohodnotit') : null);
-  }
+  const list = S.assess.filter(a => a.qrapId === q.id).sort((a, b) => String(b.at).localeCompare(String(a.at)));
   const cls = v => (v === 'OK' ? 'ok' : v === 'NOK' ? 'bad' : '');
-  return section(7, 'done', h('div', null,
-    h('div', { class: 'crit' }, CRITERIA.map(c => [h('div', null, h('b', null, c[1]), h('span', { class: 'sub' }, ' – ' + c[2])),
-      h('span', { class: 'badge ' + cls(q[c[0]]) }, q[c[0]])])),
-    q.aNote ? h('p', { class: 'pre', style: 'margin-top:10px' }, q.aNote) : null,
-    h('div', { class: 'by' }, 'Hodnotil(a) ' + q.aBy + ' · ' + fmtDT(q.aAt))), q.can.assess ? editBtn('hodnoceni') : null);
+  const items = list.map(a => h('div', { class: 'assess-item' },
+    h('div', { class: 'sub' }, fmtDT(a.at) + ' · ' + a.by),
+    h('div', { style: 'margin:4px 0' }, CRITERIA.map(c => h('span', { class: 'badge ' + cls(a[c[0]]), title: c[1] }, c[1].split(' ')[0] + ' ' + a[c[0]]))),
+    a.ojtWith ? h('div', { class: 'sub' }, 'OJT s: ' + a.ojtWith) : null,
+    a.feedback ? h('div', null, a.feedbackType ? h('b', null, a.feedbackType + ': ') : null, a.feedback) : null));
+  const form = S.edit === 'hodnoceni' ? h('div', { class: 'editing box' }, assessForm(q)) : null;
+  return section(7, list.length ? 'done' : 'wait', h('div', null,
+    list.length ? h('div', null, h('div', { class: 'sub' }, 'Celkem hodnocení: ' + list.length), items) : note('Zatím bez hodnocení.'), form),
+  q.can.assess && S.edit !== 'hodnoceni' ? editBtn('hodnoceni', '+ Hodnotit') : null);
 }
 
 function historyBox(q) {
@@ -799,39 +881,56 @@ function historyBox(q) {
 function adminBox(q) {
   if (!q.can.admin) return null;
   const open = isOpen(q);
-  const reason = h('input', { placeholder: open ? 'Důvod zrušení (např. duplicita, omyl)' : 'Důvod znovuotevření (nepovinné)' });
-  const btn = h('button', { class: 'btn ' + (open ? 'danger' : ''),
-    onclick: () => submit(btn, 'apiAdmin', [q.id, open ? 'cancel' : 'reopen', reason.value], 1) }, open ? 'Zrušit problém' : 'Znovu otevřít');
-  return h('div', { class: 'card no-print' }, h('h2', null, 'SPRÁVA (JEN MANAŽER)'), h('div', { class: 'inline-form' }, reason, btn));
+  const reason = h('input', { placeholder: 'Důvod (uloží se do historie)' });
+  const op = (label, code, cls) => {
+    const b = h('button', { class: 'btn ' + (cls || ''), onclick: () => submit(b, 'apiAdmin', [q.id, code, reason.value], 1) }, label);
+    return b;
+  };
+  return h('div', { class: 'card no-print' }, h('h2', null, 'SPRÁVA (JEN MANAŽER)'),
+    h('div', { class: 'inline-form' }, reason,
+      open && q.decision ? op('Odemknout ①–④ (zrušit rozhodnutí)', 'unlock') : null,
+      open ? op('Zrušit QRAP', 'cancel', 'danger') : op('Znovu otevřít', 'reopen')));
 }
 
-// ------------------------------------------------------------------ 7. SECTION FORMS
-/** A tiny form builder: every field remembers how to read its value and whether it is required. */
+// ------------------------------------------------------------------ 7. FORMS (① … ⑦)
+/**
+ * A tiny form builder: every field remembers how to read its value and whether it is required.
+ * Fields inside a hidden block are skipped (not required, value '').
+ */
 function makeForm(values) {
   const items = {};
+  const val = key => (values[key] === null || values[key] === undefined ? '' : values[key]);
+  const hiddenNow = i => !!i.box.closest('[hidden]');
   const wrap = (key, label, control, o) => {
     const el = h(o.group ? 'div' : 'label', { class: 'fld' + (o.wide ? ' wide' : '') },
-      h('span', { class: 'fld-l' }, label, o.req ? h('span', { class: 'req' }, ' *') : null), control, o.hint ? h('small', null, o.hint) : null);
+      label ? h('span', { class: 'fld-l' }, label, o.req ? h('span', { class: 'req' }, ' *') : null) : null,
+      control, o.hint ? h('small', null, o.hint) : null);
     items[key].box = el;
     const ok = () => el.classList.remove('invalid');
     el.addEventListener('input', ok);
     el.addEventListener('change', ok);
     return el;
   };
-  const val = key => (values[key] === null || values[key] === undefined ? '' : values[key]);
-  return {
+  const F = {
     input(key, label, o = {}) {
+      const dt = o.type === 'datetime-local';
       const el = o.rows ? h('textarea', { rows: o.rows, placeholder: o.ph, maxlength: 2000 })
-        : h('input', { type: o.type || 'text', placeholder: o.ph, min: o.min, list: o.list, maxlength: o.type ? null : 200 });
-      el.value = val(key);
-      items[key] = { label, req: o.req, get: () => el.value.trim(), focus: () => el.focus() };
-      return wrap(key, label, el, o);
+        : h('input', { type: o.type || 'text', placeholder: o.ph, min: o.min, max: o.max, list: o.list,
+          inputmode: o.type === 'number' ? 'numeric' : null, maxlength: o.type ? null : 200 });
+      el.value = dt && val(key) ? localInput(val(key)) : val(key);
+      if (o.onchange) el.addEventListener('input', () => o.onchange(el.value));
+      items[key] = { label, req: o.req, focus: () => el.focus(),
+        get: () => (dt ? (el.value ? new Date(el.value).toISOString() : '') : el.value.trim()) };
+      const control = o.now ? h('div', { class: 'with-btn' }, el, h('button', { class: 'btn small', type: 'button',
+        onclick: () => { el.value = localInput(); el.dispatchEvent(new Event('input', { bubbles: true })); } }, 'Teď')) : el;
+      return wrap(key, label, control, o);
     },
     select(key, label, options, o = {}) {
-      const opts = options.slice();
-      if (val(key) && !opts.includes(val(key))) opts.push(val(key));
-      const el = h('select', null, h('option', { value: '' }, '— vyberte —'), opts.map(x => h('option', { value: x }, x)));
+      const opts = options.map(x => (typeof x === 'string' ? { value: x, label: x } : x));
+      if (val(key) && !opts.some(x => x.value === val(key))) opts.push({ value: val(key), label: val(key) });
+      const el = h('select', null, h('option', { value: '' }, o.ph || '— vyberte —'), opts.map(x => h('option', { value: x.value }, x.label)));
       el.value = val(key);
+      if (o.onchange) el.addEventListener('change', () => o.onchange(el.value));
       items[key] = { label, req: o.req, get: () => el.value, focus: () => el.focus() };
       return wrap(key, label, el, o);
     },
@@ -840,157 +939,395 @@ function makeForm(values) {
       const boxes = options.concat(cur.filter(x => !options.includes(x))).map(x => {
         const cb = h('input', { type: 'checkbox', checked: cur.includes(x) });
         const lb = h('label', { class: 'check' + (cb.checked ? ' on' : '') }, cb, x);
-        cb.addEventListener('change', () => lb.classList.toggle('on', cb.checked));
+        cb.addEventListener('change', () => { lb.classList.toggle('on', cb.checked); if (o.onchange) o.onchange(read()); });
         return { cb, x, lb };
       });
-      items[key] = { label, req: o.req, get: () => boxes.filter(b => b.cb.checked).map(b => b.x).join(', '), focus: () => boxes[0] && boxes[0].cb.focus() };
+      const read = () => boxes.filter(b => b.cb.checked).map(b => b.x);
+      items[key] = { label, req: o.req, get: () => read().join(', '), focus: () => boxes[0] && boxes[0].cb.focus(),
+        set: list => boxes.forEach(b => { b.cb.checked = list.includes(b.x); b.lb.classList.toggle('on', b.cb.checked); }) };
       return wrap(key, label, h('div', { class: 'checks' }, boxes.map(b => b.lb)), Object.assign({ group: true }, o));
     },
     radio(key, label, options, o = {}) {
       const name = 'r' + Math.random().toString(36).slice(2);
       const rows = options.map(x => {
-        const r = h('input', { type: 'radio', name, value: x.value, checked: val(key) === x.value });
-        return { r, el: h('label', { class: 'choice' + (r.checked ? ' on' : '') }, r, h('span', null, h('b', null, x.label), x.sub ? h('small', null, x.sub) : null)) };
+        const r = h('input', { type: 'radio', name, value: x.value, checked: val(key) === x.value, disabled: x.disabled });
+        return { r, el: h('label', { class: 'choice' + (r.checked ? ' on' : '') }, r,
+          h('span', null, h('b', null, x.label), x.sub ? h('small', null, x.sub) : null)) };
       });
-      rows.forEach(x => x.r.addEventListener('change', () => rows.forEach(y => y.el.classList.toggle('on', y.r.checked))));
+      rows.forEach(x => x.r.addEventListener('change', () => {
+        rows.forEach(y => y.el.classList.toggle('on', y.r.checked));
+        if (o.onchange) o.onchange(x.r.value);
+      }));
       items[key] = { label, req: o.req, get: () => { const c = rows.find(x => x.r.checked); return c ? c.r.value : ''; }, focus: () => rows[0].r.focus() };
       return wrap(key, label, h('div', { class: 'choices' + (o.inline ? ' inline' : '') }, rows.map(x => x.el)), Object.assign({ group: true }, o));
     },
+    yesno(key, label, o = {}) { return F.radio(key, label, YES_NO, Object.assign({ inline: true }, o)); },
     toggle(key, label, o = {}) {
       const cb = h('input', { type: 'checkbox', checked: !!val(key) });
+      if (o.onchange) cb.addEventListener('change', () => o.onchange(cb.checked));
       items[key] = { label, get: () => (cb.checked ? 'ANO' : ''), focus: () => cb.focus() };
       const el = h('label', { class: 'check-line' + (o.wide ? ' wide' : '') }, cb, label);
       items[key].box = el;
       return el;
     },
+    /** Marks one field red with a message (for rules that involve two fields). */
+    mark(key, msg) {
+      items[key].box.classList.add('invalid');
+      items[key].focus();
+      toast(msg, true);
+      return null;
+    },
+    /** All values without checking (hidden fields give ''). */
+    peek() {
+      const out = {};
+      Object.keys(items).forEach(k => { out[k] = hiddenNow(items[k]) ? '' : items[k].get(); });
+      return out;
+    },
     /** Returns all values, or null (and marks the missing fields red) when something required is empty. */
     read() {
       Object.values(items).forEach(i => i.box.classList.remove('invalid'));
-      const missing = Object.values(items).filter(i => i.req && !i.get());
+      const missing = Object.values(items).filter(i => i.req && !hiddenNow(i) && !i.get());
       if (missing.length) {
         missing.forEach(i => i.box.classList.add('invalid'));
         missing[0].focus();
         toast('Vyplňte prosím: ' + missing.map(i => i.label.replace(/[?:]$/, '')).join(', '), true);
         return null;
       }
-      const out = {};
-      Object.keys(items).forEach(k => { out[k] = items[k].get(); });
-      return out;
-    }
+      return F.peek();
+    },
+    item: key => items[key]
   };
+  return F;
 }
 
-/** ① and ② – used on the "Nahlásit" page and when editing. */
-function popisForm(v) {
-  const F = makeForm(v);
+/** Shows or hides a block when a value changes. */
+function showIf(el, on) { el.hidden = !on; return el; }
+
+/** ① POPIS PROBLÉMU and ② KDO BYL UPOZORNĚN? – on the new page (isNew) and when editing. */
+function popisForm(v, isNew) {
+  const F = makeForm(Object.assign({}, v, { photoExc: v.photoException ? 'ANO' : '' }));
+  const L = S.lists;
+  const howOther = showIf(h('div', { class: 'wide' }, F.input('howOther', 'JAK – jiné (popište)', { req: true })), isOther(v.how));
+  const recent = S.qraps.filter(q => q.id !== v.id && Date.now() - new Date(q.when).getTime() < 7 * 864e5)
+    .map(q => ({ value: q.id, label: q.id + ' – ' + q.what.slice(0, 60) }));
+  const repeat = showIf(h('div', { class: 'wide' }, F.select('repeatRef', 'Vyberte QRAP z posledních 7 dnů', recent,
+    { req: true, ph: recent.length ? '— vyberte —' : 'Žádný QRAP za posledních 7 dnů' })), v.repeat7 === 'ANO');
+  const excBox = showIf(h('div', { class: 'wide' }, F.input('photoException', 'Důvod výjimky (proč nejsou fotky)', { rows: 2, req: true })),
+    !!v.photoException);
+  const photos = isNew ? photoPicker() : null;
   const one = h('div', { class: 'grid' },
-    F.input('reporter', 'Kdo hlásí', { req: true, ph: 'Jméno a příjmení' }),
-    F.input('when', 'Kdy zjištěno', { req: true, type: 'datetime-local' }),
-    F.select('area', 'Oblast', S.lists.areas || [], { req: true }),
-    F.select('type', 'Typ problému', S.lists.types || [], { req: true }),
-    F.input('what', 'Co se stalo?', { req: true, rows: 3, wide: true, ph: 'Stručně a konkrétně: co je špatně, u jakého dílu nebo zásilky.' }),
-    F.input('where', 'Kde přesně?', { ph: 'např. rampa 3, regál B-12' }),
-    F.select('how', 'Jak zjištěno?', S.lists.how || []),
-    h('div', { class: 'sub-h wide' }, 'Údaje o zásilce (nepovinné)'),
-    F.input('customer', 'Zákazník'),
-    F.input('partNo', 'Číslo dílu'),
-    F.input('delivery', 'Dodací list / zásilka'),
-    F.input('qty', 'Množství NOK (ks)', { type: 'number', min: 0 }),
-    F.toggle('safety', 'Týká se bezpečnosti (úraz nebo riziko úrazu) – upozorní i manažera', { wide: true }));
-  const two = F.checks('notified', 'Koho jste o problému informovali?', S.lists.notify || [], { req: true, hint: 'Označte všechny, kdo už o problému ví.' });
+    h('div', { class: 'sub-h wide' }, 'Problém'),
+    F.yesno('safety', 'SAFETY', { req: true, hint: 'Jde o bezpečnost lidí (úraz, pád zboží, VZV…)? Vyberte vědomě.' }),
+    F.select('how', 'JAK byl objeven?', L.how || [], { req: true, hint: 'Při jaké činnosti byl problém objeven.',
+      onchange: x => showIf(howOther, isOther(x)) }),
+    howOther,
+    F.input('what', 'CO je za problém?', { req: true, rows: 3, wide: true, hint: 'Popište fakta: co je špatně a u jakého zboží.' }),
+    F.yesno('repeat7', 'Stejný problém v posledních 7 dnech?', { req: true, wide: true, onchange: x => showIf(repeat, x === 'ANO') }),
+    repeat,
+    h('div', { class: 'sub-h wide' }, 'Kdy a kde'),
+    F.input('when', 'KDY?', { req: true, type: 'datetime-local', now: true, hint: 'Čas objevení, ne čas zápisu.' }),
+    F.select('zone', 'KDE? – zóna', L.zones || [], { req: true }),
+    F.input('location', 'KDE? – lokace', { req: true, ph: 'kód lokace, např. B-12-03, rampa 3' }),
+    F.select('originZone', 'Kde vzniklo?', L.zones || [], { ph: 'nevím / stejné' }),
+    h('div', { class: 'sub-h wide' }, 'Množství'),
+    F.input('qty', 'KOLIK?', { req: true, type: 'number', min: 0 }),
+    F.select('unit', 'Jednotka', L.units || []),
+    F.toggle('nokSituation', 'NOK situace bez kusů', { wide: true }),
+    h('div', { class: 'sub-h wide' }, 'Kdo problém našel'),
+    F.input('finder', 'JMÉNO', { list: 'people-list', hint: 'Vyberte jméno ze seznamu…' }),
+    F.input('badge', 'Číslo odznaku', { hint: '…nebo zadejte číslo odznaku.' }),
+    h('div', { class: 'sub-h wide' }, 'Nepovinné údaje'),
+    F.input('materialNo', 'Číslo materiálu'),
+    F.input('huNo', 'Číslo manipulační jednotky / dodacího listu'),
+    F.input('supplier', 'Dodavatel'),
+    h('div', { class: 'sub-h wide' }, 'Fotky'),
+    photos ? h('div', { class: 'wide' }, photos.el, h('small', { class: 'sub' }, 'Vyfoťte ŠPATNÝ a SPRÁVNÝ stav. Obě fotky jsou povinné.')) : null,
+    F.toggle('photoExc', 'Fotku nelze pořídit (výjimka s důvodem)', { wide: true, onchange: on => showIf(excBox, on) }),
+    excBox);
+  const otherBox = showIf(F.input('notifiedOther', 'Jiné – kdo', { req: true }), split(v.notified).some(isOther));
+  const two = h('div', null,
+    F.checks('notified', 'Upozorněné role', S.lists.alert || [], { req: true, hint: 'Koho jste informovali? Vyberte alespoň jednu roli.',
+      onchange: list => showIf(otherBox, list.some(isOther)) }),
+    h('div', { style: 'margin-top:10px' }, otherBox),
+    h('p', { class: 'sub' }, 'Když je riziko u zboží na skladě nebo expedovaného (③ = ANO), přidá se Kvalita automaticky.'));
   return {
     one, two,
     read() {
       const d = F.read();
-      if (d) d.when = d.when ? new Date(d.when).toISOString() : '';
+      if (!d) return null;
+      if (!d.finder && !d.badge) return F.mark('finder', 'Vyplňte JMÉNO nebo číslo odznaku.');
+      if (d.qty !== '' && Number(d.qty) === 0 && !d.nokSituation) return F.mark('qty', 'Zadejte KOLIK větší než 0, nebo zaškrtněte „NOK situace bez kusů“.');
+      if (Number(d.qty) > 0 && !d.unit) return F.mark('unit', 'Vyberte jednotku.');
+      if (new Date(d.when).getTime() > Date.now() + 5 * 60000) return F.mark('when', 'KDY nemůže být v budoucnosti.');
+      if (!d.photoExc) d.photoException = '';
+      if (photos) {
+        const p = photos.get();
+        if (!(p.WRONG && p.RIGHT) && !d.photoException) return F.mark('photoExc', 'Chybí Foto ŠPATNĚ a Foto SPRÁVNĚ (nebo výjimka s důvodem).');
+        d.photoWrong = p.WRONG || '';
+        d.photoRight = p.RIGHT || '';
+      }
       return d;
     }
   };
 }
 
-/** ③ */
-function opatreniForm(v) {
+/** ③ OKAMŽITÁ OPATŘENÍ <24h: risk, check, immediate actions, process. */
+function opatreniForm(v, ia) {
   const F = makeForm(v);
-  const el = h('div', { class: 'grid' },
-    F.input('s3Action', 'Co bylo okamžitě uděláno?', { req: true, rows: 3, wide: true,
-      ph: 'např. zásilka zastavena, díly přebaleny, etikety vyměněny, sklad zkontrolován' }),
-    F.checks('s3Places', 'Kde se kontrolovalo, jestli problém není i jinde?', S.lists.places || [], { wide: true }),
-    F.input('s3Checked', 'Zkontrolováno ks', { type: 'number', min: 0 }),
-    F.input('s3Nok', 'Z toho NOK ks', { type: 'number', min: 0 }),
-    F.select('s3Customer', 'Zákazník informován?', ['ANO', 'NE', 'NENÍ POTŘEBA'], { req: true }),
-    F.input('s3By', 'Kdo opatření provedl', { req: true }));
-  return { el, read: F.read };
+  const check = showIf(h('div', { class: 'grid wide' },
+    h('div', { class: 'note warn wide' }, 'ANO → Kvalita dostane e-mail. Vyplňte data kontroly.'),
+    F.input('checked', 'Zkontrolováno (ks)', { type: 'number', min: 0 }),
+    F.input('wrong', 'Nalezeno špatně (ks)', { type: 'number', min: 0 }),
+    F.toggle('checkRunning', 'kontrola probíhá', { wide: true })), v.risk === 'ANO');
+  const restored = showIf(h('div', null, F.input('restoredAt', 'Proces obnoven v', { type: 'datetime-local', now: true,
+    hint: 'Kdy proces znovu běží' })), v.processStopped === 'ANO');
+  const rows = iaList(ia);
+  const el = h('div', null,
+    h('div', { class: 'grid' },
+      h('div', { class: 'sub-h wide' }, 'Riziko u zboží'),
+      F.yesno('risk', 'Je riziko u zboží už na skladě nebo už expedovaného?', { req: true, wide: true,
+        hint: 'Může být stejná chyba i u zboží, které je už na skladě nebo už expedované?', onchange: x => showIf(check, x === 'ANO') }),
+      check,
+      h('div', { class: 'sub-h wide' }, 'Okamžitá opatření'),
+      h('div', { class: 'wide' }, rows.el),
+      h('div', { class: 'sub-h wide' }, 'Proces'),
+      F.yesno('processStopped', 'Proces zastaven?', { onchange: x => showIf(restored, x === 'ANO') }),
+      restored));
+  return {
+    el,
+    read() {
+      const d = F.read();
+      if (!d) return null;
+      if (d.checked !== '' && d.wrong !== '' && Number(d.wrong) > Number(d.checked)) {
+        return F.mark('wrong', '„Nalezeno špatně“ nemůže být víc než „Zkontrolováno“.');
+      }
+      const list = rows.read();
+      if (!list) return null;
+      d.ia = list;
+      return d;
+    }
+  };
 }
 
-/** ⑥ one action (new or edit) */
+/** ③ list of immediate actions (Typ, Kdo, Co bylo uděláno, Hotovo v). A new empty row is ignored. */
+function iaList(existing) {
+  const items = [];
+  const box = h('div');
+  const add = v => {
+    const F = makeForm(v || {});
+    const item = { no: v && v.no, F, removed: false };
+    item.el = h('div', { class: 'ia-row' },
+      h('div', { class: 'ia-head' }, h('b', null, 'Opatření'),
+        h('button', { class: 'link', type: 'button', onclick: () => { item.removed = true; item.el.remove(); } }, 'Odebrat')),
+      h('div', { class: 'grid' },
+        F.select('kind', 'Typ', S.lists.iaTypes || [], { req: true }),
+        F.input('owner', 'Kdo', { req: true, list: 'people-list' }),
+        F.input('text', 'Co bylo uděláno', { req: true, wide: true, ph: 'Co přesně bylo uděláno' }),
+        F.input('done', 'Hotovo v', { type: 'datetime-local', now: true, hint: 'Prázdné = ještě probíhá.' })));
+    items.push(item);
+    box.append(item.el);
+  };
+  existing.forEach(add);
+  if (!existing.length) add({ owner: S.kiosk ? '' : S.me.name });
+  const addBtn = h('button', { class: 'btn small ghost', type: 'button', onclick: () => add({ owner: S.kiosk ? '' : S.me.name }) }, '+ Přidat opatření');
+  return {
+    el: h('div', null, box, addBtn),
+    read() {
+      const out = [];
+      for (const it of items) {
+        if (it.removed) { if (it.no) out.push({ no: it.no, remove: true }); continue; }
+        const p = it.F.peek();
+        if (!it.no && !p.kind && !p.text) continue; // untouched new row
+        const d = it.F.read();
+        if (!d) return null;
+        out.push(Object.assign({ no: it.no || '' }, d));
+      }
+      return out;
+    }
+  };
+}
+
+/** ④ ROZHODNUTÍ OJT – shifts informed, decision, comment, pilots, signature. */
+function decisionForm(q) {
+  const F = makeForm({ shifts: q.shifts });
+  const warn = h('div', { class: 'note warn', hidden: true });
+  const pilots = showIf(h('div', null, F.checks('pilots', 'Piloti (vyberte)', S.people.map(p => p.name),
+    { hint: 'Piloti dostanou e-mail a vyplní ⑤ 5 Proč a ⑥ konečné akce.' })), false);
+  const onDecision = x => {
+    showIf(pilots, x === 'POKRAČOVAT' || x === 'ESKALACE');
+    const w = [];
+    if (x === 'VYŘEŠENO' && q.repeat7 === 'ANO') w.push('Problém se opakoval v posledních 7 dnech.');
+    if (x === 'VYŘEŠENO' && Number(q.wrong) > 0) w.push('Při kontrole bylo nalezeno špatně ' + q.wrong + ' ks.');
+    warn.textContent = w.length ? 'Pozor: ' + w.join(' ') + ' Opravdu bez 5 Proč?' : '';
+    warn.hidden = !w.length;
+  };
+  const shiftsAll = S.lists.shifts || [];
+  return h('div', null,
+    F.checks('shifts', 'Informace všem směnám během 5\' meetingu', shiftsAll),
+    h('div', { style: 'margin-top:14px' }, F.radio('decision', 'Rozhodnutí', DECISIONS.map(d => Object.assign({}, d,
+      { disabled: d.value === 'VYŘEŠENO' && q.safety === 'ANO', sub: d.value === 'VYŘEŠENO' && q.safety === 'ANO' ? 'Nelze – SAFETY = ANO.' : d.sub })),
+    { req: true, onchange: onDecision })),
+    h('div', { style: 'margin-top:10px' }, warn),
+    h('div', { style: 'margin-top:12px' }, pilots),
+    h('div', { style: 'margin-top:12px' }, F.input('decisionNote', 'Komentář', { rows: 2, hint: 'Povinný u „Problém vyřešen“ a „Eskalace“.' })),
+    h('p', { class: 'sub' }, 'Podpis = váš účet (' + S.me.email + ') + čas. Rozhodnutí se zamkne.'),
+    formButtons('Podepsat', b => {
+      const d = F.read();
+      if (!d) return;
+      if (d.decision === 'POKRAČOVAT' && !d.pilots) { F.mark('pilots', 'Vyberte alespoň jednoho pilota.'); return; }
+      if ((d.decision === 'VYŘEŠENO' || d.decision === 'ESKALACE') && !d.decisionNote) { F.mark('decisionNote', 'Napište komentář.'); return; }
+      if (split(d.shifts).length < shiftsAll.length) toast('Upozornění: ne všechny směny byly informovány.');
+      submit(b, 'apiSave', [q.id, 'rozhodnuti', d], 4);
+    }));
+}
+
+/** ⑤ PŘÍČINA 5 Proč? – two chains, root cause, lesson, standard. */
+function pricinaForm(q) {
+  const F = makeForm(q);
+  const roots = {};
+  const chain = (c, title, first) => {
+    const name = 'root' + c + Math.random().toString(36).slice(2);
+    roots[c] = [1, 2, 3, 4, 5].map(i => h('input', { type: 'radio', name, value: i, checked: Number(q['root' + c.toUpperCase()]) === i }));
+    return h('div', null, h('div', { class: 'sub-h' }, title),
+      [1, 2, 3, 4, 5].map(i => h('div', { class: 'why-row' },
+        F.input(c + i, c.toUpperCase() + i + ' – Proč?', { ph: i === 1 ? first : 'Proč se stalo to předchozí?' }),
+        h('label', { class: 'why-root' }, roots[c][i - 1], 'kořenová příčina'))));
+  };
+  const nBox = showIf(h('div', null, chain('n', 'Proč to nebylo zachyceno?', 'Proč problém nebyl zachycen dříve?')),
+    [1, 2, 3, 4, 5].some(i => q['n' + i]));
+  const addN = h('button', { class: 'btn small ghost', type: 'button', hidden: !nBox.hidden,
+    onclick: () => { nBox.hidden = false; addN.hidden = true; } }, '+ Přidat řetězec „Proč to nebylo zachyceno?“');
+  const stdRef = showIf(h('div', null, F.input('stdRef', 'Který standard', { req: true })), q.std === 'ANO');
+  return h('div', null,
+    h('p', { class: 'sub' }, 'Ptejte se „proč?“ na fakta, dokud nedojdete k příčině v procesu, kterou lze odstranit (ne k osobě).'),
+    chain('o', 'Proč to vzniklo?', 'Proč vznikl problém?'),
+    nBox, addN,
+    h('div', { class: 'sub-h', style: 'margin-top:12px' }, 'Poučení a standard'),
+    h('div', { class: 'grid' },
+      F.input('learned', 'Co jsme se naučili z QR?', { rows: 2, wide: true, hint: 'Povinné pro uzavření.' }),
+      F.yesno('std', 'Příležitost k aktualizaci STANDARDU?', { hint: 'ANO vytvoří akci „Aktualizovat standard“.',
+        onchange: x => showIf(stdRef, x === 'ANO') }),
+      stdRef),
+    formButtons('Uložit analýzu', b => {
+      const d = F.read();
+      if (!d) return;
+      ['o', 'n'].forEach(c => { const r = roots[c].find(x => x.checked); d['root' + c.toUpperCase()] = r ? r.value : ''; });
+      const filled = [1, 2, 3, 4, 5].filter(i => d['o' + i]).length;
+      if (filled < 3) toast('Upozornění: vyplněno jen ' + filled + ' Proč – obvykle je potřeba aspoň 3.');
+      submit(b, 'apiSave', [q.id, 'pricina', d], 5);
+    }));
+}
+
+/** ⑥ one definitive action (new or edit). The action's own pilot can only change Hotovo, důkaz and poznámka. */
 function actionForm(q, a) {
-  const F = makeForm(a || {});
-  const done = a ? h('input', { type: 'checkbox', checked: !!a.done }) : null;
+  const F = makeForm(a ? Object.assign({}, a, { done: a.done ? dayOf(a.done) : '' }) : {});
+  const full = !a || a.canEdit;
+  const steps = [];
+  ['o', 'n'].forEach(c => [1, 2, 3, 4, 5].forEach(i => {
+    if (q[c + i]) steps.push({ value: c.toUpperCase() + i, label: c.toUpperCase() + i + ' – ' + q[c + i].slice(0, 70) });
+  }));
+  if (a && a.kind === 'STD') steps.push({ value: 'STD', label: 'STD – aktualizace standardu' });
+  const done = a ? F.input('done', 'Hotovo', { type: 'date', max: today(), hint: 'Datum hotovo akci uzavře.' }) : null;
   return h('div', { class: 'act-form editing' },
     h('div', { class: 'grid' },
-      F.input('text', 'Co se udělá (trvalé opatření)', { req: true, rows: 2, wide: true }),
-      F.input('owner', 'Odpovědná osoba', { req: true, list: 'people-list', ph: 'Začněte psát jméno' }),
-      F.input('due', 'Termín', { req: true, type: 'date', min: a ? null : today() }),
-      F.input('note', 'Poznámka', { wide: true }),
-      done ? h('label', { class: 'check-line wide' }, done, 'Akce je hotová') : null),
-    h('datalist', { id: 'people-list' }, S.people.map(p => h('option', { value: p.name }))),
+      full ? F.input('text', 'Konečná akce', { req: true, rows: 2, wide: true }) : h('div', { class: 'wide' }, h('b', null, a.text)),
+      full ? F.select('kind', 'Odstraňuje krok 5 Proč', steps, { req: true }) : null,
+      full ? F.input('owner', 'Pilot', { req: true, list: 'people-list', ph: 'Začněte psát jméno' }) : null,
+      full ? F.input('due', 'Plán', { req: true, type: 'date', min: a ? null : today() }) : null,
+      done,
+      F.input('evidence', 'Odkaz na důkaz', { ph: 'https://…' }),
+      F.input('note', 'Poznámka', { wide: true })),
     formButtons(a ? 'Uložit akci' : 'Přidat akci', b => {
       const d = F.read();
       if (!d) return;
-      if (a) { d.no = a.no; d.done = done.checked; }
+      if (d.evidence && !/^https?:\/\//i.test(d.evidence)) { F.mark('evidence', 'Odkaz musí začínat http:// nebo https://'); return; }
+      if (a) {
+        d.no = a.no;
+        if (!d.done) d.done = false; // empty = not done yet
+        else if (a.done && d.done === dayOf(a.done)) delete d.done; // unchanged: keep the original time
+      }
       submit(b, 'apiSaveAction', [q.id, d], 6);
-    }));
+    }),
+    a && a.canEdit ? h('button', { class: 'btn small danger', style: 'margin-top:8px',
+      onclick: e => submit(e.currentTarget, 'apiSaveAction', [q.id, { no: a.no, remove: true }], 6) }, 'Odebrat akci') : null);
+}
+
+/** ⑦ HODNOCENÍ QRQC – 5 criteria OK / NOK / N/A, OJT and feedback. The hints help the assessor. */
+function assessForm(q) {
+  const F = makeForm({});
+  const ia = actsOf(q.id, '③');
+  const photos = q.photoWrong && q.photoRight;
+  const informed = split(q.shifts).length;
+  const hints = {
+    c1: '① kompletní' + (photos ? ' · obě fotky' : ' · bez fotek (výjimka)'),
+    c2: (q.s3Done ? '③ kompletní' : '③ nekompletní') + ' · ' + ia.length + ' opatření',
+    c3: photos ? 'obě fotky' : 'bez fotek',
+    c4: 'informováno směn: ' + informed + '/' + (S.lists.shifts || []).length,
+    c5: 'bylo OJT s operátorem u tabule?'
+  };
+  const opts = ['OK', 'NOK', 'N/A'].map(v => ({ value: v, label: v }));
+  return h('div', null,
+    h('div', { class: 'grid' },
+      CRITERIA.map(c => F.radio(c[0], c[1] + ' – ' + c[2], opts, { req: true, inline: true, wide: true, hint: hints[c[0]] })),
+      F.input('ojtWith', 'OJT s kým'),
+      F.select('feedbackType', 'Typ zpětné vazby', ['pochvala', 'silná stránka', 'ke zlepšení']),
+      F.input('feedback', 'Zpětná vazba', { rows: 2, wide: true })),
+    h('p', { class: 'sub' }, 'Hodnotitel a čas se uloží automaticky (' + S.me.name + ').'),
+    formButtons('Uložit hodnocení', b => { const d = F.read(); if (d) submit(b, 'apiAssess', [q.id, d], 7); }));
 }
 
 // ------------------------------------------------------------------ 8. PHOTOS
 const PHOTOS = {}; // fileId → image, so each photo is downloaded only once
 
-function photosRow(q) {
-  const ids = split(q.photos);
-  if (!ids.length && !q.can.popis) return null;
-  const box = h('div', { class: 'photos' });
-  ids.forEach(id => {
-    const tile = h('button', { class: 'ph', type: 'button' }, 'Načítám…');
-    box.append(tile);
-    const show = url => { fill(tile, h('img', { src: url, alt: 'Fotka' })); tile.onclick = () => zoom(url); };
-    if (PHOTOS[id]) show(PHOTOS[id]);
-    else api('apiPhoto', q.id, id).then(url => { PHOTOS[id] = url; show(url); }).catch(() => { tile.textContent = 'Fotku nelze načíst'; });
-  });
-  if (q.can.popis && ids.length < 5) {
+/** ① Foto ŠPATNĚ and Foto SPRÁVNĚ in the detail (with "Vyfotit znovu" while ① can be edited). */
+function photosView(q) {
+  const slot = (kind, key, title) => {
+    const id = q[key];
+    const tile = h('button', { class: 'ph', type: 'button' }, id ? 'Načítám…' : 'Bez fotky');
+    if (id) {
+      const show = url => { fill(tile, h('img', { src: url, alt: title })); tile.onclick = () => zoom(url); };
+      if (PHOTOS[id]) show(PHOTOS[id]);
+      else api('apiPhoto', q.id, id).then(url => { PHOTOS[id] = url; show(url); }).catch(() => { tile.textContent = 'Fotku nelze načíst'; });
+    }
+    let control = null;
+    if (q.can.popis) {
+      const input = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: async e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        button.textContent = 'Nahrávám…';
+        button.disabled = true;
+        try { store(await api('apiSetPhoto', q.id, kind, await shrink(file))); toast('Fotka uložena ✓'); } catch (err) { toast(errText(err), true); }
+        render();
+      } });
+      const button = h('button', { class: 'btn small', type: 'button', onclick: () => input.click() }, id ? 'Vyfotit znovu' : 'Vyfotit');
+      control = h('div', { class: 'no-print' }, button, input);
+    }
+    return h('div', { class: 'pslot ' + (kind === 'RIGHT' ? 'right' : 'wrong') }, h('b', null, title), tile, control);
+  };
+  return h('div', { style: 'margin-top:14px' },
+    h('div', { class: 'photo-slots' }, slot('WRONG', 'photoWrong', 'Foto ŠPATNĚ'), slot('RIGHT', 'photoRight', 'Foto SPRÁVNĚ')),
+    q.photoException ? h('p', { class: 'sub', style: 'margin-top:8px' }, 'Výjimka – proč nejsou fotky: ' + q.photoException) : null);
+}
+
+/** Photo slots for the new-problem page: photos are shrunk in the browser, so the upload is quick. */
+function photoPicker() {
+  const urls = { WRONG: '', RIGHT: '' };
+  const slot = (kind, title) => {
+    const box = h('div', { class: 'pslot ' + (kind === 'RIGHT' ? 'right' : 'wrong') });
     const input = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: async e => {
       const file = e.target.files[0];
       if (!file) return;
-      add.textContent = 'Nahrávám…';
-      try {
-        const url = await shrink(file);
-        store(await api('apiAddPhoto', q.id, url));
-        toast('Fotka přidána ✓');
-      } catch (err) { toast(errText(err), true); }
-      render();
+      try { urls[kind] = await shrink(file); } catch (err) { toast(errText(err), true); }
+      input.value = '';
+      draw();
     } });
-    const add = h('button', { class: 'ph add no-print', type: 'button', onclick: () => input.click() }, '+ Fotka');
-    box.append(add, input);
-  }
-  return h('div', { style: 'margin-top:14px' }, h('span', { class: 'fld-l' }, 'Fotky'), box);
-}
-
-/** Photo picker for the new-problem page: photos are shrunk in the browser, so upload is quick. */
-function photoPicker() {
-  const urls = [];
-  const box = h('div', { class: 'photos' });
-  const input = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true, onchange: async e => {
-    for (const file of Array.from(e.target.files).slice(0, 5 - urls.length)) {
-      try { urls.push(await shrink(file)); } catch (err) { toast(errText(err), true); }
-    }
-    input.value = '';
+    const draw = () => fill(box, h('b', null, title),
+      h('button', { class: 'ph', type: 'button', onclick: () => input.click() }, urls[kind] ? h('img', { src: urls[kind], alt: title }) : 'Zatím bez fotky'),
+      h('button', { class: 'btn small', type: 'button', onclick: () => input.click() }, urls[kind] ? 'Vyfotit znovu' : 'Vyfotit'), input);
     draw();
-  } });
-  const draw = () => fill(box,
-    urls.map((u, i) => h('div', { class: 'ph' }, h('img', { src: u, alt: 'Fotka' }),
-      h('button', { class: 'x', type: 'button', title: 'Odebrat', onclick: () => { urls.splice(i, 1); draw(); } }, '×'))),
-    urls.length < 5 ? h('button', { class: 'ph add', type: 'button', onclick: () => input.click() }, '+ Fotka') : null, input);
-  draw();
-  return { el: box, get: () => urls.slice() };
+    return box;
+  };
+  return { el: h('div', { class: 'photo-slots' }, slot('WRONG', 'Foto ŠPATNĚ'), slot('RIGHT', 'Foto SPRÁVNĚ')), get: () => Object.assign({}, urls) };
 }
 
 function shrink(file) {
@@ -1019,43 +1356,41 @@ function zoom(url) {
 function helpPage() {
   const yes = '✓', no = '–';
   const rows = [
-    ['① ② Nahlásit problém', yes, yes, yes],
-    ['③ Okamžitá opatření (do rozhodnutí)', yes, yes, yes],
-    ['④ Rozhodnout, jak dál', no, yes, yes],
-    ['⑤ Příčina 5× Proč, ⑥ zadat akce', no, yes, yes],
-    ['⑥ Označit svou akci jako hotovou', yes, yes, yes],
-    ['⑥ Ověřit účinnost a uzavřít, ⑦ hodnocení', no, yes, yes],
-    ['Zrušit nebo znovu otevřít problém', no, no, yes],
-    ['Dostává e-mail', 'o své akci', 'nový problém v oblasti', 'eskalace a BOZP']
+    ['① ② ③ Nový QRAP (③ stačí odpověď na riziko)', yes, yes, yes, yes],
+    ['③ Doplnit okamžitá opatření (do rozhodnutí)', yes, yes, yes, yes],
+    ['④ Informované směny, rozhodnutí a podpis', no, no, yes, yes],
+    ['⑤ 5 Proč, ⑥ konečné akce', no, yes, yes, yes],
+    ['⑥ Označit svou akci jako hotovou', yes, yes, yes, yes],
+    ['⑥ Efektivita 5 směn (zápis slotu)', yes, yes, yes, yes],
+    ['⑥ Podepsat uzavření, ⑦ hodnocení QRQC', no, no, yes, yes],
+    ['Zrušit / znovu otevřít / odemknout ①–④', no, no, no, yes]
   ];
   return h('div', { class: 'narrow' },
     h('div', { class: 'page-head' }, h('div', null, h('h1', null, 'Jak to funguje'),
-      h('div', { class: 'sub' }, 'Aplikace je elektronická verze formuláře QRAP pro sklad a expedici.'))),
+      h('div', { class: 'sub' }, 'Elektronická verze formuláře QRAP V3.0 pro sklad a expedici – stejné otázky ① až ⑦.'))),
     h('div', { class: 'flow' },
-      h('div', null, h('b', null, 'Nahlásit'), h('span', { class: 'sub' }, '① co, kde, kdy + ② kdo ví. Kdokoli, i na kiosku. Asi 2 minuty.')),
-      h('div', null, h('b', null, 'Opatření'), h('span', { class: 'sub' }, '③ do ' + hours3() + ' h: zastavit zásilku, přebalit, zkontrolovat sklad.')),
-      h('div', null, h('b', null, 'Rozhodnutí'), h('span', { class: 'sub' }, '④ vedoucí: vyřešeno / analýza / eskalace.')),
-      h('div', null, h('b', null, 'Příčina a akce'), h('span', { class: 'sub' }, '⑤ 5× Proč, ⑥ akce s odpovědnou osobou a termínem.')),
-      h('div', null, h('b', null, 'Ověření'), h('span', { class: 'sub' }, '⑥ neopakuje se? → uzavřeno. ⑦ hodnocení je nepovinné.'))),
+      h('div', null, h('b', null, 'QR (operátor / TL)'), h('span', { class: 'sub' }, '① popis + fotky, ② kdo byl upozorněn, ③ okamžitá opatření do ' + hours3() + ' h.')),
+      h('div', null, h('b', null, 'Rozhodnutí OJT'), h('span', { class: 'sub' }, '④ směny informovány, vedoucí podepíše: 5 Proč / vyřešeno / eskalace.')),
+      h('div', null, h('b', null, '5 Proč (piloti)'), h('span', { class: 'sub' }, '⑤ proč vzniklo, proč nebylo zachyceno, kořenová příčina, poučení.')),
+      h('div', null, h('b', null, 'Konečné akce'), h('span', { class: 'sub' }, '⑥ každá akce odstraňuje krok 5 Proč, má pilota a plán.')),
+      h('div', null, h('b', null, 'Ověření a uzavření'), h('span', { class: 'sub' }, '⑥ efektivní na 5 různých směnách → vedoucí podepíše uzavření. ⑦ hodnocení QRQC.'))),
     h('div', { class: 'card', style: 'margin-top:14px' }, h('h2', null, 'KDO CO MŮŽE'),
-      h('table', { class: 'roles' },
-        h('tr', null, h('th', null, ''), h('th', null, 'Kdokoli'), h('th', null, 'Vedoucí'), h('th', null, 'Manažer')),
-        rows.map(r => h('tr', null, r.map(c => h('td', null, c))))),
+      h('div', { class: 'slots-wrap' }, h('table', { class: 'roles' },
+        h('tr', null, h('th', null, ''), h('th', null, 'Kdokoli'), h('th', null, 'Pilot'), h('th', null, 'Vedoucí'), h('th', null, 'Manažer')),
+        rows.map(r => h('tr', null, r.map(c => h('td', null, c)))))),
       h('p', { class: 'sub', style: 'margin-top:10px' }, 'Vaše role: ' + (roleName(S.me.role) || 'běžný uživatel') +
-        '. Role nastavuje správce v Google tabulce na listu „Lidé“.')),
+        '. Role nastavuje správce v Google tabulce na listu „Lidé“. Piloty vybírá vedoucí v ④.')),
     h('div', { class: 'card' }, h('h2', null, 'TIPY'),
-      h('p', null, '• Na přehledu klikněte na „Moje úkoly“ – uvidíte jen to, co čeká na vás.'),
+      h('p', null, '• Na tabuli klikněte na „Moje úkoly“ – uvidíte jen to, co čeká na vás.'),
       h('p', null, '• Tlačítko „Tisk / PDF“ v detailu vytiskne celý formulář QRAP.'),
-      h('p', null, '• Kiosk: přidejte k adrese aplikace ?kiosk=1 – obrazovka se po chvíli sama vrátí na přehled.')));
+      h('p', null, '• Kiosk: přidejte k adrese aplikace ?kiosk=1 – obrazovka se po chvíli sama vrátí na tabuli.')));
 }
 
 async function refresh(quiet, btn, all) {
   if (btn) { btn.disabled = true; btn.textContent = 'Načítám…'; }
   try {
     const res = await api('apiRefresh', all || S.all);
-    S.qraps = res.qraps;
-    S.actions = res.actions;
-    S.all = res.all;
+    Object.assign(S, { qraps: res.qraps, actions: res.actions, effects: res.effects, assess: res.assess, all: res.all });
     if (!quiet) toast('Aktualizováno ✓');
   } catch (e) {
     if (!quiet) toast(errText(e), true);
@@ -1065,10 +1400,12 @@ async function refresh(quiet, btn, all) {
 
 /** When a problem is opened, fetch its latest version in the background (someone else may have changed it). */
 function refreshOne(id) {
+  const snap = () => JSON.stringify([byId(id), S.actions.filter(a => a.qrapId === id), S.effects.filter(a => a.qrapId === id),
+    S.assess.filter(a => a.qrapId === id)]);
   api('apiGet', id).then(res => {
-    const before = JSON.stringify([byId(id), actsOf(id)]);
+    const before = snap();
     store(res);
-    if (before !== JSON.stringify([byId(id), actsOf(id)]) && S.view === 'detail' && S.id === id && !S.edit) render();
+    if (before !== snap() && S.view === 'detail' && S.id === id && !S.edit) render();
   }).catch(e => {
     if (!byId(id)) { toast(errText(e), true); go('board'); }
   });
@@ -1091,6 +1428,7 @@ function start() {
       h('p', { class: 'muted' }, 'Kontaktujte správce aplikace.'))));
     return;
   }
+  fill(document.getElementById('people-list'), S.people.map(p => h('option', { value: p.name })));
   const p = BOOT.params || {};
   S.view = p.id ? 'detail' : (['new', 'help'].includes(p.view) ? p.view : 'board');
   S.id = p.id || null;

@@ -223,7 +223,7 @@ function makeEnv(opts) {
   function triggerBuilder(handler) {
     const b = { handler, timeBased: () => b, everyHours: () => b, atHour: () => b, nearMinute: () => b, everyDays: () => b,
       inTimezone: () => b, onWeekDay: () => b,
-      create: () => { const t = { getHandlerFunction: () => handler }; state.triggers.push(t); return t; } };
+      create: () => { const uid = 'TRIG-' + (state.triggers.length + 1) + '-' + Date.now(); const t = { getHandlerFunction: () => handler, getUniqueId: () => uid }; state.triggers.push(t); return t; } };
     return b;
   }
   const ScriptApp = {

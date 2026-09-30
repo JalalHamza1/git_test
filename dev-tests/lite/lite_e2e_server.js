@@ -9,6 +9,7 @@ function start(port) {
   env.call('setup');
   env.call('exampleData');
   env.setConfig('EMAILY', 'ANO');
+  env.setConfig('EMAIL_KVALITA', 'kvalita@example.com');
   let offline = false;
 
   const clientMock = `<script>
