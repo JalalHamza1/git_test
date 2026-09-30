@@ -215,6 +215,27 @@ body.kiosk { font-size: 16px; }
 .assess-item:first-child { border-top: 0; }
 .assess-item .badge { margin-right: 4px; }
 
+/* paper-form look (QRAP V3.0): role bands and grey title boxes */
+.band { position: relative; background: #e5e7eb; color: #374151; font-size: 12px; font-weight: 700; letter-spacing: .03em;
+  padding: 6px 28px 6px 14px; margin: 18px 0 8px; clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%); }
+.band.dark { background: #4b5563; color: #fff; }
+.sec { padding: 0; overflow: hidden; border: 2px solid #9ca3af; }
+.sec .sec-head { background: linear-gradient(#f3f4f6, #e5e7eb); border-bottom: 2px solid #9ca3af; padding: 10px 16px; margin: 0; }
+.sec .sec-head h2 { font-size: 17px; font-weight: 800; letter-spacing: .02em; }
+.sec .num { border-radius: 6px; background: #111827; border-color: #111827; color: #fff; }
+.sec .sec-body { padding: 16px 20px; }
+.sec.now { border-color: var(--accent); }
+.sec.now .sec-head { background: linear-gradient(#eef3ff, #dbe6fd); }
+/* wizard */
+.wiz-steps { display: flex; gap: 4px; margin-bottom: 16px; }
+.wiz-step { flex: 1; text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); padding: 8px 4px; border-bottom: 4px solid var(--line); cursor: pointer; background: none; border-top: 0; border-left: 0; border-right: 0; }
+.wiz-step.done { color: var(--ok); border-bottom-color: var(--ok); }
+.wiz-step.on { color: var(--accent); border-bottom-color: var(--accent); }
+.wiz-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 16px; position: sticky; bottom: 0; background: var(--bg); padding: 10px 0; }
+.wiz-nav .btn { min-width: 140px; padding: 14px 22px; font-size: 16px; }
+.choices.inline .choice { padding: 10px 22px; font-size: 16px; }
+@media (max-width: 820px) { .wiz-step span { display: none; } .wiz-nav .btn { min-width: 0; flex: 1; } }
+
 /* phones and small tablets */
 @media (max-width: 820px) {
   .top-in { padding: 8px 16px; gap: 10px; }
@@ -238,6 +259,8 @@ body.kiosk { font-size: 16px; }
   .d-head { flex-direction: column; }
   .steps .step { font-size: 0; }
   .card { padding: 16px; }
+  .card.sec { padding: 0; }
+  .sec .sec-body { padding: 14px; }
 }
 @media print {
   .top, .no-print, .btn, .toast { display: none !important; }
@@ -573,10 +596,38 @@ function myActions() {
 }
 
 // ------------------------------------------------------------------ 5. NEW PROBLEM (NAHLÁSIT)
+/** New QRAP as a step-by-step wizard (Zpět / Další). The last step shows everything for a check before sending. */
 function newPage() {
   const pf = popisForm({ when: new Date().toISOString(), finder: S.kiosk ? '' : S.me.name, zone: S.me.area || '' }, true);
   const of = opatreniForm({}, []);
-  const send = h('button', { class: 'btn primary big', onclick: async () => {
+  // split ① into its groups (Problém | Kdy a kde | Množství + Kdo + Nepovinné | Fotky)
+  const groups = [];
+  Array.from(pf.one.children).forEach(el => {
+    if (el.classList.contains('sub-h')) groups.push(h('div', { class: 'grid' }));
+    groups[groups.length - 1].append(el);
+  });
+  const g = (...i) => h('div', null, i.map(x => groups[x]));
+  const steps = [
+    { name: 'Problém', el: section(1, 'now', g(0)) },
+    { name: 'Kdy a kde', el: section(1, 'now', g(1)) },
+    { name: 'Množství a kdo', el: section(1, 'now', g(2, 3, 4)) },
+    { name: 'Fotky', el: section(1, 'now', g(5)), check: () => {
+      const p = pf.photos.get();
+      const d = pf.F.peek();
+      if (!(p.WRONG && p.RIGHT) && !(d.photoExc && d.photoException)) return pf.F.mark('photoExc', 'Vyfoťte ŠPATNĚ i SPRÁVNĚ, nebo zaškrtněte výjimku s důvodem.');
+      return true;
+    } },
+    { name: '② Upozornění', el: section(2, 'now', pf.two) },
+    { name: '③ Opatření', el: section(3, 'now', h('div', null, of.el, h('p', { class: 'sub', style: 'margin-top:12px' },
+      'Stačí odpověď na riziko – zbytek ③ může doplnit TL později (do ' + hours3() + ' h od KDY).'))) },
+    { name: 'Kontrola', el: null }
+  ];
+  let at = 0;
+  const bar = h('div', { class: 'wiz-steps' });
+  const body = h('div');
+  const back = h('button', { class: 'btn', onclick: () => show(at - 1) }, '← Zpět');
+  const next = h('button', { class: 'btn primary', onclick: () => { if (valid(at)) show(at + 1); } }, 'Další →');
+  const send = h('button', { class: 'btn primary', onclick: async () => {
     const data = pf.read();
     if (!data) return;
     const s3 = of.read();
@@ -584,17 +635,42 @@ function newPage() {
     data.s3 = s3;
     const res = await save(send, 'apiCreate', [data]);
     if (res) go(S.kiosk ? 'done' : 'detail', res.qrap.id, true);
-  } }, 'Odeslat');
-
-  return h('div', { class: 'narrow' },
+  } }, 'Odeslat ✓');
+  function valid(i) {
+    const st = steps[i];
+    if (i === 5) return !!of.read();
+    if (!pf.F.read()) return false;
+    const d = pf.F.peek();
+    if (i === 1 && new Date(d.when).getTime() > Date.now() + 5 * 60000) return !!pf.F.mark('when', 'KDY nemůže být v budoucnosti.');
+    if (i === 2) {
+      if (!d.finder && !d.badge) return !!pf.F.mark('finder', 'Vyplňte JMÉNO nebo číslo odznaku.');
+      if (Number(d.qty) === 0 && !d.nokSituation) return !!pf.F.mark('qty', 'Zadejte KOLIK větší než 0, nebo zaškrtněte „NOK situace bez kusů“.');
+      if (Number(d.qty) > 0 && !d.unit) return !!pf.F.mark('unit', 'Vyberte jednotku.');
+    }
+    return st.check ? !!st.check() : true;
+  }
+  function show(i) {
+    for (let k = 0; k < i; k++) if (k >= at && !valid(k)) { i = k; break; }
+    at = Math.max(0, Math.min(i, steps.length - 1));
+    const last = at === steps.length - 1;
+    fill(bar, steps.map((st, k) => h('button', { class: 'wiz-step' + (k < at ? ' done' : k === at ? ' on' : ''), type: 'button',
+      onclick: () => show(k) }, (k + 1) + '', h('span', null, ' ' + st.name))));
+    fill(body, last ? [h('p', { class: 'sub' }, 'Zkontrolujte údaje. Cokoli můžete ještě opravit přímo zde.')].concat(steps.slice(0, -1).map(st => st.el)) : steps[at].el);
+    back.hidden = at === 0;
+    next.hidden = last;
+    send.hidden = !last;
+    window.scrollTo(0, 0);
+    const f = body.querySelector('input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select');
+    if (f && !last) f.focus({ preventScroll: true });
+  }
+  const page = h('div', { class: 'narrow' },
+    h('div', { class: 'band' }, 'QR vyplňuje OPERÁTOR, který nalezl problém'),
     h('div', { class: 'page-head' }, h('div', null, h('h1', null, 'Nový QRAP'),
-      h('div', { class: 'sub' }, 'Vyplňte fakta. Povinné údaje jsou označené hvězdičkou *.'))),
-    section(1, 'now', pf.one),
-    section(2, 'now', pf.two),
-    section(3, 'now', h('div', null, of.el, h('p', { class: 'sub', style: 'margin-top:12px' },
-      'Stačí odpověď na riziko – zbytek ③ může doplnit TL později (do ' + hours3() + ' h od KDY).'))),
-    h('div', { class: 'form-btns' }, send, h('button', { class: 'btn ghost', onclick: () => go('board') }, 'Zrušit')),
-    h('p', { class: 'sub' }, 'Po odeslání dostane vedoucí e-mail a QRAP se objeví na tabuli.'));
+      h('div', { class: 'sub' }, 'Krok za krokem. Povinné údaje jsou označené hvězdičkou *.'))),
+    bar, body,
+    h('div', { class: 'wiz-nav' }, back, h('button', { class: 'btn ghost', onclick: () => go('board') }, 'Zrušit'), next, send));
+  show(0);
+  return page;
 }
 
 function donePage() {
@@ -636,7 +712,10 @@ function detailPage() {
         h('div', { class: 'sub' }, [q.zone, q.location, 'KDY ' + fmtDT(q.when)].filter(Boolean).join(' · '))),
       h('button', { class: 'btn no-print', onclick: () => window.print() }, 'Tisk / PDF')),
     steps(q), nextBox(q),
-    sec1(q, pf), sec2(q, pf), sec3(q), sec4(q), sec5(q), sec6(q), sec7(q),
+    h('div', { class: 'band' }, 'QR vyplňuje OPERÁTOR, který nalezl problém'), sec1(q, pf), sec2(q, pf), sec3(q),
+    h('div', { class: 'band dark' }, 'Vyplňuje Supervizor'), sec4(q),
+    h('div', { class: 'band' }, 'Vyplňují pověření pracovníci (piloti), na základě rozhodnutí Supervizora'), sec5(q), sec6(q),
+    h('div', { class: 'band dark' }, 'Supervizor / Manažer'), sec7(q),
     historyBox(q), adminBox(q));
 }
 
@@ -900,7 +979,7 @@ function adminBox(q) {
 function makeForm(values) {
   const items = {};
   const val = key => (values[key] === null || values[key] === undefined ? '' : values[key]);
-  const hiddenNow = i => !!i.box.closest('[hidden]');
+  const hiddenNow = i => !i.box.isConnected || !!i.box.closest('[hidden]'); // not on screen = not checked now
   const wrap = (key, label, control, o) => {
     const el = h(o.group ? 'div' : 'label', { class: 'fld' + (o.wide ? ' wide' : '') },
       label ? h('span', { class: 'fld-l' }, label, o.req ? h('span', { class: 'req' }, ' *') : null) : null,
@@ -980,7 +1059,7 @@ function makeForm(values) {
     /** All values without checking (hidden fields give ''). */
     peek() {
       const out = {};
-      Object.keys(items).forEach(k => { out[k] = hiddenNow(items[k]) ? '' : items[k].get(); });
+      Object.keys(items).forEach(k => { out[k] = items[k].box.closest('[hidden]') ? '' : items[k].get(); });
       return out;
     },
     /** Returns all values, or null (and marks the missing fields red) when something required is empty. */
@@ -1051,7 +1130,7 @@ function popisForm(v, isNew) {
     h('div', { style: 'margin-top:10px' }, otherBox),
     h('p', { class: 'sub' }, 'Když je riziko u zboží na skladě nebo expedovaného (③ = ANO), přidá se Kvalita automaticky.'));
   return {
-    one, two,
+    one, two, F, photos,
     read() {
       const d = F.read();
       if (!d) return null;
