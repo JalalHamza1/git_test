@@ -1,0 +1,2621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tasks</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ===== Tokens ======================================================== */
+    :root {
+      --bg: #0b0f14;
+      --bg-2: #0e1319;
+      --card: #151b23;
+      --card-hi: #1b232d;
+      --raised: #1a212b;
+      --line: #232c37;
+      --line-2: #2f3a47;
+      --text: #e6edf3;
+      --text-2: #9ba8b5;
+      --text-3: #6f7b89;
+      --accent: #6ea8fe;
+      --accent-ink: #0b1220;
+      --accent-soft: rgba(110, 168, 254, .14);
+      --chart: #5b8def;
+      --red: #ff7b72;
+      --red-soft: rgba(255, 123, 114, .14);
+      --green: #3fb950;
+      --green-soft: rgba(63, 185, 80, .14);
+      --amber: #e3b341;
+      --amber-soft: rgba(227, 179, 65, .14);
+      --star: #f5c451;
+      --radius: 16px;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 10px 28px rgba(0, 0, 0, .28);
+      --shadow-lg: 0 24px 56px rgba(0, 0, 0, .55);
+      --ease: cubic-bezier(.2, 0, 0, 1);
+      --drawer-w: 264px;
+      --card-w: 360px;
+      --panel-w: 420px;
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font: 14px/1.45 Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, textarea, select { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    svg { width: 20px; height: 20px; fill: currentColor; flex: none; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    [hidden] { display: none !important; }
+    ::selection { background: rgba(110, 168, 254, .35); }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 10px; border: 3px solid transparent; background-clip: padding-box; }
+    ::-webkit-scrollbar-thumb:hover { background-color: #3d4a59; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    kbd {
+      font: 500 11px/1 Inter, system-ui, sans-serif; color: var(--text-2);
+      border: 1px solid var(--line-2); border-bottom-width: 2px; border-radius: 5px; padding: 3px 6px; background: var(--card);
+    }
+
+    /* ===== Shell ========================================================= */
+    .app {
+      display: grid;
+      grid-template-columns: var(--drawer-w) minmax(0, 1fr);
+      height: 100vh;
+      transition: grid-template-columns .25s var(--ease);
+    }
+    .app.drawer-closed { grid-template-columns: 0 minmax(0, 1fr); }
+
+    .drawer {
+      background: var(--bg-2);
+      border-right: 1px solid var(--line);
+      display: flex; flex-direction: column;
+      min-width: 0; overflow: hidden;
+    }
+    .drawer-inner { width: var(--drawer-w); display: flex; flex-direction: column; height: 100%; overflow-y: auto; padding: 14px 12px 12px; }
+    .brand { display: flex; align-items: center; gap: 10px; padding: 2px 8px 16px; font-weight: 600; font-size: 17px; letter-spacing: -.1px; }
+    .brand svg { width: 26px; height: 26px; color: var(--accent); }
+    .create {
+      display: inline-flex; align-items: center; gap: 10px; align-self: flex-start;
+      height: 48px; padding: 0 20px 0 16px; margin: 0 0 14px 2px;
+      border: 1px solid var(--line-2); border-radius: 16px; background: var(--card);
+      font-weight: 600; box-shadow: var(--shadow);
+      transition: background .15s var(--ease), transform .15s var(--ease);
+    }
+    .create svg { color: var(--accent); width: 22px; height: 22px; }
+    .create:hover { background: var(--card-hi); }
+    .create:active { transform: scale(.98); }
+
+    .nav-item, .dl-row {
+      display: flex; align-items: center; gap: 12px; width: 100%;
+      min-height: 38px; padding: 0 10px 0 12px; border-radius: 19px; border: 0; background: none;
+      color: var(--text-2); text-align: left; font-weight: 500;
+      transition: background .12s var(--ease), color .12s var(--ease);
+    }
+    .nav-item:hover, .dl-row:hover { background: var(--card-hi); color: var(--text); }
+    .nav-item[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+    .nav-item span.lbl { flex: 1; }
+    .nav-item .badge { font-size: 12px; font-weight: 600; color: var(--text-3); }
+    .nav-item .badge.hot { color: var(--red); }
+    .nav-item[aria-current="page"] .badge { color: var(--accent); }
+
+    .drawer-sec { display: flex; align-items: center; padding: 18px 6px 6px 12px; color: var(--text-3); font-size: 11px; font-weight: 600; letter-spacing: .7px; text-transform: uppercase; }
+    .drawer-sec span { flex: 1; }
+    .drawer-sec .icon-btn { width: 28px; height: 28px; }
+    .drawer-sec .icon-btn svg { width: 18px; height: 18px; }
+
+    .dl-row { padding: 0 4px 0 8px; gap: 8px; }
+    .dl-check {
+      width: 20px; height: 20px; flex: none; display: grid; place-items: center; padding: 0;
+      border: 2px solid var(--c); border-radius: 6px; background: var(--c); color: var(--accent-ink);
+      transition: background .12s var(--ease);
+    }
+    .dl-check svg { width: 16px; height: 16px; }
+    .dl-row.off .dl-check { background: none; }
+    .dl-row.off .dl-check svg { opacity: 0; }
+    .dl-name { flex: 1; min-width: 0; border: 0; background: none; padding: 8px 0; text-align: left; color: inherit; font-weight: 500; }
+    .dl-name span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dl-count { font-size: 12px; color: var(--text-3); min-width: 16px; text-align: right; }
+    .dl-row .dl-more { width: 28px; height: 28px; opacity: 0; }
+    .dl-row:hover .dl-more, .dl-row:focus-within .dl-more { opacity: 1; }
+    .drawer-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
+
+    .drawer-scrim { display: none; }
+
+    .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
+
+    /* ===== Top bar ======================================================= */
+    .topbar { display: flex; align-items: center; gap: 6px; padding: 10px 16px 8px 10px; flex: none; }
+    .topbar h1 { flex: none; margin: 0 8px 0 4px; font-size: 20px; font-weight: 600; letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .topbar .spacer { flex: 1; }
+    .search {
+      display: flex; align-items: center; gap: 8px; flex: 0 1 420px; min-width: 0;
+      height: 40px; padding: 0 8px 0 12px; margin-left: auto;
+      background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+      color: var(--text-3); transition: border-color .15s var(--ease), background .15s var(--ease);
+    }
+    .search:focus-within { border-color: var(--accent); background: var(--raised); color: var(--text-2); }
+    .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--text); height: 100%; }
+    .search input::placeholder { color: var(--text-3); }
+    .search input::-webkit-search-cancel-button { display: none; }
+    .search .icon-btn { width: 28px; height: 28px; }
+    .search .icon-btn svg { width: 18px; height: 18px; }
+    .status { font-size: 12px; color: var(--text-3); min-width: 56px; text-align: right; white-space: nowrap; transition: opacity .3s; }
+    .status.saving { color: var(--text-2); }
+
+    .icon-btn {
+      width: 38px; height: 38px; flex: none; display: grid; place-items: center; padding: 0;
+      border: 0; border-radius: 50%; background: none; color: var(--text-2);
+      transition: background .12s var(--ease), color .12s var(--ease);
+    }
+    .icon-btn:hover { background: var(--card-hi); color: var(--text); }
+    .icon-btn:active { background: var(--line-2); }
+    .icon-btn.spin svg { animation: spin .9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== Board ========================================================= */
+    .board {
+      flex: 1; min-height: 0;
+      display: flex; align-items: flex-start; gap: 16px;
+      overflow: auto; overscroll-behavior: contain;
+      padding: 6px 24px 24px;
+      transition: padding-right .25s var(--ease);
+    }
+    .board.single { justify-content: center; }
+    .board::after { content: ''; flex: 0 0 8px; align-self: stretch; }
+
+    .card {
+      position: relative; flex: none; width: var(--card-w); max-height: 100%;
+      display: flex; flex-direction: column;
+      background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+      box-shadow: var(--shadow); overflow: hidden;
+      --c: var(--accent);
+    }
+    .card::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--c); opacity: .9; }
+    .card.wide { width: min(680px, 100%); }
+    .card.flash { animation: flash .9s var(--ease); }
+    @keyframes flash { 30% { box-shadow: 0 0 0 2px var(--c), var(--shadow); } }
+    .card.drop-hover { border-color: var(--c); }
+
+    .card-head { display: flex; align-items: center; gap: 8px; padding: 14px 8px 4px 16px; flex: none; }
+    .card-head .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; }
+    .card-head h2 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -.1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card-head .count { color: var(--text-3); font-size: 13px; font-weight: 500; }
+    .card-head .grow { flex: 1; }
+    .card-head .icon-btn { width: 32px; height: 32px; }
+    .card-head .icon-btn svg { width: 18px; height: 18px; }
+    .card-sub { padding: 0 16px 6px; color: var(--text-3); font-size: 12px; margin-top: -2px; }
+    .card-meter { margin: 2px 16px 8px; display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-2); }
+    .meter { flex: 1; height: 6px; border-radius: 3px; background: rgba(91, 141, 239, .18); overflow: hidden; }
+    .meter i { display: block; height: 100%; border-radius: 3px; background: var(--chart); transition: width .4s var(--ease); }
+
+    .card-scroll { overflow-y: auto; overscroll-behavior: contain; min-height: 0; flex: 1; padding-bottom: 8px; }
+    .card-body { min-height: 8px; padding: 0 0 4px; }
+
+    .text-btn {
+      border: 0; background: none; border-radius: 16px; padding: 7px 12px; font-weight: 600; font-size: 13px; color: var(--accent);
+      transition: background .12s var(--ease);
+    }
+    .text-btn:hover { background: var(--accent-soft); }
+    .text-btn.danger { color: var(--red); }
+    .text-btn.danger:hover { background: var(--red-soft); }
+    .text-btn[disabled] { color: var(--text-3); background: none; cursor: default; }
+
+    .new-list-card {
+      flex: none; width: 240px; height: 120px; display: grid; place-items: center; gap: 6px;
+      border: 1.5px dashed var(--line-2); border-radius: var(--radius); background: none; color: var(--text-3); font-weight: 600;
+      transition: border-color .15s var(--ease), color .15s var(--ease), background .15s var(--ease);
+    }
+    .new-list-card:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+    .new-list-card span { display: flex; align-items: center; gap: 8px; }
+
+    /* ===== Quick add ===================================================== */
+    .qa { padding: 2px 12px 6px 10px; flex: none; }
+    .qa-row {
+      display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 10px; border-radius: 12px;
+      color: var(--accent); cursor: text; transition: background .12s var(--ease);
+    }
+    .qa-row:hover { background: var(--card-hi); }
+    .qa-row:focus-within { background: var(--bg-2); box-shadow: inset 0 0 0 1px var(--line-2); }
+    .qa-row svg { width: 22px; height: 22px; }
+    .qa-input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--text); height: 100%; }
+    .qa-input::placeholder { color: var(--accent); font-weight: 500; }
+    .qa-row:focus-within .qa-input::placeholder { color: var(--text-3); font-weight: 400; }
+    .qa-preview { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 10px 2px 44px; }
+    .qa-preview:empty { display: none; }
+    .qa-hint { font-size: 11px; color: var(--text-3); align-self: center; }
+
+    /* ===== Task rows ===================================================== */
+    .section-label { padding: 12px 18px 4px; font-size: 11px; font-weight: 600; color: var(--text-3); letter-spacing: .7px; text-transform: uppercase; display: flex; gap: 8px; align-items: center; }
+    .section-label.hot { color: var(--red); }
+    .task {
+      position: relative; display: flex; align-items: flex-start; gap: 8px;
+      padding: 8px 8px 8px 2px; margin: 0 6px; border-radius: 12px;
+      outline: 0; cursor: pointer; user-select: none;
+      transition: background .12s var(--ease);
+    }
+    .task:hover { background: var(--card-hi); }
+    .task:focus-visible { background: var(--card-hi); box-shadow: inset 0 0 0 2px var(--accent); }
+    .task.sub { margin-left: 34px; }
+    .task.enter { animation: rowIn .28s var(--ease); }
+    @keyframes rowIn { from { opacity: 0; transform: translateY(-6px); } }
+    .task.leaving, .group.leaving { animation: rowOut .2s var(--ease) forwards; pointer-events: none; }
+    @keyframes rowOut { to { opacity: 0; transform: translateX(16px); } }
+
+    .grip, .grip-space { width: 16px; height: 22px; flex: none; display: grid; place-items: center; color: var(--text-3); margin-top: 1px; }
+    .grip { opacity: 0; cursor: grab; touch-action: none; transition: opacity .12s; }
+    .grip svg { width: 16px; height: 16px; }
+    .task:hover .grip, .task:focus-visible .grip { opacity: 1; }
+    @media (hover: none) { .grip { opacity: .7; } }
+
+    .check {
+      width: 22px; height: 22px; flex: none; margin-top: 0; padding: 0;
+      display: grid; place-items: center; position: relative;
+      border: 2px solid var(--text-3); border-radius: 50%; background: none; color: var(--accent-ink);
+      transition: border-color .15s var(--ease), background .15s var(--ease);
+    }
+    .check svg { width: 16px; height: 16px; opacity: 0; transform: scale(.4); transition: opacity .15s var(--ease), transform .2s var(--ease); color: var(--accent); }
+    .check:hover { border-color: var(--accent); }
+    .check:hover svg { opacity: 1; transform: scale(1); }
+    .task.done .check, .task.completing .check { background: var(--accent); border-color: var(--accent); }
+    .task.done .check svg, .task.completing .check svg { opacity: 1; transform: scale(1); color: var(--accent-ink); }
+    .task.completing .task-title { color: var(--text-3); text-decoration: line-through; }
+    .task.completing { animation: pulse .26s var(--ease); }
+    @keyframes pulse { 50% { background: var(--accent-soft); } }
+
+    .task-body { flex: 1; min-width: 0; padding-top: 1px; }
+    .task-title { font-size: 14px; line-height: 20px; word-break: break-word; }
+    .task.done .task-title { color: var(--text-3); text-decoration: line-through; }
+    .task-notes { font-size: 13px; line-height: 18px; color: var(--text-2); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    mark { background: rgba(245, 196, 81, .28); color: inherit; border-radius: 3px; padding: 0 1px; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 4px; max-width: 100%;
+      font-size: 12px; line-height: 18px; padding: 1px 8px; border-radius: 10px;
+      background: var(--bg-2); color: var(--text-2); border: 1px solid var(--line);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .chip svg { width: 13px; height: 13px; }
+    .chip .cdot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
+    .chip.today { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
+    .chip.overdue, .chip.high { color: var(--red); background: var(--red-soft); border-color: transparent; }
+    .chip.low { color: var(--green); background: var(--green-soft); border-color: transparent; }
+    .chip.blocked { color: var(--amber); background: var(--amber-soft); border-color: transparent; }
+    .chip.progress { color: var(--accent); border-color: rgba(110, 168, 254, .35); background: none; }
+    .chip.star { color: var(--star); background: rgba(245, 196, 81, .12); border-color: transparent; }
+
+    .star {
+      width: 30px; height: 30px; margin: -4px -2px -4px 0; flex: none; display: grid; place-items: center; padding: 0;
+      border: 0; border-radius: 50%; background: none; color: var(--text-3); opacity: 0;
+      transition: opacity .12s, color .12s, background .12s;
+    }
+    .star svg { width: 19px; height: 19px; }
+    .task:hover .star, .task:focus-visible .star, .star.on { opacity: 1; }
+    .star:hover { background: var(--line); color: var(--text); }
+    .star.on { color: var(--star); }
+    @media (hover: none) { .star { opacity: .6; } }
+    .row-actions { display: flex; gap: 2px; margin: -5px -2px -5px 0; }
+    .row-actions .icon-btn { width: 32px; height: 32px; }
+    .row-actions .icon-btn svg { width: 18px; height: 18px; }
+
+    .done-sec { margin-top: 6px; border-top: 1px solid var(--line); padding-top: 4px; }
+    .done-toggle {
+      display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: none;
+      padding: 8px 16px; color: var(--text-2); font-weight: 600; font-size: 13px; text-align: left;
+    }
+    .done-toggle:hover { color: var(--text); }
+    .done-toggle svg { width: 18px; height: 18px; transition: transform .2s var(--ease); transform: rotate(-90deg); }
+    .done-sec.open .done-toggle svg { transform: none; }
+
+    .mini-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 16px 26px; color: var(--text-3); font-size: 13px; text-align: center; }
+    .mini-empty svg { width: 40px; height: 40px; opacity: .5; }
+    .mini-empty strong { color: var(--text-2); font-weight: 600; font-size: 14px; }
+
+    /* ===== Drag & drop =================================================== */
+    body.dragging, body.dragging * { cursor: grabbing !important; user-select: none !important; }
+    .ghost {
+      position: fixed; z-index: 90; pointer-events: none; margin: 0;
+      background: var(--raised); border: 1px solid var(--line-2); box-shadow: var(--shadow-lg);
+      transform: rotate(1.5deg); opacity: .96;
+    }
+    .ghost .grip, .ghost .star { opacity: 1; }
+    .drag-src { display: none !important; }
+    .drop-ph { margin: 2px 8px; border-radius: 12px; background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px rgba(110, 168, 254, .55); }
+    .drop-ph.sub { margin-left: 40px; }
+
+    /* ===== Skeleton / empty ============================================= */
+    .skeleton { padding: 18px 16px; }
+    .skeleton i {
+      display: block; height: 12px; border-radius: 6px; margin: 14px 0;
+      background: linear-gradient(90deg, var(--card-hi) 25%, var(--line-2) 37%, var(--card-hi) 63%);
+      background-size: 400% 100%; animation: shimmer 1.3s ease infinite;
+    }
+    .skeleton i:nth-child(1) { width: 40%; height: 16px; margin-bottom: 22px; }
+    .skeleton i:nth-child(even) { width: 78%; }
+    @keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+    .big-empty { margin: auto; text-align: center; color: var(--text-3); padding: 48px 24px; }
+    .big-empty svg { width: 72px; height: 72px; opacity: .45; }
+    .big-empty p { margin: 8px 0; }
+    .big-empty .btn { margin-top: 10px; }
+
+    /* ===== Buttons / controls ============================================ */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      height: 36px; padding: 0 16px; border-radius: 18px; border: 1px solid var(--line-2);
+      background: none; color: var(--text); font-weight: 600; font-size: 13px;
+      transition: background .12s var(--ease), border-color .12s var(--ease);
+    }
+    .btn:hover { background: var(--card-hi); }
+    .btn svg { width: 18px; height: 18px; }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+    .btn.primary:hover { background: #8ab8ff; }
+    .btn.primary[disabled] { background: var(--line-2); border-color: var(--line-2); color: var(--text-3); cursor: default; }
+    .btn.danger { color: var(--red); border-color: rgba(255, 123, 114, .4); }
+    .btn.danger:hover { background: var(--red-soft); }
+    .btn.tonal { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
+    .btn.tonal:hover { background: rgba(110, 168, 254, .22); }
+
+    .seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 18px; overflow: hidden; flex-wrap: nowrap; }
+    .seg button { border: 0; background: none; padding: 6px 12px; font-size: 12.5px; font-weight: 500; color: var(--text-2); white-space: nowrap; }
+    .seg button + button { border-left: 1px solid var(--line-2); }
+    .seg button:hover { background: var(--card-hi); color: var(--text); }
+    .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+    .seg button[data-v="High"][aria-pressed="true"] { background: var(--red-soft); color: var(--red); }
+    .seg button[data-v="Low"][aria-pressed="true"] { background: var(--green-soft); color: var(--green); }
+    .seg button[data-v="Blocked"][aria-pressed="true"] { background: var(--amber-soft); color: var(--amber); }
+
+    .input, .select {
+      height: 36px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--bg-2);
+      padding: 0 10px; color: var(--text); outline: 0; min-width: 0;
+    }
+    .input:focus, .select:focus { border-color: var(--accent); }
+    .select option { background: var(--raised); color: var(--text); }
+
+    /* ===== Detail panel ================================================== */
+    .panel {
+      position: fixed; z-index: 50; top: 12px; right: 12px; bottom: 12px; width: var(--panel-w); max-width: calc(100vw - 24px);
+      display: flex; flex-direction: column;
+      background: var(--raised); border: 1px solid var(--line-2); border-radius: 20px; box-shadow: var(--shadow-lg);
+      transform: translateX(calc(100% + 32px)); visibility: hidden;
+      transition: transform .3s var(--ease), visibility 0s linear .3s;
+    }
+    .panel.open { transform: none; visibility: visible; transition: transform .3s var(--ease), visibility 0s; }
+    .pnl-head { display: flex; align-items: center; gap: 4px; padding: 10px 8px 6px 14px; border-bottom: 1px solid var(--line); flex: none; }
+    .pnl-head .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; margin-right: 2px; }
+    .pnl-head .grow { flex: 1; }
+    .pnl-head .list-select { border: 0; background: none; font-weight: 600; color: var(--text); padding: 6px 4px; border-radius: 8px; max-width: 200px; outline: 0; }
+    .pnl-head .list-select:hover, .pnl-head .list-select:focus { background: var(--card-hi); }
+    .pnl-head .list-select option { background: var(--raised); }
+    .pnl-head .pnl-kind { font-weight: 600; }
+    .pnl-scroll { flex: 1; overflow-y: auto; padding: 8px 20px 16px; }
+    .pnl-back { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; color: var(--text-2); font-size: 12.5px; padding: 6px 8px; margin: 2px 0 0 -8px; border-radius: 8px; max-width: 100%; }
+    .pnl-back:hover { background: var(--card-hi); color: var(--text); }
+    .pnl-back svg { width: 16px; height: 16px; }
+    .pnl-back span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pnl-title, .pnl-notes { display: block; width: 100%; resize: none; border: 0; outline: 0; background: none; color: var(--text); padding: 8px 0; }
+    .pnl-title { font-size: 21px; font-weight: 600; line-height: 1.3; letter-spacing: -.2px; overflow: hidden; }
+    .pnl-title::placeholder, .pnl-notes::placeholder { color: var(--text-3); }
+    .pnl-notes { font-size: 14px; line-height: 1.55; color: var(--text-2); min-height: 64px; border-radius: 10px; padding: 8px 10px; margin: 0 -10px; overflow: hidden; }
+    .pnl-notes:hover { background: var(--card); }
+    .pnl-notes:focus { background: var(--bg-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-2); }
+    .pnl-done { display: flex; align-items: center; gap: 8px; margin: 4px 0 6px; padding: 8px 12px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 500; }
+    .pnl-done svg { width: 18px; height: 18px; }
+    .pnl-fields { display: flex; flex-direction: column; gap: 4px; margin: 10px 0 6px; }
+    .frow { display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: start; padding: 6px 0; }
+    .frow > svg { width: 20px; height: 20px; color: var(--text-3); margin-top: 8px; }
+    .frow .fctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; }
+    .frow .flabel { width: 100%; font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text-3); margin: 2px 0 -2px; }
+    .quick { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+    .quick button { border: 1px solid var(--line-2); background: none; color: var(--text-2); border-radius: 14px; padding: 3px 10px; font-size: 12px; font-weight: 500; }
+    .quick button:hover { background: var(--card-hi); color: var(--text); }
+    .quick button.on { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
+
+    .pnl-subs { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+    .pnl-sec-title { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text-3); margin-bottom: 6px; }
+    .sub-row { display: flex; align-items: center; gap: 10px; padding: 5px 4px; border-radius: 10px; }
+    .sub-row:hover { background: var(--card); }
+    .sub-row .check { width: 20px; height: 20px; }
+    .sub-row .check svg { width: 14px; height: 14px; }
+    .sub-row.done .check { background: var(--accent); border-color: var(--accent); }
+    .sub-row.done .check svg { opacity: 1; transform: none; color: var(--accent-ink); }
+    .sub-title { flex: 1; min-width: 0; text-align: left; border: 0; background: none; padding: 2px 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sub-row.done .sub-title { color: var(--text-3); text-decoration: line-through; }
+    .sub-add { display: flex; align-items: center; gap: 10px; padding: 5px 4px; color: var(--accent); }
+    .sub-add svg { width: 20px; height: 20px; }
+    .sub-add input { flex: 1; border: 0; outline: 0; background: none; height: 30px; }
+    .sub-add input::placeholder { color: var(--accent); }
+
+    .pnl-foot { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); flex: none; }
+    .pnl-foot .meta { flex: 1; min-width: 0; font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ===== Menus, dialogs, snackbar ====================================== */
+    .menu-scrim { position: fixed; inset: 0; z-index: 70; }
+    .menu {
+      position: fixed; z-index: 71; min-width: 220px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow-y: auto;
+      padding: 6px; background: var(--raised); border: 1px solid var(--line-2); border-radius: 14px; box-shadow: var(--shadow-lg);
+      animation: pop .14s var(--ease);
+    }
+    @keyframes pop { from { opacity: 0; transform: scale(.96); } }
+    .menu-i {
+      display: flex; align-items: center; gap: 12px; width: 100%; border: 0; background: none; text-align: left;
+      padding: 8px 12px 8px 10px; border-radius: 9px; color: var(--text); font-size: 13.5px;
+    }
+    .menu-i svg { width: 18px; height: 18px; color: var(--text-2); }
+    .menu-i .mi-space { width: 18px; flex: none; }
+    .menu-i span.l { flex: 1; }
+    .menu-i:hover, .menu-i:focus-visible { background: var(--card-hi); outline: 0; }
+    .menu-i.on { color: var(--accent); }
+    .menu-i.on svg { color: var(--accent); }
+    .menu-i.danger { color: var(--red); }
+    .menu-i.danger svg { color: var(--red); }
+    .menu-i[disabled] { color: var(--text-3); cursor: default; background: none; }
+    .menu-i[disabled] svg { color: var(--text-3); }
+    .menu-i .cdot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); margin: 0 4px; }
+    .menu-h { padding: 8px 12px 4px; font-size: 11px; font-weight: 600; color: var(--text-3); letter-spacing: .6px; text-transform: uppercase; }
+    .menu hr { border: 0; border-top: 1px solid var(--line); margin: 6px 4px; }
+
+    .dlg-scrim { position: fixed; inset: 0; z-index: 80; background: rgba(1, 4, 9, .6); display: grid; place-items: center; padding: 16px; animation: fade .15s var(--ease); }
+    @keyframes fade { from { opacity: 0; } }
+    .dlg {
+      width: min(440px, 100%); max-height: calc(100vh - 32px); overflow-y: auto;
+      background: var(--raised); border: 1px solid var(--line-2); border-radius: 20px; box-shadow: var(--shadow-lg);
+      padding: 22px 22px 16px; animation: pop .18s var(--ease);
+    }
+    .dlg h2 { margin: 0 0 6px; font-size: 18px; font-weight: 600; }
+    .dlg p { margin: 6px 0; color: var(--text-2); }
+    .dlg-body { margin: 12px 0 4px; display: flex; flex-direction: column; gap: 10px; }
+    .dlg-input { height: 42px; font-size: 15px; }
+    .dlg-label { font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text-3); margin-top: 6px; }
+    .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+    .swatches { display: grid; grid-template-columns: repeat(auto-fill, 34px); gap: 8px; }
+    .sw { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--c); display: grid; place-items: center; padding: 0; color: var(--accent-ink); box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
+    .sw svg { opacity: 0; width: 20px; height: 20px; }
+    .sw.on { box-shadow: 0 0 0 2px var(--raised), 0 0 0 4px var(--c); }
+    .sw.on svg { opacity: 1; }
+
+    .set-group { border: 1px solid var(--line); border-radius: 14px; padding: 4px 14px; }
+    .set-group + .set-group { margin-top: 10px; }
+    .set-title { font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text-3); margin: 14px 0 6px; }
+    .set-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+    .set-row + .set-row { border-top: 1px solid var(--line); }
+    .set-row .grow { flex: 1; min-width: 0; }
+    .set-label { font-weight: 500; }
+    .set-desc { font-size: 12.5px; color: var(--text-3); margin-top: 2px; }
+    .switch { appearance: none; -webkit-appearance: none; width: 40px; height: 24px; border-radius: 12px; background: var(--line-2); position: relative; margin: 0; flex: none; cursor: pointer; transition: background .15s var(--ease); }
+    .switch::after { content: ''; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--text-2); transition: transform .18s var(--ease), background .15s; }
+    .switch:checked { background: var(--accent); }
+    .switch:checked::after { transform: translateX(16px); background: var(--accent-ink); }
+    .keys { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; align-items: center; margin-top: 10px; font-size: 13.5px; color: var(--text-2); }
+    .keys div:nth-child(odd) { display: flex; gap: 4px; justify-content: flex-end; }
+
+    .snack {
+      position: fixed; left: 50%; bottom: 20px; z-index: 85; transform: translate(-50%, 120px);
+      display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px);
+      background: #e6edf3; color: #0b0f14; border-radius: 12px; padding: 10px 10px 10px 16px;
+      box-shadow: var(--shadow-lg); font-size: 13.5px; font-weight: 500; opacity: 0; pointer-events: none;
+      transition: transform .25s var(--ease), opacity .25s var(--ease);
+    }
+    .snack.show { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+    .snack button { border: 0; background: none; color: #1f5fd1; font-weight: 700; padding: 6px 10px; border-radius: 8px; }
+    .snack button:hover { background: rgba(31, 95, 209, .1); }
+
+    .fab {
+      position: fixed; right: 16px; bottom: 16px; z-index: 30; display: none; align-items: center; gap: 8px;
+      height: 54px; padding: 0 20px 0 16px; border: 0; border-radius: 18px; background: var(--accent); color: var(--accent-ink);
+      font-weight: 700; box-shadow: var(--shadow-lg);
+    }
+    .fab svg { width: 24px; height: 24px; }
+
+    /* ===== Insights ====================================================== */
+    .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 8px 16px 16px; }
+    .tile { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+    .tile:last-child:nth-child(odd) { grid-column: span 2; }
+    .tile-label { font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 6px; }
+    .tile-label svg { width: 15px; height: 15px; }
+    .tile-value { font-size: 28px; font-weight: 600; letter-spacing: -.5px; line-height: 1.2; margin-top: 4px; color: var(--text); }
+    .tile-delta { font-size: 12px; margin-top: 2px; color: var(--text-3); }
+    .tile-delta.up { color: var(--green); }
+    .tile-delta.down { color: var(--red); }
+    .tile.alert .tile-label { color: var(--red); }
+    .chart { position: relative; padding: 4px 16px 0; }
+    .chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+    .chart .bar-hit { fill: transparent; cursor: default; outline: none; }
+    .chart .bar-hit:hover + .bar, .chart .bar-hit:focus + .bar { fill: #7aa3f2; }
+    .chart .bar { fill: var(--chart); pointer-events: none; }
+    .chart .grid { stroke: var(--line); stroke-width: 1; shape-rendering: crispEdges; }
+    .chart .axis { font-size: 11px; fill: var(--text-3); font-variant-numeric: tabular-nums; }
+    .chart .axis.today { fill: var(--text); font-weight: 600; }
+    .chart .val { font-size: 11px; fill: var(--text-2); font-weight: 600; }
+    .tip {
+      position: absolute; z-index: 5; pointer-events: none; transform: translate(-50%, -100%);
+      background: var(--raised); border: 1px solid var(--line-2); border-radius: 8px; padding: 6px 10px; box-shadow: var(--shadow);
+      font-size: 12px; color: var(--text-2); white-space: nowrap;
+    }
+    .tip strong { color: var(--text); font-size: 14px; margin-right: 4px; }
+    details.table-view { padding: 4px 16px 14px; color: var(--text-2); font-size: 12.5px; }
+    details.table-view summary { cursor: pointer; color: var(--text-3); padding: 6px 0; }
+    details.table-view table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    details.table-view td, details.table-view th { padding: 4px 0; border-bottom: 1px solid var(--line); text-align: left; }
+    details.table-view td:last-child, details.table-view th:last-child { text-align: right; }
+    .lrow { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 8px 16px; }
+    .lrow .lname { display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 500; }
+    .lrow .lname span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lrow .lname i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; }
+    .lrow .lnum { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+    .lrow .meter { grid-column: 1 / -1; height: 6px; }
+
+    /* ===== Responsive ==================================================== */
+    @media (min-width: 1180px) {
+      .app.panel-open .board { padding-right: calc(var(--panel-w) + 36px); }
+      .app.panel-open .board.single { justify-content: flex-start; }
+    }
+    @media (max-width: 900px) {
+      .app, .app.drawer-closed { grid-template-columns: minmax(0, 1fr); }
+      .drawer {
+        position: fixed; z-index: 60; top: 0; bottom: 0; left: 0; width: var(--drawer-w); max-width: 86vw;
+        transform: translateX(-102%); transition: transform .25s var(--ease); box-shadow: var(--shadow-lg);
+      }
+      .drawer-inner { width: 100%; }
+      .app.drawer-open .drawer { transform: none; }
+      .app.drawer-open .drawer-scrim { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(1, 4, 9, .55); animation: fade .2s; }
+      .fab { display: inline-flex; }
+      .board { padding-bottom: 96px; }
+    }
+    @media (max-width: 640px) {
+      :root { --radius: 14px; }
+      .topbar { padding: 8px 6px 6px 2px; gap: 0; }
+      .topbar h1 { flex: 0 1 auto; font-size: 18px; margin: 0 4px; }
+      .topbar .icon-btn { width: 34px; height: 34px; }
+      .frow { grid-template-columns: 1fr; }
+      .frow > svg { display: none; }
+      .seg button { padding: 6px 9px; font-size: 12px; }
+      .pnl-scroll { padding: 8px 16px 16px; }
+      .topbar.searching h1 { display: none; }
+      .search { flex: 0 1 auto; width: 40px; padding: 0; justify-content: center; border-color: transparent; background: none; }
+      .search input, .search .icon-btn, .search kbd { display: none; }
+      .search > svg { width: 20px; height: 20px; color: var(--text-2); }
+      .topbar.searching .search { flex: 1; width: auto; padding: 0 6px 0 12px; justify-content: flex-start; border-color: var(--accent); background: var(--raised); }
+      .topbar.searching .search input, .topbar.searching .search .icon-btn { display: block; }
+      .topbar.searching .search .icon-btn { display: grid; }
+      .status { display: none; }
+      .board, .board.single { flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 4px 10px 96px; gap: 12px; overflow-x: hidden; }
+      .card, .card.wide { width: auto; max-height: none; }
+      .card-scroll { overflow: visible; }
+      .new-list-card { width: auto; height: 64px; }
+      .panel { top: 0; right: 0; bottom: 0; left: 0; width: auto; max-width: none; border-radius: 0; border: 0; }
+      .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .task.sub { margin-left: 26px; }
+      .qa-preview { padding-left: 10px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <aside class="drawer" id="drawer" aria-label="Navigation">
+      <div class="drawer-inner">
+        <div class="brand" id="brand"></div>
+        <button class="create" id="btnCreate" type="button"></button>
+        <nav id="nav" aria-label="Views"></nav>
+        <div class="drawer-sec"><span>Lists</span><button class="icon-btn" id="btnNewList" type="button" title="Create new list" aria-label="Create new list"></button></div>
+        <div id="drawerLists" role="group" aria-label="Lists"></div>
+        <div class="drawer-foot" id="drawerFoot"></div>
+      </div>
+    </aside>
+    <div class="drawer-scrim" id="drawerScrim"></div>
+
+    <main class="main">
+      <header class="topbar" id="topbar">
+        <button class="icon-btn" id="btnDrawer" type="button" title="Main menu (m)" aria-label="Toggle main menu"></button>
+        <h1 id="viewTitle">Tasks</h1>
+        <div class="search" id="searchBox" role="search">
+          <input id="search" type="search" placeholder="Search tasks" aria-label="Search tasks" autocomplete="off">
+          <kbd id="searchKbd">/</kbd>
+          <button class="icon-btn" id="btnClearSearch" type="button" title="Clear search" aria-label="Clear search" hidden></button>
+        </div>
+        <span class="status" id="status" aria-live="polite"></span>
+        <button class="icon-btn" id="btnRefresh" type="button" title="Refresh" aria-label="Refresh"></button>
+        <button class="icon-btn" id="btnSync" type="button" title="Sync to Google Calendar" aria-label="Sync to Google Calendar"></button>
+        <button class="icon-btn" id="btnSettings" type="button" title="Settings" aria-label="Settings"></button>
+      </header>
+      <div class="board" id="board"></div>
+    </main>
+
+    <aside class="panel" id="panel" aria-label="Task details" aria-hidden="true"></aside>
+  </div>
+
+  <button class="fab" id="fab" type="button" aria-label="Create task"></button>
+  <div class="snack" id="snack" role="status"><span id="snackText"></span><button id="snackAction" type="button" hidden></button></div>
+  <div id="layer"></div>
+
+  <script>
+  'use strict';
+
+  /* ======================================================================
+   * Preview mode — lets index.html open straight in a browser with demo data.
+   * Inside Apps Script, `google.script.run` exists and this block is skipped.
+   * ==================================================================== */
+  if (typeof google === 'undefined') {
+    const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+    const ago = n => new Date(Date.now() - n * 864e5).toISOString();
+    let k = 0;
+    const t = (title, list, extra) => Object.assign({ id: 'demo' + (++k), title, desc: '', due: '', time: '', status: 'Not started', priority: 'Medium',
+      list, starred: false, parent: '', order: k, repeat: '', created: ago(9), completed: '', archived: false, archType: '', synced: false }, extra);
+    const demo = [
+      t('Finish onboarding checklist', 'Onboarding', { due: d(0), priority: 'High', starred: true, desc: 'HR forms, laptop setup and security training.' }),
+      t('Laptop setup', 'Onboarding', { parent: 'demo1' }),
+      t('Security training video', 'Onboarding', { parent: 'demo1', archived: true, archType: 'Completed', status: 'Done', completed: ago(0) }),
+      t('Meet the team lead', 'Onboarding', { due: d(1), time: '10:30' }),
+      t('Submit expense report', 'Admin', { due: d(-2), priority: 'High' }),
+      t('Renew parking permit', 'Admin', { due: d(5), status: 'Blocked' }),
+      t('Weekly planning', 'Meetings', { due: d(0), time: '09:00', repeat: 'weekly' }),
+      t('1:1 with manager', 'Meetings', { due: d(2), time: '14:00', repeat: 'weekly', starred: true }),
+      t('Read the style guide', 'Training', { status: 'In progress', desc: 'Sections 1–4 first.' }),
+      t('Module 3 quiz', 'Training', { due: d(3), priority: 'Low' }),
+      t('Order new badge', 'General', {}),
+      t('Old request', 'General', { archived: true, archType: 'Deleted' }),
+    ];
+    [0, 0, 1, 1, 1, 2, 3, 3, 4, 6, 6, 6, 8, 9, 11, 12].forEach((a, i) => demo.push(t('Done task ' + (i + 1), ['Admin', 'Training', 'General'][i % 3],
+      { archived: true, archType: 'Completed', status: 'Done', completed: ago(a) })));
+    const lists = [['Admin', 'ORANGE'], ['General', 'GRAY'], ['Meetings', 'MAUVE'], ['Onboarding', 'BLUE'], ['Training', 'GREEN']].map(([name, color]) => ({ name, color }));
+    const api = {
+      getAll: () => ({ tasks: demo, lists, settings: { autoSync: false, digest: false, digestHour: 7, sheetUrl: '' }, defaultList: 'General' }),
+      syncToCalendar: () => ({ message: 'Preview mode — nothing synced' }),
+      sendDigest: () => 'Preview mode — no email sent',
+    };
+    const runner = (ok, fail) => new Proxy({}, {
+      get: (_, name) => {
+        if (name === 'withSuccessHandler') return fn => runner(fn, fail);
+        if (name === 'withFailureHandler') return fn => runner(ok, fn);
+        return (...args) => setTimeout(() => {
+          try { const r = api[name] ? api[name](...args) : {}; ok && ok(JSON.parse(JSON.stringify(r))); } catch (e) { fail && fail(e); }
+        }, 120);
+      },
+    });
+    window.google = { script: { run: runner() } };
+  }
+
+  /* ======================================================================
+   * Helpers
+   * ==================================================================== */
+  const $ = id => document.getElementById(id);
+  const PROPS = new Set(['value', 'checked', 'disabled', 'selected', 'tabIndex', 'hidden', 'type', 'rows', 'maxLength']);
+  function h(tag, props, ...kids) {
+    const n = document.createElement(tag);
+    if (props) for (const key in props) {
+      const v = props[key];
+      if (v == null || v === false) continue;
+      if (key === 'class') n.className = v;
+      else if (key === 'text') n.textContent = v;
+      else if (key === 'style') n.style.cssText = v;
+      else if (key.startsWith('on') && typeof v === 'function') n.addEventListener(key.slice(2), v);
+      else if (PROPS.has(key)) n[key] = v;
+      else n.setAttribute(key, v === true ? '' : v);
+    }
+    for (const kid of kids.flat(3)) if (kid != null && kid !== false) n.append(kid);
+    return n;
+  }
+
+  const ICONS = {
+    logo: 'M22 5.18 10.59 16.6l-4.24-4.24 1.41-1.41 2.83 2.83 10-10L22 5.18zm-2.21 5.04c.13.57.21 1.17.21 1.78 0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8c1.58 0 3.04.46 4.28 1.25l1.44-1.44A9.9 9.9 0 0 0 12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10c0-1.19-.22-2.33-.6-3.39l-1.61 1.61z',
+    menu: 'M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z',
+    search: 'M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
+    close: 'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+    add: 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z',
+    addCircle: 'M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7zm-1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z',
+    check: 'M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z',
+    star: 'M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z',
+    starOutline: 'M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4l-3.76 2.27 1-4.28-3.32-2.88 4.38-.38L12 6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z',
+    refresh: 'M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z',
+    event: 'M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z',
+    sync: 'M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z',
+    settings: 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z',
+    more: 'M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z',
+    drag: 'M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z',
+    sun: 'M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z',
+    upcoming: 'M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z',
+    insights: 'M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z',
+    board: 'M4 5v13h17V5H4zm10 2v9h-3V7h3zM6 7h3v9H6V7zm13 9h-3V7h3v9z',
+    trash: 'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z',
+    restore: 'M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z',
+    deleteForever: 'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zm2.46-7.12 1.41-1.41L12 12.59l2.12-2.12 1.41 1.41L13.41 14l2.12 2.12-1.41 1.41L12 15.41l-2.12 2.12-1.41-1.41L10.59 14l-2.13-2.12zM15.5 4l-1-1h-5l-1 1H5v2h14V4z',
+    repeat: 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z',
+    flag: 'M14.4 6 14 4H5v17h2v-7h5.6l.4 2h7V6z',
+    subArrow: 'M19 15l-6 6-1.42-1.42L15.17 16H4V4h2v10h9.17l-3.59-3.58L13 9l6 6z',
+    checklist: 'M22 7h-9v2h9V7zm0 8h-9v2h9v-2zM5.54 11 2 7.46l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41L5.54 11zm0 8L2 15.46l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41L5.54 19z',
+    notes: 'M3 18h12v-2H3v2zM3 6v2h18V6H3zm0 7h18v-2H3v2z',
+    keyboard: 'M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z',
+    chevron: 'M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z',
+    back: 'M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z',
+    clock: 'M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z',
+    palette: 'M12 3a9 9 0 0 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z',
+    hide: 'M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46A11.804 11.804 0 0 0 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78 3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z',
+    edit: 'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z',
+    mail: 'M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z',
+    indent: 'M3 21h18v-2H3v2zM3 8v8l4-4-4-4zm8 9h10v-2H11v2zM3 3v2h18V3H3zm8 6h10V7H11v2zm0 4h10v-2H11v2z',
+    outdent: 'M11 17h10v-2H11v2zm-8-5 4 4V8l-4 4zm0 9h18v-2H3v2zM3 3v2h18V3H3zm8 6h10V7H11v2zm0 4h10v-2H11v2z',
+    fire: 'M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z',
+    alert: 'M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z',
+    doneAll: 'M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41 6 19l1.41-1.41L1.83 12 .41 13.41z',
+    blocked: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9A7.902 7.902 0 0 1 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1A7.902 7.902 0 0 1 20 12c0 4.42-3.58 8-8 8z',
+    half: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18V4c4.41 0 8 3.59 8 8s-3.59 8-8 8z',
+    up: 'M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z',
+    down: 'M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z',
+  };
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  function icon(name) {
+    const s = document.createElementNS(SVGNS, 'svg');
+    s.setAttribute('viewBox', '0 0 24 24');
+    s.setAttribute('aria-hidden', 'true');
+    const p = document.createElementNS(SVGNS, 'path');
+    p.setAttribute('d', ICONS[name]);
+    s.append(p);
+    return s;
+  }
+  function iconBtn(name, label, onclick, cls) {
+    return h('button', { class: 'icon-btn' + (cls ? ' ' + cls : ''), type: 'button', title: label, 'aria-label': label, onclick }, icon(name));
+  }
+  const keyed = (node, key) => { node.dataset.key = key; return node; };
+
+  const COLORS = ['BLUE', 'GREEN', 'RED', 'ORANGE', 'YELLOW', 'MAUVE', 'CYAN', 'PALE_BLUE', 'PALE_GREEN', 'PALE_RED', 'GRAY'];
+  const COLOR_HEX = { BLUE: '#5b8def', GREEN: '#3fb950', RED: '#f0625d', ORANGE: '#f0883e', YELLOW: '#e3b341', MAUVE: '#b889f5',
+    CYAN: '#39c5cf', PALE_BLUE: '#9db8f7', PALE_GREEN: '#7ddbb2', PALE_RED: '#ff9b92', GRAY: '#8b949e' };
+  const COLOR_NAMES = { BLUE: 'Blueberry', GREEN: 'Basil', RED: 'Tomato', ORANGE: 'Tangerine', YELLOW: 'Banana', MAUVE: 'Grape',
+    CYAN: 'Peacock', PALE_BLUE: 'Lavender', PALE_GREEN: 'Sage', PALE_RED: 'Flamingo', GRAY: 'Graphite' };
+  const REPEATS = ['', 'daily', 'weekdays', 'weekly', 'monthly', 'yearly'];
+  const RANK = { High: 0, Medium: 1, Low: 2 };
+
+  /* ----- dates (all due dates are local 'YYYY-MM-DD' strings) ----- */
+  const pad = n => String(n).padStart(2, '0');
+  const isoOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const todayISO = () => isoOf(new Date());
+  const parseISO = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const addDays = (iso, n) => { const d = parseISO(iso); d.setDate(d.getDate() + n); return isoOf(d); };
+  const addMonths = (iso, n) => {
+    const d = parseISO(iso), day = d.getDate();
+    const t = new Date(d.getFullYear(), d.getMonth() + n, 1);
+    t.setDate(Math.min(day, new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate()));
+    return isoOf(t);
+  };
+  const localDayOf = stamp => (stamp ? isoOf(new Date(stamp)) : '');
+  function fmtDay(iso, opts) {
+    const d = parseISO(iso), o = Object.assign({ weekday: 'short', month: 'short', day: 'numeric' }, opts);
+    if (d.getFullYear() !== new Date().getFullYear()) o.year = 'numeric';
+    return d.toLocaleDateString(undefined, o);
+  }
+  function relDay(iso) {
+    const diff = Math.round((parseISO(iso) - parseISO(todayISO())) / 864e5);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Tomorrow';
+    if (diff === -1) return 'Yesterday';
+    if (diff > 1 && diff < 7) return parseISO(iso).toLocaleDateString(undefined, { weekday: 'long' });
+    return fmtDay(iso);
+  }
+  const relDayLower = iso => { const r = relDay(iso); return /^(Today|Tomorrow|Yesterday)$/.test(r) ? r.toLowerCase() : r; };
+  const fmtTime = hm => { const [H, M] = hm.split(':').map(Number); return new Date(2000, 0, 1, H, M).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); };
+  const weekdayOf = iso => parseISO(iso).toLocaleDateString(undefined, { weekday: 'long' });
+  const ordinal = n => n + (['th', 'st', 'nd', 'rd'][(n % 100 - 20) % 10] || ['th', 'st', 'nd', 'rd'][n % 100] || 'th');
+
+  // Mirrors nextDue_ in Code.gs so the next occurrence shows up instantly.
+  function nextDue(iso, rule, today) {
+    const base = parseISO(iso || today), floor = parseISO(today), anchor = base.getDate();
+    let d = new Date(base), months = 0;
+    const step = () => {
+      if (rule === 'daily') d.setDate(d.getDate() + 1);
+      else if (rule === 'weekly') d.setDate(d.getDate() + 7);
+      else if (rule === 'weekdays') { do d.setDate(d.getDate() + 1); while (d.getDay() === 0 || d.getDay() === 6); }
+      else {
+        months += rule === 'yearly' ? 12 : 1;
+        const t = new Date(base.getFullYear(), base.getMonth() + months, 1);
+        t.setDate(Math.min(anchor, new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate()));
+        d = t;
+      }
+    };
+    step();
+    for (let g = 0; d < floor && g < 5000; g++) step();
+    return isoOf(d);
+  }
+
+  function repeatLabel(rule, due) {
+    const iso = due || todayISO(), d = parseISO(iso);
+    return {
+      '': 'Does not repeat', daily: 'Daily', weekdays: 'Every weekday (Mon–Fri)',
+      weekly: `Weekly on ${weekdayOf(iso)}`, monthly: `Monthly on the ${ordinal(d.getDate())}`,
+      yearly: `Yearly on ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`,
+    }[rule];
+  }
+
+  const newId = () => {
+    const b = new Uint8Array(5);
+    crypto.getRandomValues(b);
+    return 't' + [...b].map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 9);
+  };
+
+  /* ======================================================================
+   * State
+   * ==================================================================== */
+  const S = {
+    tasks: [], lists: [], settings: {}, defaultList: 'General',
+    view: 'board', prevView: 'board', query: '',
+    panel: null, ready: false, error: null, loadedAt: 0,
+    fresh: new Set(),
+  };
+  const byId = new Map();
+  let kids = new Map();
+  const drafts = new Map();
+
+  const PREF_KEY = 'taskmgr.prefs.v1';
+  const prefs = (() => {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(PREF_KEY) || '{}') || {}; } catch (e) {}
+    const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+    return {
+      hidden: Array.isArray(saved.hidden) ? saved.hidden.filter(x => typeof x === 'string') : [],
+      sort: obj(saved.sort), open: obj(saved.open), drawer: saved.drawer !== false,
+      view: typeof saved.view === 'string' ? saved.view : 'board',
+    };
+  })();
+  const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) {} };
+  const VIEWS = ['board', 'starred', 'today', 'upcoming', 'insights', 'trash'];
+  if (VIEWS.includes(prefs.view)) S.view = prefs.view;
+
+  function reindex() {
+    byId.clear();
+    kids = new Map();
+    S.tasks.forEach(t => byId.set(t.id, t));
+    S.tasks.forEach(t => {
+      if (!t.parent) return;
+      if (!kids.has(t.parent)) kids.set(t.parent, []);
+      kids.get(t.parent).push(t);
+    });
+  }
+  const kidsOf = id => kids.get(id) || [];
+  const activeKids = id => kidsOf(id).filter(k => !k.archived);
+  const listByName = name => S.lists.find(l => l.name === name);
+  const listHex = name => COLOR_HEX[(listByName(name) || {}).color] || COLOR_HEX.GRAY;
+  const isActive = t => t && !t.archived;
+  // A subtask renders at top level when its parent can't hold it (archived, moved, or nested).
+  const isTop = t => { const p = t.parent && byId.get(t.parent); return !p || p.archived || p.list !== t.list || !!p.parent; };
+  const hasLiveKids = id => kidsOf(id).some(k => k.archType !== 'Deleted');
+
+  const SORTS = {
+    my: (a, b) => a.order - b.order || (a.created || '').localeCompare(b.created || ''),
+    date: (a, b) => (a.due || '9999').localeCompare(b.due || '9999') || (a.time || '99').localeCompare(b.time || '99') || a.order - b.order,
+    priority: (a, b) => RANK[a.priority] - RANK[b.priority] || a.order - b.order,
+    title: (a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }),
+  };
+  const SORT_LABELS = { my: 'My order', date: 'Date', priority: 'Priority', title: 'Title' };
+  const sortOf = list => (SORTS[prefs.sort[list]] ? prefs.sort[list] : 'my');
+  const byDueTime = (a, b) => (a.due || '9999').localeCompare(b.due || '9999') || (a.time || '').localeCompare(b.time || '') || RANK[a.priority] - RANK[b.priority] || a.order - b.order;
+  const byCompletedDesc = (a, b) => (b.completed || '').localeCompare(a.completed || '');
+
+  /* ======================================================================
+   * Server bridge: one ordered write queue, results merged when it drains
+   * ==================================================================== */
+  const call = (fn, ...args) => new Promise((resolve, reject) => {
+    google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
+  });
+
+  // A lock timeout means the server never ran the call (a long calendar sync held the lock), so retrying is safe.
+  async function callWithRetry(fn, args) {
+    for (let attempt = 1; ; attempt++) {
+      try { return await call(fn, ...args); }
+      catch (err) {
+        if (attempt >= 3 || !/lock timeout/i.test(String((err && err.message) || err))) throw err;
+        await new Promise(r => setTimeout(r, 2000 * attempt));
+      }
+    }
+  }
+
+  const Q = { chain: Promise.resolve(), pending: 0, results: [], failed: false };
+  function send(fn, ...args) {
+    Q.pending++;
+    setStatus();
+    const run = Q.chain.then(() => callWithRetry(fn, args));
+    Q.chain = run.then(res => { Q.results.push(res); }, err => {
+      Q.failed = true;
+      snack(`Couldn't save: ${(err && err.message) || err}`);
+    }).then(() => { if (--Q.pending === 0) drain(); });
+    return run.catch(() => undefined);
+  }
+  function drain() {
+    setStatus();
+    const results = Q.results;
+    Q.results = [];
+    if (Q.failed) { Q.failed = false; boot(true); return; }
+    results.forEach(merge);
+    reindex();
+    schedule();
+  }
+  function merge(r) {
+    if (!r || typeof r !== 'object') return;
+    (r.tasks || []).forEach(t => {
+      const cur = byId.get(t.id);
+      if (cur) Object.assign(cur, t); else { S.tasks.push(t); byId.set(t.id, t); }
+    });
+    if (r.removed && r.removed.length) {
+      const gone = new Set(r.removed);
+      S.tasks = S.tasks.filter(t => !gone.has(t.id));
+    }
+    if (r.lists) S.lists = r.lists;
+    if (r.settings) S.settings = r.settings;
+  }
+  let statusTimer;
+  function setStatus() {
+    const s = $('status');
+    clearTimeout(statusTimer);
+    if (Q.pending) { s.textContent = 'Saving…'; s.classList.add('saving'); s.style.opacity = 1; return; }
+    s.classList.remove('saving');
+    if (s.textContent) {
+      s.textContent = 'Saved';
+      statusTimer = setTimeout(() => { s.style.opacity = 0; }, 1600);
+    }
+  }
+  window.addEventListener('beforeunload', e => {
+    flushSaves();
+    if (Q.pending) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  async function boot(silent) {
+    if (!silent && !S.ready) render();
+    try {
+      const data = await call('getAll');
+      S.tasks = data.tasks || [];
+      S.lists = data.lists || [];
+      S.settings = data.settings || {};
+      S.defaultList = data.defaultList || 'General';
+      S.ready = true;
+      S.error = null;
+      S.loadedAt = Date.now();
+      reindex();
+    } catch (err) {
+      if (!S.ready) S.error = (err && err.message) || String(err);
+      else snack(`Couldn't refresh: ${(err && err.message) || err}`);
+    }
+    render();
+  }
+
+  /* ======================================================================
+   * Mutations — optimistic locally, then queued to the server
+   * ==================================================================== */
+  const PAYLOAD = ['id', 'title', 'desc', 'due', 'time', 'status', 'priority', 'list', 'starred', 'parent', 'order', 'repeat'];
+  function siblingOrders(list, parent) {
+    return S.tasks.filter(t => !t.archived && t.list === list && (parent ? t.parent === parent : isTop(t))).map(t => t.order);
+  }
+
+  function createTask(f) {
+    const list = f.list || S.defaultList, parent = f.parent || '';
+    const orders = siblingOrders(list, parent);
+    const order = !orders.length ? 0 : f.append ? Math.max(...orders) + 1 : Math.min(...orders) - 1;
+    const due = f.due || (f.time ? todayISO() : '');
+    const t = {
+      id: newId(), title: f.title, desc: f.desc || '', due, time: due ? (f.time || '') : '',
+      status: f.status || 'Not started', priority: f.priority || 'Medium', list, starred: !!f.starred, parent, order,
+      repeat: f.repeat || '', created: new Date().toISOString(), completed: '', archived: false, archType: '', synced: false,
+    };
+    S.tasks.push(t);
+    reindex();
+    S.fresh.add(t.id);
+    schedule();
+    send('saveTask', Object.assign(pick(t, PAYLOAD), { create: true }));
+    return t;
+  }
+  const pick = (o, keys) => keys.reduce((a, k) => (k in o ? (a[k] = o[k], a) : a), {});
+
+  function patch(id, fields) {
+    const t = byId.get(id);
+    if (!t) return;
+    const diff = {};
+    for (const k in fields) if (t[k] !== fields[k]) diff[k] = fields[k];
+    if (!Object.keys(diff).length) return;
+    if ('due' in diff && !diff.due && t.time) diff.time = '';
+    if ('list' in diff) {
+      if (!('order' in diff)) { const o = siblingOrders(diff.list, ''); diff.order = o.length ? Math.min(...o) - 1 : 0; }
+      if (t.parent && !('parent' in diff)) t.parent = '';
+      kidsOf(id).forEach(k => { k.list = diff.list; });
+    }
+    Object.assign(t, diff);
+    reindex();
+    schedule();
+    send('saveTask', Object.assign({ id }, diff));
+  }
+
+  const completing = new Set();
+  function complete(id, rowEl) {
+    const t = byId.get(id);
+    if (!t || t.archived || completing.has(id)) return;
+    completing.add(id);
+    const finish = () => {
+      completing.delete(id);
+      if (t.archived) return;
+      const now = new Date().toISOString();
+      [t, ...activeKids(id)].forEach(x => Object.assign(x, { archived: true, archType: 'Completed', status: 'Done', completed: now }));
+      let next = null;
+      if (t.repeat) {
+        next = Object.assign(pick(t, ['title', 'desc', 'time', 'priority', 'list', 'starred', 'order', 'repeat']), {
+          id: newId(), due: nextDue(t.due, t.repeat, todayISO()), status: 'Not started', created: now, completed: '',
+          parent: t.parent && isActive(byId.get(t.parent)) ? t.parent : '', archived: false, archType: '', synced: false,
+        });
+        S.tasks.push(next);
+        S.fresh.add(next.id);
+      }
+      reindex();
+      schedule();
+      send('completeTask', id, next ? next.id : null);
+      const nextId = next && next.id;
+      snack(next ? `Completed · next one ${relDayLower(next.due)}` : 'Task completed', 'Undo', () => uncomplete(id, nextId));
+    };
+    if (rowEl && !matchMedia('(prefers-reduced-motion: reduce)').matches) { rowEl.classList.add('completing'); setTimeout(finish, 280); }
+    else finish();
+  }
+
+  function unarch(x) { Object.assign(x, { archived: false, archType: '', completed: '', status: x.status === 'Done' ? 'Not started' : x.status }); }
+  // Mirrors restoreTask in Code.gs.
+  function restoreLocal(t) {
+    const was = t.archType, stamp = t.completed;
+    unarch(t);
+    const p = t.parent && byId.get(t.parent);
+    if (t.parent && !p) t.parent = '';
+    else if (p && p.archType === 'Completed') unarch(p);
+    else if (p && p.archived) t.parent = '';
+    kidsOf(t.id).forEach(k => { if (k.archType === was && (was !== 'Completed' || k.completed === stamp)) unarch(k); });
+  }
+
+  // Mirrors purge_ in Code.gs: deleted subtasks go with their parent, live ones are detached.
+  function dropLocal(ids) {
+    S.tasks = S.tasks.filter(t => !ids.has(t.id) && !(ids.has(t.parent) && t.archType === 'Deleted'));
+    S.tasks.forEach(t => { if (ids.has(t.parent)) t.parent = ''; });
+    reindex();
+  }
+
+  function uncomplete(id, spawnedId) {
+    const t = byId.get(id);
+    if (!t) return;
+    if (t.archType === 'Completed') { restoreLocal(t); send('restoreTask', id); }
+    if (spawnedId && byId.has(spawnedId)) {
+      dropLocal(new Set([spawnedId]));
+      send('purgeTask', spawnedId);
+    }
+    reindex();
+    schedule();
+  }
+
+  function trash(id) {
+    const t = byId.get(id);
+    if (!t) return;
+    const affected = [t, ...kidsOf(id).filter(k => k.archType !== 'Deleted')];
+    if (S.panel && (S.panel.id === id || affected.some(a => a.id === S.panel.id))) closePanel();
+    animateOut(affected.map(a => a.id), () => {
+      affected.forEach(x => Object.assign(x, { archived: true, archType: 'Deleted' }));
+      schedule();
+    });
+    send('deleteTask', id);
+    snack(affected.length > 1 ? `Moved to trash with ${affected.length - 1} subtask${affected.length > 2 ? 's' : ''}` : 'Moved to trash', 'Undo', () => untrash(id));
+  }
+  function untrash(id) {
+    const t = byId.get(id);
+    if (!t || t.archType !== 'Deleted') return;
+    restoreLocal(t);
+    S.fresh.add(id);
+    reindex();
+    schedule();
+    send('restoreTask', id);
+  }
+  async function purge(id) {
+    const t = byId.get(id);
+    if (!t) return;
+    if (!(await confirmDlg('Delete forever?', `"${t.title}" will be permanently removed. This can't be undone.`, 'Delete forever'))) return;
+    animateOut([id], () => {
+      dropLocal(new Set([id]));
+      schedule();
+    });
+    send('purgeTask', id);
+  }
+  async function emptyTrash() {
+    const gone = S.tasks.filter(t => t.archType === 'Deleted');
+    if (!gone.length) return;
+    if (!(await confirmDlg('Empty trash?', `${gone.length} task${gone.length > 1 ? 's' : ''} will be permanently deleted. This can't be undone.`, 'Empty trash'))) return;
+    dropLocal(new Set(gone.map(t => t.id)));
+    schedule();
+    send('emptyTrash');
+    snack('Trash emptied');
+  }
+
+  function reorder(list, parent, ids) {
+    ids.forEach((id, i) => {
+      const t = byId.get(id);
+      if (!t) return;
+      t.order = i;
+      t.parent = parent;
+      if (t.list !== list) { t.list = list; kidsOf(id).forEach(k => { k.list = list; }); }
+    });
+    reindex();
+    schedule();
+    send('reorderTasks', list, parent, ids);
+  }
+  const siblingsOf = t => (t.parent && !isTop(t)
+    ? activeKids(t.parent).filter(k => k.list === t.list)
+    : S.tasks.filter(x => !x.archived && x.list === t.list && isTop(x))).sort(SORTS.my);
+
+  function moveBy(id, dir) {
+    const t = byId.get(id);
+    if (!t || t.archived) return;
+    const sib = siblingsOf(t), i = sib.indexOf(t), j = i + dir;
+    if (j < 0 || j >= sib.length) return;
+    [sib[i], sib[j]] = [sib[j], sib[i]];
+    reorder(t.list, isTop(t) ? '' : t.parent, sib.map(x => x.id));
+  }
+  function indent(id) {
+    const t = byId.get(id);
+    if (!t || t.archived || !isTop(t)) return;
+    if (hasLiveKids(id)) return snack('Tasks with subtasks can\'t be indented');
+    const sib = siblingsOf(t), i = sib.indexOf(t);
+    if (i <= 0) return snack('Nothing above to indent under');
+    const parent = sib[i - 1];
+    reorder(t.list, parent.id, activeKids(parent.id).filter(k => k.list === t.list).sort(SORTS.my).map(k => k.id).concat(id));
+  }
+  function outdent(id) {
+    const t = byId.get(id);
+    if (!t || t.archived || isTop(t)) return;
+    const p = byId.get(t.parent);
+    const tops = S.tasks.filter(x => !x.archived && x.list === t.list && isTop(x)).sort(SORTS.my).map(x => x.id);
+    tops.splice(tops.indexOf(p.id) + 1, 0, id);
+    reorder(t.list, '', tops);
+  }
+
+  /* ----- lists ----- */
+  async function newList() {
+    const res = await listDlg({ title: 'Create new list', ok: 'Create', color: COLORS[S.lists.length % COLORS.length] });
+    if (!res || !res.name) return;
+    if (S.lists.some(l => l.name.toLowerCase() === res.name.toLowerCase())) return snack('That list already exists');
+    S.lists.push({ name: res.name, color: res.color });
+    prefs.hidden = prefs.hidden.filter(n => n !== res.name);
+    savePrefs();
+    send('createList', res.name, res.color);
+    showList(res.name);
+  }
+  async function renameList(l) {
+    const res = await listDlg({ title: 'Rename list', name: l.name, color: l.color, ok: 'Save' });
+    if (!res || !res.name) return;
+    const old = l.name, name = res.name;
+    if (name !== old) {
+      if (S.lists.some(x => x !== l && x.name.toLowerCase() === name.toLowerCase())) return snack('A list with that name already exists');
+      l.name = name;
+      S.tasks.forEach(t => { if (t.list === old) t.list = name; });
+      if (old in prefs.sort) { prefs.sort[name] = prefs.sort[old]; delete prefs.sort[old]; }
+      if (prefs.open['list:' + old]) { prefs.open['list:' + name] = true; delete prefs.open['list:' + old]; }
+      prefs.hidden = prefs.hidden.map(n => (n === old ? name : n));
+      savePrefs();
+      send('renameList', old, name);
+    }
+    if (res.color !== l.color) { l.color = res.color; send('setListColor', name, res.color); }
+    schedule();
+  }
+  async function recolorList(l) {
+    const res = await listDlg({ title: `Color for “${l.name}”`, name: l.name, color: l.color, ok: 'Save', nameEditable: false });
+    if (!res || res.color === l.color) return;
+    l.color = res.color;
+    schedule();
+    send('setListColor', l.name, res.color);
+  }
+  async function deleteList(l) {
+    const n = S.tasks.filter(t => t.list === l.name && t.archType !== 'Deleted').length;
+    const msg = n ? `Its ${n} task${n > 1 ? 's' : ''} will move to Trash, where you can still restore them.` : 'This list is empty.';
+    if (!(await confirmDlg(`Delete “${l.name}”?`, msg, 'Delete list'))) return;
+    S.lists = S.lists.filter(x => x !== l);
+    S.tasks.forEach(t => { if (t.list === l.name && t.archType !== 'Deleted') Object.assign(t, { archived: true, archType: 'Deleted' }); });
+    if (S.panel && S.panel.id && (byId.get(S.panel.id) || {}).list === l.name) closePanel();
+    schedule();
+    send('deleteList', l.name);
+    snack(`“${l.name}” deleted`);
+  }
+  function toggleHidden(name) {
+    prefs.hidden = prefs.hidden.includes(name) ? prefs.hidden.filter(n => n !== name) : prefs.hidden.concat(name);
+    savePrefs();
+    schedule();
+  }
+  function hideList(name) {
+    toggleHidden(name);
+    snack(`“${name}” hidden from the board`, 'Show', () => toggleHidden(name));
+  }
+  function clearCompleted(l) {
+    const done = S.tasks.filter(t => t.list === l.name && t.archType === 'Completed');
+    if (!done.length) return;
+    done.forEach(t => { t.archType = 'Deleted'; });
+    schedule();
+    send('clearCompleted', l.name);
+    snack(`${done.length} completed task${done.length > 1 ? 's' : ''} moved to trash`);
+  }
+  function showList(name) {
+    prefs.hidden = prefs.hidden.filter(n => n !== name);
+    savePrefs();
+    setView('board');
+    if (isNarrow()) closeDrawer();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const card = $('board').querySelector(`.card[data-list="${CSS.escape(name)}"]`);
+      if (!card) return;
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      card.classList.remove('flash');
+      void card.offsetWidth;
+      card.classList.add('flash');
+    }));
+  }
+
+  /* ----- calendar / settings ----- */
+  async function sync() {
+    const btn = $('btnSync');
+    btn.classList.add('spin');
+    snack('Syncing to Google Calendar…');
+    const res = await send('syncToCalendar');
+    btn.classList.remove('spin');
+    if (res && res.message) snack(res.message);
+  }
+  async function saveSettings(p) {
+    Object.assign(S.settings, p);
+    const res = await send('saveSettings', p);
+    if (res && res.settings) S.settings = res.settings;
+  }
+
+  /* ======================================================================
+   * Quick-add parsing:  "Call Sam tomorrow 3pm !high #Admin * every week"
+   * ==================================================================== */
+  const MONTHS = ['january|jan', 'february|feb', 'march|mar', 'april|apr', 'may', 'june|jun', 'july|jul', 'august|aug', 'september|sept|sep', 'october|oct', 'november|nov', 'december|dec'];
+  const DAYS_FULL = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const DAYS_SHORT = ['sun', 'mon', 'tue|tues', 'wed', 'thu|thur|thurs', 'fri', 'sat'];
+  const dayIndex = w => { w = w.toLowerCase(); return DAYS_FULL.findIndex((f, i) => f === w || DAYS_SHORT[i].split('|').includes(w)); };
+  const monthIndex = w => { w = w.toLowerCase().replace('.', ''); return MONTHS.findIndex(m => m.split('|').includes(w)); };
+  const nextWeekday = (idx, allowToday) => { const t = todayISO(); let diff = (idx - parseISO(t).getDay() + 7) % 7; if (!diff && !allowToday) diff = 7; return addDays(t, diff); };
+  // "next friday" means Friday of next week (Monday-start), not the coming Friday.
+  const weekdayNextWeek = idx => addDays(nextWeekday(1, false), (idx + 6) % 7);
+  const norm = s => s.toLowerCase().replace(/[\s_-]+/g, '');
+  function findList(token) {
+    const n = norm(token), exact = S.lists.find(l => norm(l.name) === n);
+    if (exact) return exact.name;
+    const pre = S.lists.filter(l => norm(l.name).startsWith(n));
+    return pre.length === 1 ? pre[0].name : '';
+  }
+
+  function parseQuick(raw) {
+    let s = ' ' + raw + ' ';
+    const r = {};
+    const take = (pattern, fn) => {
+      const m = s.match(new RegExp('\\s' + pattern + '(?=[\\s,.;:!?])', 'i'));
+      if (!m || fn(m.slice(1)) === false) return false;
+      s = s.slice(0, m.index) + ' ' + s.slice(m.index + m[0].length);
+      return true;
+    };
+    const monthRe = `(${MONTHS.join('|')})\\.?`;
+    // "sun", "sat" and "wed" are ordinary words, so they only count after on/next/this/due.
+    const dayRe = `(${DAYS_FULL.join('|')}|mon|tues|tue|thurs|thur|thu|fri)`;
+    const dayAnyRe = `(${DAYS_FULL.join('|')}|${DAYS_SHORT.join('|')})`;
+
+    take('(?:!(?:high|h|1)|!!)', () => { r.priority = 'High'; })
+      || take('!(?:low|l|3)', () => { r.priority = 'Low'; })
+      || take('!(?:medium|med|m|2)', () => { r.priority = 'Medium'; });
+    take('\\*', () => { r.starred = true; });
+    take('#([^\\s#]+)', ([name]) => { const l = findList(name); if (!l) return false; r.list = l; });
+
+    take(`every\\s+${dayAnyRe}`, ([d]) => { r.repeat = 'weekly'; r.due = nextWeekday(dayIndex(d), true); })
+      || [['every\\s+day|daily', 'daily'], ['every\\s+weekday|weekdays', 'weekdays'], ['every\\s+week|weekly', 'weekly'],
+        ['every\\s+month|monthly', 'monthly'], ['every\\s+year|yearly|annually', 'yearly']]
+        .some(([p, v]) => take(`(?:${p})`, () => { r.repeat = v; }));
+
+    take('(?:at\\s+)?(\\d{1,2})(?::([0-5]\\d))?\\s?(am|pm)', ([hh, mm, ap]) => {
+      const n = Number(hh);
+      if (n < 1 || n > 12) return false;
+      r.time = pad(n % 12 + (ap.toLowerCase() === 'pm' ? 12 : 0)) + ':' + (mm || '00');
+    })
+      || take('(?:at\\s+)?([01]?\\d|2[0-3]):([0-5]\\d)', ([hh, mm]) => { r.time = pad(Number(hh)) + ':' + mm; })
+      || take('(?:at\\s+)?noon', () => { r.time = '12:00'; });
+
+    if (!r.due) {
+      const today = todayISO();
+      take('(?:today|tod)', () => { r.due = today; })
+        || take('(?:tomorrow|tmrw|tmr)', () => { r.due = addDays(today, 1); })
+        || take('(?:day\\s+after\\s+tomorrow)', () => { r.due = addDays(today, 2); })
+        || take('next\\s+week', () => { r.due = nextWeekday(1, false); })
+        || take('next\\s+month', () => { r.due = addMonths(today, 1); })
+        || take('(?:this\\s+)?weekend', () => { r.due = nextWeekday(6, true); })
+        || take('in\\s+(\\d+|a|an|one|two|three)\\s+(days?|weeks?|months?)', ([n, unit]) => {
+          const k = { a: 1, an: 1, one: 1, two: 2, three: 3 }[n.toLowerCase()] || Number(n);
+          r.due = unit.startsWith('month') ? addMonths(today, k) : addDays(today, unit.startsWith('week') ? k * 7 : k);
+        })
+        || take(`next\\s+${dayAnyRe}`, ([d]) => { r.due = weekdayNextWeek(dayIndex(d)); })
+        || take(`(?:on\\s+|this\\s+|due\\s+)${dayAnyRe}`, ([d]) => { r.due = nextWeekday(dayIndex(d), false); })
+        || take(dayRe, ([d]) => { r.due = nextWeekday(dayIndex(d), false); })
+        || take('(\\d{4})-(\\d{2})-(\\d{2})', ([y, m, d]) => { const iso = `${y}-${m}-${d}`; if (isoOf(parseISO(iso)) !== iso) return false; r.due = iso; })
+        || take(`(?:on\\s+)?${monthRe}\\s+(\\d{1,2})(?:st|nd|rd|th)?`, ([mo, d]) => setMonthDay(r, monthIndex(mo), Number(d)))
+        || take(`(?:on\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+${monthRe}`, ([d, mo]) => setMonthDay(r, monthIndex(mo), Number(d)));
+    }
+    if ((r.time || r.repeat) && !r.due) r.due = todayISO();
+    r.title = s.replace(/\s+([,.;:!?])/g, '$1').replace(/\s+/g, ' ').trim().replace(/[,;:]+(?=[.!?]*$)/, '').replace(/^[\s,.;:]+|[\s,;:]+$/g, '') || raw.trim();
+    return r;
+  }
+  function setMonthDay(r, mi, day) {
+    if (mi < 0 || day < 1 || day > 31) return false;
+    const now = new Date();
+    let d = new Date(now.getFullYear(), mi, day);
+    if (d.getMonth() !== mi) return false;
+    if (isoOf(d) < todayISO()) d = new Date(now.getFullYear() + 1, mi, day);
+    r.due = isoOf(d);
+  }
+
+  /* ======================================================================
+   * Rendering
+   * ==================================================================== */
+  let rafPending = false, renderBlocked = false, composing = false;
+  function schedule() {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => { rafPending = false; render(); });
+  }
+  function render() {
+    if (drag.active || composing) { renderBlocked = true; return; }
+    keepFocus($('drawer'), renderDrawer);
+    renderTop();
+    renderView();
+    syncPanel();
+    S.fresh.clear();
+  }
+
+  // Rebuilding a region would drop keyboard focus; put it back on the same keyed control.
+  function keepFocus(root, build) {
+    const a = document.activeElement, key = a && root.contains(a) ? a.dataset.key : null;
+    build();
+    if (!key) return;
+    const n = root.querySelector(`[data-key="${CSS.escape(key)}"]`);
+    if (n) n.focus({ preventScroll: true });
+  }
+
+  const isNarrow = () => matchMedia('(max-width: 900px)').matches;
+  const VIEW_META = {
+    board: ['All tasks', 'board'], starred: ['Starred', 'star'], today: ['Today', 'sun'],
+    upcoming: ['Upcoming', 'upcoming'], insights: ['Insights', 'insights'], trash: ['Trash', 'trash'], search: ['Search', 'search'],
+  };
+
+  function renderDrawer() {
+    const act = S.tasks.filter(t => !t.archived), today = todayISO();
+    const todayCount = act.filter(t => t.due && t.due <= today).length;
+    const overdue = act.some(t => t.due && t.due < today);
+    const counts = new Map();
+    act.forEach(t => counts.set(t.list, (counts.get(t.list) || 0) + 1));
+
+    const nav = (key, badge, hot) => h('button', {
+      class: 'nav-item', type: 'button', 'data-key': 'nav:' + key, 'aria-current': S.view === key ? 'page' : null,
+      onclick: () => { setView(key); if (isNarrow()) closeDrawer(); },
+    }, icon(VIEW_META[key][1]), h('span', { class: 'lbl', text: VIEW_META[key][0] }), badge ? h('span', { class: 'badge' + (hot ? ' hot' : ''), text: badge }) : null);
+
+    $('nav').replaceChildren(
+      nav('board', act.length || ''), nav('starred', act.filter(t => t.starred).length || ''),
+      nav('today', todayCount || '', overdue), nav('upcoming'), nav('insights'));
+
+    $('drawerLists').replaceChildren(...S.lists.map(l => {
+      const hidden = prefs.hidden.includes(l.name);
+      return h('div', { class: 'dl-row' + (hidden ? ' off' : '') },
+        h('button', {
+          class: 'dl-check', type: 'button', role: 'checkbox', 'aria-checked': String(!hidden), 'data-key': 'dl-check:' + l.name,
+          'aria-label': `Show ${l.name} on the board`, title: hidden ? 'Show on board' : 'Hide from board',
+          style: `--c:${COLOR_HEX[l.color] || COLOR_HEX.GRAY}`, onclick: () => toggleHidden(l.name),
+        }, icon('check')),
+        h('button', { class: 'dl-name', type: 'button', title: l.name, 'data-key': 'dl-name:' + l.name, onclick: () => showList(l.name) }, h('span', { text: l.name })),
+        h('span', { class: 'dl-count', text: counts.get(l.name) || '' }),
+        keyed(iconBtn('more', `Options for ${l.name}`, e => listMenu(l, e.currentTarget), 'dl-more'), 'dl-more:' + l.name));
+    }));
+
+    const trashCount = S.tasks.filter(t => t.archType === 'Deleted').length;
+    $('drawerFoot').replaceChildren(
+      nav('trash', trashCount || ''),
+      h('button', { class: 'nav-item', type: 'button', 'data-key': 'nav:settings', onclick: settingsDlg }, icon('settings'), h('span', { class: 'lbl', text: 'Settings' })),
+      h('button', { class: 'nav-item', type: 'button', 'data-key': 'nav:keys', onclick: shortcutsDlg }, icon('keyboard'), h('span', { class: 'lbl', text: 'Keyboard shortcuts' }), h('kbd', { text: '?' })));
+  }
+
+  function renderTop() {
+    $('viewTitle').textContent = S.view === 'search' ? 'Search' : VIEW_META[S.view][0];
+    $('btnClearSearch').hidden = !S.query;
+    $('searchKbd').hidden = !!S.query;
+    const app = $('app');
+    app.classList.toggle('drawer-closed', !prefs.drawer);
+  }
+
+  function setView(v) {
+    if (v !== 'search' && S.query) { S.query = ''; $('search').value = ''; $('topbar').classList.remove('searching'); }
+    S.view = v;
+    if (v !== 'search') { prefs.view = v; savePrefs(); }
+    renderNow();
+    $('board').scrollTo(0, 0);
+  }
+  function renderNow() { rafPending = false; render(); }
+
+  /* ----- board-level snapshot so re-renders keep focus, caret and scroll ----- */
+  function snapshot() {
+    const board = $('board'), a = document.activeElement, snap = { left: board.scrollLeft, top: board.scrollTop, scrolls: {} };
+    board.querySelectorAll('.card-scroll[data-key]').forEach(n => { snap.scrolls[n.dataset.key] = n.scrollTop; });
+    if (a && board.contains(a)) {
+      const keyed = a.closest('[data-key]');
+      if (keyed) {
+        snap.focus = keyed.dataset.key;
+        snap.isInput = a.tagName === 'INPUT';
+        if (snap.isInput) { snap.selStart = a.selectionStart; snap.selEnd = a.selectionEnd; }
+        const rows = [...board.querySelectorAll('.task')];
+        snap.rowIndex = rows.indexOf(a);
+      }
+    }
+    return snap;
+  }
+  function restore(snap) {
+    const board = $('board');
+    board.scrollLeft = snap.left;
+    board.scrollTop = snap.top;
+    board.querySelectorAll('.card-scroll[data-key]').forEach(n => { if (n.dataset.key in snap.scrolls) n.scrollTop = snap.scrolls[n.dataset.key]; });
+    if (!snap.focus) return;
+    let target = board.querySelector(`[data-key="${CSS.escape(snap.focus)}"]`);
+    if (!target && snap.rowIndex >= 0) {
+      const rows = board.querySelectorAll('.task');
+      target = rows[Math.min(snap.rowIndex, rows.length - 1)];
+    }
+    if (!target) return;
+    target.focus({ preventScroll: true });
+    if (snap.isInput && target.tagName === 'INPUT') { try { target.setSelectionRange(snap.selStart, snap.selEnd); } catch (e) {} }
+  }
+
+  function renderView() {
+    const board = $('board'), snap = snapshot(), frag = document.createDocumentFragment();
+    let single = false;
+    if (S.error && !S.ready) {
+      frag.append(h('div', { class: 'big-empty' }, icon('alert'), h('p', { text: 'Couldn\'t load your tasks.' }), h('p', { text: S.error }),
+        h('button', { class: 'btn primary', type: 'button', onclick: () => { S.error = null; boot(); }, text: 'Try again' })));
+    } else if (!S.ready) {
+      for (let i = 0; i < 3; i++) frag.append(h('div', { class: 'card' }, h('div', { class: 'skeleton' }, h('i'), h('i'), h('i'), h('i'), h('i'))));
+    } else {
+      single = ({ board: renderBoard, starred: renderStarred, today: renderToday, upcoming: renderUpcoming, insights: renderInsights, trash: renderTrash, search: renderSearch })[S.view](frag);
+    }
+    board.className = 'board view-' + S.view + (single ? ' single' : '');
+    board.replaceChildren(frag);
+    restore(snap);
+    if (S.view === 'insights' && S.ready) drawCharts();
+  }
+
+  function cardEl(o) {
+    const card = h('section', { class: 'card' + (o.wide ? ' wide' : ''), 'aria-label': o.title });
+    if (o.color) card.style.setProperty('--c', o.color);
+    if (o.drop) Object.keys(o.drop).forEach(k => { card.dataset[k] = o.drop[k]; });
+    if (o.list) card.dataset.list = o.list;
+    card.append(h('header', { class: 'card-head' },
+      h('span', { class: 'dot' }), h('h2', { text: o.title }),
+      o.count ? h('span', { class: 'count', text: o.count }) : null,
+      h('span', { class: 'grow' }), o.actions || null));
+    if (o.sub) card.append(h('div', { class: 'card-sub', text: o.sub }));
+    if (o.meter) card.append(o.meter);
+    if (o.add) card.append(o.add);
+    const scroll = h('div', { class: 'card-scroll', 'data-key': o.key });
+    const body = h('div', { class: 'card-body' });
+    scroll.append(body);
+    card.append(scroll);
+    return { card, body, scroll };
+  }
+
+  function miniEmpty(ic, title, text) {
+    return h('div', { class: 'mini-empty' }, icon(ic), title ? h('strong', { text: title }) : null, text ? h('span', { text }) : null);
+  }
+
+  function renderBoard(frag) {
+    const visible = S.lists.filter(l => !prefs.hidden.includes(l.name));
+    if (!S.lists.length || !visible.length) {
+      frag.append(h('div', { class: 'big-empty' }, icon('board'),
+        h('p', { text: S.lists.length ? 'All lists are hidden.' : 'No lists yet.' }),
+        S.lists.length
+          ? h('button', { class: 'btn tonal', type: 'button', text: 'Show all lists', onclick: () => { prefs.hidden = []; savePrefs(); schedule(); } })
+          : h('button', { class: 'btn primary', type: 'button', text: 'Create a list', onclick: newList })));
+      return true;
+    }
+    visible.forEach(l => frag.append(listCard(l)));
+    frag.append(h('button', { class: 'new-list-card', type: 'button', onclick: newList }, h('span', {}, icon('add'), 'Create new list')));
+    return false;
+  }
+
+  function listCard(l) {
+    const sort = sortOf(l.name), mine = sort === 'my';
+    const act = S.tasks.filter(t => !t.archived && t.list === l.name);
+    const done = S.tasks.filter(t => t.archType === 'Completed' && t.list === l.name).sort(byCompletedDesc);
+    const { card, body, scroll } = cardEl({
+      key: 'list:' + l.name, title: l.name, list: l.name, color: COLOR_HEX[l.color] || COLOR_HEX.GRAY,
+      count: act.length || '', drop: mine ? { drop: 'list' } : null,
+      actions: [sort !== 'my' ? h('span', { class: 'count', title: 'Sorted by ' + SORT_LABELS[sort].toLowerCase(), text: SORT_LABELS[sort] }) : null,
+        iconBtn('more', `Options for ${l.name}`, e => listMenu(l, e.currentTarget))],
+      add: quickAdd('add:' + l.name, { list: l.name }),
+    });
+    const tops = act.filter(isTop).sort(SORTS[sort]);
+    if (!tops.length) body.append(done.length ? miniEmpty('doneAll', 'All tasks complete', 'Nice work!') : miniEmpty('notes', null, 'No tasks yet'));
+    tops.forEach(t => body.append(groupEl(t, mine)));
+    if (done.length) scroll.append(doneSection('list:' + l.name, done, { showParent: true }));
+    return card;
+  }
+
+  function groupEl(t, draggable) {
+    const g = h('div', { class: 'group', 'data-id': t.id });
+    g.append(taskRow(t, { drag: draggable }));
+    const sub = h('div', { class: 'subtasks', 'data-parent': t.id });
+    activeKids(t.id).filter(k => k.list === t.list).sort(SORTS.my).forEach(k => sub.append(taskRow(k, { sub: true, drag: draggable })));
+    g.append(sub);
+    return g;
+  }
+
+  function doneSection(key, tasks, o) {
+    const open = !!prefs.open[key];
+    const sec = h('div', { class: 'done-sec' + (open ? ' open' : '') });
+    sec.append(h('button', {
+      class: 'done-toggle', type: 'button', 'aria-expanded': String(open),
+      onclick: () => { prefs.open[key] = !open; savePrefs(); schedule(); },
+    }, icon('chevron'), h('span', { text: `Completed (${tasks.length})` })));
+    if (open) sec.append(h('div', {}, tasks.map(t => taskRow(t, Object.assign({}, o, { done: true })))));
+    return sec;
+  }
+
+  function highlight(node, text, q) {
+    if (!q) { node.textContent = text; return; }
+    const lower = text.toLowerCase(), needle = q.toLowerCase();
+    let i = 0, at;
+    while ((at = lower.indexOf(needle, i)) >= 0) {
+      node.append(text.slice(i, at), h('mark', { text: text.slice(at, at + needle.length) }));
+      i = at + needle.length;
+    }
+    node.append(text.slice(i));
+  }
+
+  function taskRow(t, o = {}) {
+    const done = t.archType === 'Completed';
+    const row = h('div', {
+      class: 'task' + (o.sub ? ' sub' : '') + (done ? ' done' : '') + (S.fresh.has(t.id) ? ' enter' : ''),
+      'data-id': t.id, 'data-key': 'task:' + t.id + (o.keySuffix || ''), tabindex: 0,
+      'aria-label': t.title + (done ? ', completed' : ''),
+    });
+    row.append(o.drag && !done ? h('span', { class: 'grip', title: 'Drag to move' }, icon('drag')) : h('span', { class: 'grip-space' }));
+    if (!o.trash) {
+      row.append(h('button', {
+        class: 'check', type: 'button', role: 'checkbox', 'aria-checked': String(done),
+        'aria-label': done ? 'Mark not complete' : 'Mark complete', title: done ? 'Mark not complete' : 'Mark complete',
+        onclick: e => { e.stopPropagation(); done ? uncomplete(t.id) : complete(t.id, row); },
+      }, icon('check')));
+    }
+    const body = h('div', { class: 'task-body' });
+    const title = h('div', { class: 'task-title' });
+    const q = S.view === 'search' ? S.query.trim() : '';
+    highlight(title, t.title, q);
+    body.append(title);
+    if (t.desc && !done) {
+      const notes = h('div', { class: 'task-notes' });
+      highlight(notes, t.desc.split('\n')[0], q);
+      body.append(notes);
+    }
+    const chips = chipsFor(t, o, done);
+    if (chips.childNodes.length) body.append(chips);
+    row.append(body);
+
+    if (o.trash) {
+      row.append(h('div', { class: 'row-actions' },
+        iconBtn('restore', 'Restore', e => { e.stopPropagation(); untrash(t.id); }),
+        iconBtn('deleteForever', 'Delete forever', e => { e.stopPropagation(); purge(t.id); })));
+    } else if (!done) {
+      row.append(h('button', {
+        class: 'star' + (t.starred ? ' on' : ''), type: 'button', 'aria-pressed': String(t.starred),
+        'aria-label': t.starred ? 'Remove star' : 'Star task', title: t.starred ? 'Remove star (s)' : 'Star (s)',
+        onclick: e => { e.stopPropagation(); patch(t.id, { starred: !t.starred }); },
+      }, icon(t.starred ? 'star' : 'starOutline')));
+    }
+    if (!o.trash) {
+      row.addEventListener('click', () => openPanel(t.id));
+      row.addEventListener('contextmenu', e => { e.preventDefault(); taskMenu(t, { x: e.clientX, y: e.clientY }); });
+    }
+    return row;
+  }
+
+  function chipsFor(t, o, done) {
+    const c = h('div', { class: 'chips' }), today = todayISO();
+    if (o.showList) c.append(h('span', { class: 'chip', style: `--c:${listHex(t.list)}` }, h('span', { class: 'cdot' }), t.list));
+    if (done && t.completed) c.append(h('span', { class: 'chip' }, icon('check'), 'Done ' + relDayLower(localDayOf(t.completed))));
+    if (!done && t.due) {
+      const cls = t.due < today ? ' overdue' : t.due === today ? ' today' : '';
+      const label = (o.hideDay ? '' : relDay(t.due)) + (t.time ? (o.hideDay ? '' : ', ') + fmtTime(t.time) : '');
+      if (label) c.append(h('span', { class: 'chip' + cls }, icon(t.time ? 'clock' : 'event'), label, t.repeat ? icon('repeat') : null));
+      else if (t.repeat) c.append(h('span', { class: 'chip' }, icon('repeat'), repeatLabel(t.repeat, t.due).split(' on ')[0]));
+    } else if (!done && t.repeat) c.append(h('span', { class: 'chip' }, icon('repeat'), repeatLabel(t.repeat, t.due).split(' on ')[0]));
+    if (!done && t.priority === 'High') c.append(h('span', { class: 'chip high' }, icon('flag'), 'High'));
+    if (!done && t.priority === 'Low') c.append(h('span', { class: 'chip low' }, icon('flag'), 'Low'));
+    if (!done && t.status === 'In progress') c.append(h('span', { class: 'chip progress' }, icon('half'), 'In progress'));
+    if (!done && t.status === 'Blocked') c.append(h('span', { class: 'chip blocked' }, icon('blocked'), 'Blocked'));
+    const ks = kidsOf(t.id).filter(k => k.archType !== 'Deleted');
+    if (ks.length && !o.sub) c.append(h('span', { class: 'chip', title: 'Subtasks done' }, icon('checklist'), `${ks.filter(k => k.archived).length}/${ks.length}`));
+    if (o.showParent && t.parent) {
+      const p = byId.get(t.parent);
+      if (p && (o.done || isTop(t) || o.showList)) c.append(h('span', { class: 'chip', title: 'Subtask of ' + p.title }, icon('subArrow'), p.title));
+    }
+    if (o.showStar && t.starred && !done) c.append(h('span', { class: 'chip star' }, icon('star'), 'Starred'));
+    return c;
+  }
+
+  function quickAdd(key, defaults, placeholder) {
+    const input = h('input', {
+      class: 'qa-input', 'data-key': key, placeholder: placeholder || 'Add a task', 'aria-label': placeholder || 'Add a task',
+      value: drafts.get(key) || '', autocomplete: 'off', enterkeyhint: 'done', maxlength: 500,
+    });
+    const preview = h('div', { class: 'qa-preview', 'aria-live': 'polite' });
+    const refresh = () => {
+      const v = input.value;
+      if (v) drafts.set(key, v); else drafts.delete(key);
+      preview.replaceChildren(...(v.trim() ? previewChips(parseQuick(v), defaults) : []));
+    };
+    input.addEventListener('input', refresh);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.isComposing) {
+        e.preventDefault();
+        const text = input.value.trim();
+        if (!text) return;
+        const p = parseQuick(text);
+        const f = Object.assign({}, defaults);
+        Object.keys(p).forEach(k => { if (p[k] !== undefined) f[k] = p[k]; });
+        createTask(f);
+        input.value = '';
+        refresh();
+        if (p.list && p.list !== defaults.list) snack(`Added to ${p.list}`);
+      } else if (e.key === 'Escape') {
+        e.stopPropagation();
+        input.value = '';
+        refresh();
+        input.blur();
+      }
+    });
+    refresh();
+    return h('div', { class: 'qa' }, h('label', { class: 'qa-row' }, icon('addCircle'), input), preview);
+  }
+
+  function previewChips(p, defaults) {
+    const out = [];
+    if (p.due && p.due !== defaults.due) out.push(h('span', { class: 'chip today' }, icon('event'), relDay(p.due)));
+    if (p.time) out.push(h('span', { class: 'chip today' }, icon('clock'), fmtTime(p.time)));
+    if (p.repeat) out.push(h('span', { class: 'chip' }, icon('repeat'), repeatLabel(p.repeat, p.due).split(' on ')[0]));
+    if (p.priority) out.push(h('span', { class: 'chip ' + p.priority.toLowerCase() }, icon('flag'), p.priority));
+    if (p.list && p.list !== defaults.list) out.push(h('span', { class: 'chip', style: `--c:${listHex(p.list)}` }, h('span', { class: 'cdot' }), p.list));
+    if (p.starred) out.push(h('span', { class: 'chip star' }, icon('star'), 'Starred'));
+    if (out.length) out.push(h('span', { class: 'qa-hint', text: 'Enter to add' }));
+    return out;
+  }
+
+  /* ----- smart views ----- */
+  function renderStarred(frag) {
+    const items = S.tasks.filter(t => !t.archived && t.starred).sort(byDueTime);
+    const { card, body } = cardEl({ key: 'starred', title: 'Starred', color: 'var(--star)', count: items.length || '', wide: true,
+      add: quickAdd('add:starred', { starred: true }, 'Add a starred task') });
+    if (!items.length) body.append(miniEmpty('starOutline', 'No starred tasks', 'Star important tasks to see them here.'));
+    items.forEach(t => body.append(taskRow(t, { showList: true, showParent: true })));
+    frag.append(card);
+    return true;
+  }
+
+  function renderToday(frag) {
+    const today = todayISO(), act = S.tasks.filter(t => !t.archived && t.due);
+    const overdue = act.filter(t => t.due < today).sort(byDueTime);
+    const dueToday = act.filter(t => t.due === today).sort(byDueTime);
+    const doneToday = S.tasks.filter(t => t.archType === 'Completed' && localDayOf(t.completed) === today).sort(byCompletedDesc);
+    const total = overdue.length + dueToday.length + doneToday.length;
+    const meter = total ? h('div', { class: 'card-meter' },
+      h('div', { class: 'meter', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': total, 'aria-valuenow': doneToday.length, 'aria-label': 'Done today' },
+        h('i', { style: `width:${Math.round(doneToday.length / total * 100)}%` })),
+      h('span', { text: `${doneToday.length} of ${total} done` })) : null;
+    const { card, body, scroll } = cardEl({
+      key: 'today', title: 'Today', wide: true, color: 'var(--accent)',
+      sub: parseISO(today).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }),
+      meter, add: quickAdd('add:today', { due: today }, 'Add a task for today'),
+    });
+    if (overdue.length) {
+      body.append(h('div', { class: 'section-label hot' }, icon('alert'), `Overdue · ${overdue.length}`));
+      overdue.forEach(t => body.append(taskRow(t, { showList: true, showParent: true, keySuffix: ':od' })));
+      body.append(h('div', { class: 'section-label', text: 'Today' }));
+    }
+    if (!dueToday.length) body.append(miniEmpty(doneToday.length ? 'doneAll' : 'sun', doneToday.length ? 'All done for today' : 'Nothing due today', doneToday.length ? 'Enjoy the rest of your day.' : 'Add a task above or plan ahead in Upcoming.'));
+    dueToday.forEach(t => body.append(taskRow(t, { showList: true, showParent: true, hideDay: true })));
+    if (doneToday.length) scroll.append(doneSection('today', doneToday, { showList: true }));
+    frag.append(card);
+    return true;
+  }
+
+  function renderUpcoming(frag) {
+    const today = todayISO(), act = S.tasks.filter(t => !t.archived && t.due);
+    const overdue = act.filter(t => t.due < today).sort(byDueTime);
+    const mk = (key, title, sub, items, date, color) => {
+      const { card, body } = cardEl({
+        key, title, sub, count: items.length || '', color,
+        drop: date ? { drop: 'day', date } : null,
+        add: date ? quickAdd('add:' + key, { due: date }) : null,
+      });
+      if (!items.length) body.append(miniEmpty('event', null, date ? 'Nothing planned' : 'Nothing here'));
+      items.forEach(t => body.append(taskRow(t, { showList: true, showParent: true, drag: true, hideDay: !!date })));
+      return card;
+    };
+    if (overdue.length) frag.append(mk('day:overdue', 'Overdue', 'Drag onto a day to reschedule', overdue, null, 'var(--red)'));
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(today, i);
+      frag.append(mk('day:' + d, i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : weekdayOf(d), fmtDay(d, { weekday: undefined }),
+        act.filter(t => t.due === d).sort(byDueTime), d, i === 0 ? 'var(--accent)' : 'var(--line-2)'));
+    }
+    frag.append(mk('day:later', 'Later', 'After ' + fmtDay(addDays(today, 6), { weekday: undefined }), act.filter(t => t.due > addDays(today, 6)).sort(byDueTime), null, 'var(--line-2)'));
+    return false;
+  }
+
+  function renderSearch(frag) {
+    const q = S.query.trim().toLowerCase();
+    const hit = t => t.archType !== 'Deleted' && (t.title.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q) || t.list.toLowerCase().includes(q));
+    const act = S.tasks.filter(t => !t.archived && hit(t)).sort(byDueTime);
+    const done = S.tasks.filter(t => t.archType === 'Completed' && hit(t)).sort(byCompletedDesc);
+    const { card, body, scroll } = cardEl({ key: 'search', title: `Results for “${S.query.trim()}”`, wide: true, count: (act.length + done.length) || '' });
+    if (!act.length && !done.length) body.append(miniEmpty('search', 'No matches', 'Try a different word, or check Trash.'));
+    act.forEach(t => body.append(taskRow(t, { showList: true, showParent: true, showStar: true })));
+    if (done.length) scroll.append(doneSection('search', done, { showList: true }));
+    frag.append(card);
+    return true;
+  }
+
+  function renderTrash(frag) {
+    const items = S.tasks.filter(t => t.archType === 'Deleted').sort((a, b) => a.list.localeCompare(b.list) || a.title.localeCompare(b.title));
+    const { card, body } = cardEl({
+      key: 'trash', title: 'Trash', wide: true, color: 'var(--text-3)', count: items.length || '',
+      sub: 'Deleted tasks stay here until you empty the trash.',
+      actions: h('button', { class: 'text-btn danger', type: 'button', disabled: !items.length, onclick: emptyTrash, text: 'Empty trash' }),
+    });
+    if (!items.length) body.append(miniEmpty('trash', 'Trash is empty', null));
+    items.forEach(t => body.append(taskRow(t, { trash: true, showList: true })));
+    frag.append(card);
+    return true;
+  }
+
+  /* ----- insights ----- */
+  function computeStats() {
+    const today = todayISO(), done = S.tasks.filter(t => t.archType === 'Completed' && t.completed);
+    const perDay = new Map();
+    done.forEach(t => { const d = localDayOf(t.completed); perDay.set(d, (perDay.get(d) || 0) + 1); });
+    const days = [];
+    for (let i = 13; i >= 0; i--) { const d = addDays(today, -i); days.push({ date: d, n: perDay.get(d) || 0 }); }
+    const sum = (from, to) => { let s = 0; for (let i = from; i <= to; i++) s += perDay.get(addDays(today, -i)) || 0; return s; };
+    let streak = 0;
+    for (let i = perDay.get(today) ? 0 : 1; perDay.get(addDays(today, -i)); i++) streak++;
+    const act = S.tasks.filter(t => !t.archived);
+    return {
+      days, today: perDay.get(today) || 0, week: sum(0, 6), prevWeek: sum(7, 13), streak,
+      open: act.length, overdue: act.filter(t => t.due && t.due < today).length,
+      lists: S.lists.map(l => ({ l, open: act.filter(t => t.list === l.name).length, done: S.tasks.filter(t => t.list === l.name && t.archType === 'Completed').length })),
+    };
+  }
+
+  function renderInsights(frag) {
+    const s = computeStats();
+    const tile = (label, value, o = {}) => h('div', { class: 'tile' + (o.alert ? ' alert' : '') },
+      h('div', { class: 'tile-label' }, o.icon ? icon(o.icon) : null, label),
+      h('div', { class: 'tile-value', text: value.toLocaleString() }),
+      o.delta != null ? h('div', { class: 'tile-delta ' + (o.dir || ''), text: o.delta }) : null);
+    const diff = s.week - s.prevWeek;
+    const overview = cardEl({ key: 'ins-overview', title: 'Overview', color: 'var(--chart)' });
+    overview.body.append(h('div', { class: 'tiles' },
+      tile('Done today', s.today),
+      tile('Last 7 days', s.week, { delta: diff === 0 ? 'Same as the 7 days before' : `${diff > 0 ? '+' : '−'}${Math.abs(diff)} vs the 7 days before`, dir: diff > 0 ? 'up' : diff < 0 ? 'down' : '' }),
+      tile('Streak', s.streak, { icon: 'fire', delta: s.streak === 1 ? 'day in a row' : 'days in a row' }),
+      tile('Open tasks', s.open),
+      tile('Overdue', s.overdue, { alert: s.overdue > 0, icon: s.overdue ? 'alert' : null, delta: s.overdue ? 'Need a new date' : 'All on track' })));
+    frag.append(overview.card);
+
+    const chart = cardEl({ key: 'ins-chart', title: 'Completed per day', sub: 'Last 14 days', color: 'var(--chart)' });
+    chart.body.append(h('div', { class: 'chart', 'data-chart': 'days' }));
+    chart.body.append(h('details', { class: 'table-view' }, h('summary', { text: 'View as table' }),
+      h('table', {}, h('thead', {}, h('tr', {}, h('th', { text: 'Day' }), h('th', { text: 'Completed' }))),
+        h('tbody', {}, s.days.slice().reverse().map(d => h('tr', {}, h('td', { text: relDay(d.date) }), h('td', { text: d.n })))))));
+    chart.card._days = s.days;
+    frag.append(chart.card);
+
+    const lists = cardEl({ key: 'ins-lists', title: 'Lists', sub: 'Completed vs. still open', color: 'var(--chart)' });
+    s.lists.forEach(({ l, open, done }) => {
+      const total = open + done, pct = total ? Math.round(done / total * 100) : 0;
+      lists.body.append(h('div', { class: 'lrow' },
+        h('div', { class: 'lname', style: `--c:${COLOR_HEX[l.color] || COLOR_HEX.GRAY}` }, h('i'), h('span', { text: l.name })),
+        h('div', { class: 'lnum', text: total ? `${done} of ${total} done` : 'No tasks' }),
+        h('div', { class: 'meter', role: 'progressbar', 'aria-label': l.name, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': pct }, h('i', { style: `width:${pct}%` }))));
+    });
+    frag.append(lists.card);
+    return false;
+  }
+
+  function drawCharts() {
+    $('board').querySelectorAll('.chart[data-chart]').forEach(box => {
+      const days = box.closest('.card')._days;
+      const W = Math.max(240, box.clientWidth - 32), H = 170, top = 18, bottom = 24, left = 26, plotW = W - left, plotH = H - top - bottom;
+      const max = Math.max(1, ...days.map(d => d.n)), niceMax = max <= 4 ? max : Math.ceil(max / 2) * 2;
+      const slot = plotW / days.length, barW = Math.min(24, slot - 4);
+      const svg = document.createElementNS(SVGNS, 'svg');
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      svg.setAttribute('role', 'img');
+      svg.setAttribute('aria-label', `Tasks completed per day over the last 14 days, up to ${max} per day`);
+      const add = (tag, attrs, text) => {
+        const n = document.createElementNS(SVGNS, tag);
+        Object.keys(attrs).forEach(k => n.setAttribute(k, attrs[k]));
+        if (text != null) n.textContent = text;
+        svg.append(n);
+        return n;
+      };
+      const y = v => top + plotH - (v / niceMax) * plotH;
+      [0, niceMax / 2, niceMax].forEach(v => {
+        if (v !== Math.round(v)) return;
+        add('line', { class: 'grid', x1: left, x2: W, y1: y(v), y2: y(v) });
+        add('text', { class: 'axis', x: left - 8, y: y(v) + 4, 'text-anchor': 'end' }, v);
+      });
+      const tip = h('div', { class: 'tip', hidden: true });
+      const topIdx = days.reduce((best, d, i) => (d.n > days[best].n ? i : best), 0);
+      days.forEach((d, i) => {
+        const cx = left + slot * i + slot / 2, x = cx - barW / 2, bh = (d.n / niceMax) * plotH, isToday = i === days.length - 1;
+        const hit = add('rect', { class: 'bar-hit', x: left + slot * i, y: top, width: slot, height: plotH, tabindex: 0,
+          'aria-label': `${relDay(d.date)}: ${d.n} completed` });
+        if (d.n) {
+          const r = Math.min(4, bh), yb = top + plotH;
+          add('path', { class: 'bar', d: `M${x},${yb} V${yb - bh + r} Q${x},${yb - bh} ${x + r},${yb - bh} H${x + barW - r} Q${x + barW},${yb - bh} ${x + barW},${yb - bh + r} V${yb} Z` });
+        } else add('g', {});
+        if ((i === topIdx && d.n) || (isToday && d.n)) add('text', { class: 'val', x: cx, y: y(d.n) - 5, 'text-anchor': 'middle' }, d.n);
+        const day = parseISO(d.date);
+        const crowded = slot < 44 && i === days.length - 2;
+        const skip = slot < 26 ? (days.length - 1 - i) % 2 === 1 : crowded;
+        add('text', { class: 'axis' + (isToday ? ' today' : ''), x: isToday ? W : cx, y: H - 6, 'text-anchor': isToday ? 'end' : 'middle' },
+          isToday ? 'Today' : skip ? '' : day.getDate());
+        const show = () => {
+          tip.replaceChildren(h('strong', { text: d.n }), `completed · ${fmtDay(d.date)}`);
+          tip.hidden = false;
+          const scale = box.querySelector('svg').getBoundingClientRect().width / W;
+          tip.style.left = (16 + cx * scale) + 'px';
+          tip.style.top = (y(d.n) * scale - 6) + 'px';
+        };
+        hit.addEventListener('pointerenter', show);
+        hit.addEventListener('focus', show);
+        hit.addEventListener('pointerleave', () => { tip.hidden = true; });
+        hit.addEventListener('blur', () => { tip.hidden = true; });
+      });
+      box.replaceChildren(svg, tip);
+    });
+  }
+
+  /* ======================================================================
+   * Detail panel
+   * ==================================================================== */
+  const saveTimers = new Map();
+  function saveSoon(id, field, value) {
+    const k = id + ':' + field, prev = saveTimers.get(k);
+    if (prev) clearTimeout(prev.timer);
+    const run = () => { saveTimers.delete(k); patch(id, { [field]: value }); };
+    saveTimers.set(k, { timer: setTimeout(run, 600), run });
+  }
+  function flushSaves() { [...saveTimers.values()].forEach(v => { clearTimeout(v.timer); v.run(); }); }
+
+  let panelReturnFocus = null;
+  function openPanel(id) {
+    if (!byId.get(id)) return;
+    flushSaves();
+    if (!S.panel) panelReturnFocus = document.activeElement;
+    S.panel = { mode: 'edit', id };
+    renderPanel();
+    focusPanelTitle(false);
+  }
+  function openNew() {
+    flushSaves();
+    const defaults = { list: S.view === 'board' ? (S.lists.find(l => !prefs.hidden.includes(l.name)) || {}).name || S.defaultList : S.defaultList };
+    if (S.view === 'today') defaults.due = todayISO();
+    if (S.view === 'starred') defaults.starred = true;
+    if (!S.panel) panelReturnFocus = document.activeElement;
+    S.panel = { mode: 'new', draft: Object.assign({ id: '', title: '', desc: '', due: '', time: '', status: 'Not started', priority: 'Medium', list: S.defaultList, starred: false, parent: '', repeat: '' }, defaults) };
+    renderPanel();
+    focusPanelTitle(true);
+  }
+  function focusPanelTitle(always) {
+    requestAnimationFrame(() => {
+      const ta = $('panel').querySelector('.pnl-title');
+      if (!ta) return;
+      if (always || !isNarrow()) { ta.focus({ preventScroll: true }); ta.setSelectionRange(ta.value.length, ta.value.length); }
+    });
+  }
+  function closePanel() {
+    if (!S.panel) return;
+    flushSaves();
+    S.panel = null;
+    renderPanel();
+    const f = panelReturnFocus;
+    panelReturnFocus = null;
+    if (f && f.isConnected) f.focus({ preventScroll: true });
+  }
+
+  // Background refreshes never rebuild a control the user is typing in or has open.
+  function syncPanel() {
+    if (!S.panel || S.panel.mode !== 'edit') return;
+    const t = byId.get(S.panel.id);
+    if (!t || t.archType === 'Deleted') { S.panel = null; renderPanel(); return; }
+    const a = document.activeElement;
+    if (a && $('panel').contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) { refreshPanelSubs(t); return; }
+    renderPanel();
+  }
+
+  function renderPanel() {
+    const pnl = $('panel'), app = $('app');
+    if (!S.panel) {
+      pnl.classList.remove('open');
+      pnl.setAttribute('aria-hidden', 'true');
+      app.classList.remove('panel-open');
+      return;
+    }
+    const isNew = S.panel.mode === 'new', t = isNew ? S.panel.draft : byId.get(S.panel.id);
+    if (!t) { S.panel = null; return renderPanel(); }
+    const a = document.activeElement, focusF = a && pnl.contains(a) ? a.dataset.f : null;
+    const oldScroll = pnl.querySelector('.pnl-scroll');
+    const scrollTop = oldScroll ? oldScroll.scrollTop : 0;
+    pnl.replaceChildren(...panelContent(t, isNew));
+    pnl.classList.add('open');
+    pnl.removeAttribute('aria-hidden');
+    app.classList.add('panel-open');
+    const sc = pnl.querySelector('.pnl-scroll');
+    if (sc) sc.scrollTop = scrollTop;
+    if (focusF) { const n = pnl.querySelector(`[data-f="${focusF}"]`); if (n) n.focus({ preventScroll: true }); }
+    pnl.querySelectorAll('textarea').forEach(autogrow);
+  }
+  const autogrow = ta => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+
+  function panelContent(t, isNew) {
+    const done = t.archType === 'Completed';
+    const set = (field, value) => {
+      if (isNew) { t[field] = value; if (field === 'due' && !value) t.time = ''; }
+      else { patch(t.id, { [field]: value }); renderNow(); }
+      renderPanel();
+    };
+
+    const parent = !isNew && t.parent && byId.get(t.parent);
+    const head = h('div', { class: 'pnl-head', style: `--c:${listHex(t.list)}` },
+      h('span', { class: 'dot' }),
+      h('select', { class: 'list-select', 'data-f': 'list', 'aria-label': 'List', title: 'Move to list', onchange: e => set('list', e.target.value) },
+        (S.lists.some(l => l.name === t.list) ? S.lists : S.lists.concat({ name: t.list })).map(l => h('option', { value: l.name, text: l.name, selected: l.name === t.list }))),
+      h('span', { class: 'grow' }),
+      !done ? h('button', {
+        class: 'star' + (t.starred ? ' on' : ''), type: 'button', style: 'opacity:1;margin:0', 'data-f': 'star',
+        'aria-pressed': String(t.starred), 'aria-label': t.starred ? 'Remove star' : 'Star task', title: t.starred ? 'Remove star' : 'Star',
+        onclick: () => set('starred', !t.starred),
+      }, icon(t.starred ? 'star' : 'starOutline')) : null,
+      !isNew ? iconBtn('trash', 'Delete task', () => trash(t.id)) : null,
+      iconBtn('close', 'Close (Esc)', closePanel));
+
+    const scroll = h('div', { class: 'pnl-scroll' });
+    if (parent) scroll.append(h('button', { class: 'pnl-back', type: 'button', onclick: () => openPanel(parent.id), title: 'Open parent task' }, icon('back'), h('span', { text: parent.title })));
+    if (done) scroll.append(h('div', { class: 'pnl-done' }, icon('doneAll'), `Completed ${relDayLower(localDayOf(t.completed))}`));
+
+    const title = h('textarea', { class: 'pnl-title', 'data-f': 'title', rows: 1, placeholder: isNew ? 'What needs doing?' : 'Title', 'aria-label': 'Title', value: t.title, maxlength: 500 });
+    title.addEventListener('input', () => {
+      autogrow(title);
+      const v = title.value.replace(/\n/g, ' ');
+      if (isNew) { t.title = v; updateAddBtn(); } else if (v.trim()) saveSoon(t.id, 'title', v.trim());
+    });
+    title.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); if (isNew) submitNew(); else desc.focus(); }
+    });
+    title.addEventListener('blur', () => {
+      if (!isNew && !title.value.trim()) { title.value = t.title; autogrow(title); }
+      else if (!isNew) flushSaves();
+    });
+
+    const desc = h('textarea', { class: 'pnl-notes', 'data-f': 'desc', rows: 3, placeholder: 'Add details', 'aria-label': 'Details', value: t.desc, maxlength: 5000 });
+    desc.addEventListener('input', () => { autogrow(desc); if (isNew) t.desc = desc.value; else saveSoon(t.id, 'desc', desc.value); });
+    desc.addEventListener('blur', () => { if (!isNew) flushSaves(); });
+
+    const today = todayISO();
+    const quickDates = [['Today', today], ['Tomorrow', addDays(today, 1)], ['Next week', nextWeekday(1, false)]];
+    const dateRow = h('div', { class: 'fctl' },
+      h('input', { class: 'input', type: 'date', 'data-f': 'due', value: t.due, 'aria-label': 'Due date', onchange: e => set('due', e.target.value) }),
+      t.due ? h('input', { class: 'input', type: 'time', 'data-f': 'time', value: t.time, 'aria-label': 'Due time', onchange: e => set('time', e.target.value) }) : null,
+      h('div', { class: 'quick' },
+        quickDates.map(([label, d]) => h('button', { type: 'button', class: t.due === d ? 'on' : '', text: label, onclick: () => set('due', d) })),
+        t.due ? h('button', { type: 'button', text: 'Clear', onclick: () => set('due', '') }) : null));
+
+    const repeat = h('select', { class: 'select', 'data-f': 'repeat', 'aria-label': 'Repeat', onchange: e => set('repeat', e.target.value) },
+      REPEATS.map(r => h('option', { value: r, text: repeatLabel(r, t.due), selected: r === (t.repeat || '') })));
+
+    const seg = (field, options) => h('div', { class: 'seg', role: 'group', 'aria-label': field },
+      options.map(v => h('button', { type: 'button', 'data-v': v, 'data-f': field + ':' + v, 'aria-pressed': String(t[field] === v), text: v, onclick: () => set(field, v) })));
+
+    const frow = (ic, label, ctl) => h('div', { class: 'frow' }, icon(ic), h('div', { class: 'fctl' }, h('div', { class: 'flabel', text: label }), ctl));
+    scroll.append(title, desc, h('div', { class: 'pnl-fields' },
+      frow('event', 'Due', dateRow),
+      frow('repeat', 'Repeat', repeat),
+      frow('flag', 'Priority', seg('priority', ['High', 'Medium', 'Low'])),
+      frow('half', 'Status', seg('status', ['Not started', 'In progress', 'Blocked']))));
+
+    if (!isNew && !parent && !done) scroll.append(subsSection(t));
+
+    const foot = h('div', { class: 'pnl-foot' });
+    let addBtn = null;
+    const updateAddBtn = () => { if (addBtn) addBtn.disabled = !t.title.trim(); };
+    if (isNew) {
+      addBtn = h('button', { class: 'btn primary', type: 'button', text: 'Add task', onclick: submitNew });
+      foot.append(h('span', { class: 'meta', text: 'Ctrl+Enter to add' }), h('button', { class: 'btn', type: 'button', text: 'Cancel', onclick: closePanel }), addBtn);
+      updateAddBtn();
+    } else {
+      const meta = [t.created ? 'Created ' + fmtDay(localDayOf(t.created), { weekday: undefined }) : '', t.synced ? 'On Google Calendar' : ''].filter(Boolean).join(' · ');
+      foot.append(h('span', { class: 'meta', text: meta, title: meta }),
+        done ? h('button', { class: 'btn tonal', type: 'button', onclick: () => uncomplete(t.id) }, icon('restore'), 'Mark not complete')
+          : h('button', { class: 'btn tonal', type: 'button', onclick: () => { closePanel(); complete(t.id, $('board').querySelector(`.task[data-id="${CSS.escape(t.id)}"]`)); } }, icon('check'), 'Mark complete'));
+    }
+    return [head, scroll, foot];
+  }
+
+  function submitNew() {
+    if (!S.panel || S.panel.mode !== 'new') return;
+    const d = S.panel.draft;
+    if (!d.title.trim()) return;
+    const t = createTask(Object.assign({}, d, { title: d.title.trim() }));
+    closePanel();
+    const visibleHere = S.view === 'board' ? !prefs.hidden.includes(t.list) : S.view === 'starred' ? t.starred : S.view === 'today' ? t.due && t.due <= todayISO() : S.view === 'upcoming' ? !!t.due : false;
+    snack(visibleHere ? 'Task added' : `Task added to ${t.list}`, 'Open', () => openPanel(t.id));
+  }
+
+  function subsSection(t) {
+    const box = h('div', { class: 'pnl-subs', id: 'pnlSubs' });
+    fillSubs(box, t);
+    return box;
+  }
+  function refreshPanelSubs(t) {
+    const box = $('pnlSubs');
+    if (box) fillSubs(box, t);
+  }
+  function fillSubs(box, t) {
+    const ks = kidsOf(t.id).filter(k => k.archType !== 'Deleted').sort((a, b) => Number(a.archived) - Number(b.archived) || SORTS.my(a, b));
+    const doneN = ks.filter(k => k.archived).length;
+    const keepFocus = document.activeElement && document.activeElement.dataset.f === 'subadd';
+    const input = h('input', { 'data-f': 'subadd', placeholder: 'Add subtask', 'aria-label': 'Add subtask', maxlength: 500, value: drafts.get('sub:' + t.id) || '' });
+    input.addEventListener('input', () => drafts.set('sub:' + t.id, input.value));
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.isComposing && input.value.trim()) {
+        e.preventDefault();
+        createTask({ title: input.value.trim(), parent: t.id, list: t.list, append: true });
+        input.value = '';
+        drafts.delete('sub:' + t.id);
+      }
+    });
+    box.replaceChildren(
+      h('div', { class: 'pnl-sec-title' }, h('span', { text: 'Subtasks' }), ks.length ? h('span', { text: `${doneN}/${ks.length}` }) : null),
+      ...ks.map(k => h('div', { class: 'sub-row' + (k.archived ? ' done' : '') },
+        h('button', { class: 'check', type: 'button', role: 'checkbox', 'aria-checked': String(k.archived), 'aria-label': k.archived ? 'Mark not complete' : 'Mark complete', onclick: () => (k.archived ? uncomplete(k.id) : complete(k.id)) }, icon('check')),
+        h('button', { class: 'sub-title', type: 'button', text: k.title, title: 'Open subtask', onclick: () => openPanel(k.id) }))),
+      h('label', { class: 'sub-add' }, icon('add'), input));
+    if (keepFocus) input.focus({ preventScroll: true });
+  }
+
+  /* ======================================================================
+   * Menus, dialogs, snackbar
+   * ==================================================================== */
+  let menuReturn = null;
+  function openMenu(items, at) {
+    closeMenu();
+    menuReturn = at instanceof Element ? at : document.activeElement;
+    const layer = $('layer');
+    const menu = h('div', { class: 'menu', role: 'menu' });
+    items.forEach(it => {
+      if (!it) return;
+      if (it === '-') return menu.append(h('hr'));
+      if (it.header) return menu.append(h('div', { class: 'menu-h', text: it.header }));
+      menu.append(h('button', {
+        class: 'menu-i' + (it.danger ? ' danger' : '') + (it.on ? ' on' : ''), type: 'button',
+        role: it.radio ? 'menuitemradio' : 'menuitem', 'aria-checked': it.radio ? String(!!it.on) : null, disabled: !!it.disabled,
+        style: it.color ? `--c:${it.color}` : null,
+        onclick: () => { closeMenu(false); it.action(); },
+      }, it.color ? h('span', { class: 'cdot' }) : it.icon ? icon(it.icon) : h('span', { class: 'mi-space' }), h('span', { class: 'l', text: it.label }), it.hint ? h('kbd', { text: it.hint }) : null));
+    });
+    const scrim = h('div', { class: 'menu-scrim', onclick: () => closeMenu(), oncontextmenu: e => { e.preventDefault(); closeMenu(); } });
+    layer.append(scrim, menu);
+    const r = at instanceof Element ? at.getBoundingClientRect() : { left: at.x, right: at.x, top: at.y, bottom: at.y };
+    const mw = menu.offsetWidth, mh = menu.offsetHeight, vw = innerWidth, vh = innerHeight;
+    let left = at instanceof Element ? r.right - mw : r.left;
+    if (left < 8) left = Math.min(r.left, vw - mw - 8);
+    left = Math.max(8, Math.min(left, vw - mw - 8));
+    let top = r.bottom + 4;
+    if (top + mh > vh - 8) top = Math.max(8, r.top - mh - 4);
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+    menu.addEventListener('keydown', e => {
+      const btns = [...menu.querySelectorAll('.menu-i:not([disabled])')], i = btns.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        btns[(i + (e.key === 'ArrowDown' ? 1 : -1) + btns.length) % btns.length].focus();
+      } else if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); e.stopPropagation(); closeMenu(); }
+    });
+    const first = menu.querySelector('.menu-i:not([disabled])');
+    if (first) first.focus();
+  }
+  function closeMenu(refocus = true) {
+    const layer = $('layer');
+    const had = layer.querySelector('.menu');
+    layer.querySelectorAll('.menu, .menu-scrim').forEach(n => n.remove());
+    if (had && refocus && menuReturn && menuReturn.isConnected) menuReturn.focus({ preventScroll: true });
+  }
+
+  function listMenu(l, anchor) {
+    const sort = sortOf(l.name);
+    const isDefault = l.name === S.defaultList;
+    const doneN = S.tasks.filter(t => t.list === l.name && t.archType === 'Completed').length;
+    openMenu([
+      { header: 'Sort by' },
+      ...Object.keys(SORT_LABELS).map(k => ({ label: SORT_LABELS[k], radio: true, on: sort === k, icon: sort === k ? 'check' : null,
+        action: () => { if (k === 'my') delete prefs.sort[l.name]; else prefs.sort[l.name] = k; savePrefs(); schedule(); } })),
+      '-',
+      { label: 'Rename list', icon: 'edit', disabled: isDefault, action: () => renameList(l) },
+      { label: 'Change color', icon: 'palette', action: () => recolorList(l) },
+      { label: prefs.hidden.includes(l.name) ? 'Show on board' : 'Hide from board', icon: 'hide', action: () => (prefs.hidden.includes(l.name) ? showList(l.name) : hideList(l.name)) },
+      '-',
+      { label: `Delete completed (${doneN})`, icon: 'doneAll', disabled: !doneN, action: () => clearCompleted(l) },
+      { label: 'Delete list', icon: 'trash', danger: true, disabled: isDefault, action: () => deleteList(l) },
+    ], anchor);
+  }
+
+  function taskMenu(t, at) {
+    if (t.archType === 'Deleted') return;
+    const done = t.archived;
+    const top = isTop(t);
+    openMenu([
+      { label: 'Open details', icon: 'edit', hint: 'Enter', action: () => openPanel(t.id) },
+      done ? { label: 'Mark not complete', icon: 'restore', action: () => uncomplete(t.id) }
+        : { label: 'Mark complete', icon: 'check', hint: 'X', action: () => complete(t.id) },
+      !done ? { label: t.starred ? 'Remove star' : 'Star', icon: t.starred ? 'star' : 'starOutline', hint: 'S', action: () => patch(t.id, { starred: !t.starred }) } : null,
+      !done && top && !t.parent ? { label: 'Add subtask', icon: 'checklist', action: () => { openPanel(t.id); requestAnimationFrame(() => { const i = $('panel').querySelector('[data-f="subadd"]'); if (i) i.focus(); }); } } : null,
+      '-',
+      !done ? { label: 'Due today', icon: 'sun', action: () => patch(t.id, { due: todayISO() }) } : null,
+      !done ? { label: 'Due tomorrow', icon: 'event', action: () => patch(t.id, { due: addDays(todayISO(), 1) }) } : null,
+      !done && top ? { label: 'Indent (make subtask)', icon: 'indent', hint: ']', action: () => indent(t.id) } : null,
+      !done && !top ? { label: 'Outdent', icon: 'outdent', hint: '[', action: () => outdent(t.id) } : null,
+      !done ? { label: 'Move up', icon: 'up', hint: 'Alt+↑', action: () => moveBy(t.id, -1) } : null,
+      !done ? { label: 'Move down', icon: 'down', hint: 'Alt+↓', action: () => moveBy(t.id, 1) } : null,
+      '-',
+      { header: 'Move to list' },
+      ...S.lists.filter(l => l.name !== t.list).map(l => ({ label: l.name, color: COLOR_HEX[l.color], action: () => patch(t.id, { list: l.name }) })),
+      '-',
+      { label: 'Delete', icon: 'trash', danger: true, hint: 'Del', action: () => trash(t.id) },
+    ], at);
+  }
+
+  function openDialog(title, content, actions) {
+    return new Promise(resolve => {
+      const prev = document.activeElement;
+      const box = h('div', { class: 'dlg', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'dlgTitle' });
+      const scrim = h('div', { class: 'dlg-scrim' }, box);
+      const finish = v => {
+        scrim.remove();
+        document.removeEventListener('keydown', onKey, true);
+        if (prev && prev.isConnected) prev.focus({ preventScroll: true });
+        resolve(v);
+      };
+      const primary = actions.find(a => a.primary);
+      const onKey = e => {
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(null); }
+        else if (e.key === 'Enter' && primary && e.target.tagName === 'INPUT' && e.target.type !== 'checkbox') { e.preventDefault(); finish(primary.value); }
+        else if (e.key === 'Tab') {
+          const f = [...box.querySelectorAll('button:not([disabled]), input, select, a[href], summary')];
+          if (!f.length) return;
+          const i = f.indexOf(document.activeElement);
+          if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
+          else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+        }
+      };
+      box.append(h('h2', { id: 'dlgTitle', text: title }), content,
+        h('div', { class: 'dlg-actions' }, actions.map(a => h('button', {
+          class: 'btn' + (a.primary ? (a.danger ? ' danger' : ' primary') : ''), type: 'button', text: a.label, onclick: () => finish(a.value),
+        }))));
+      scrim.addEventListener('mousedown', e => { if (e.target === scrim) finish(null); });
+      document.addEventListener('keydown', onKey, true);
+      $('layer').append(scrim);
+      const first = box.querySelector('input:not([type=checkbox]), select') || box.querySelector('.btn.primary, .btn.danger') || box.querySelector('button');
+      if (first) { first.focus(); if (first.select) first.select(); }
+    });
+  }
+  const dialogOpen = () => !!$('layer').querySelector('.dlg-scrim');
+
+  async function confirmDlg(title, text, ok) {
+    const v = await openDialog(title, h('p', { text }), [{ label: 'Cancel', value: false }, { label: ok, primary: true, danger: true, value: true }]);
+    return v === true;
+  }
+
+  async function listDlg({ title, name = '', color = 'BLUE', ok, nameEditable = true }) {
+    let picked = COLORS.includes(color) ? color : 'BLUE';
+    const input = nameEditable ? h('input', { class: 'input dlg-input', value: name, placeholder: 'List name', 'aria-label': 'List name', maxlength: 60 }) : null;
+    const sw = h('div', { class: 'swatches', role: 'radiogroup', 'aria-label': 'Color' });
+    COLORS.forEach(c => sw.append(h('button', {
+      class: 'sw' + (c === picked ? ' on' : ''), type: 'button', role: 'radio', 'aria-checked': String(c === picked),
+      'aria-label': COLOR_NAMES[c], title: COLOR_NAMES[c], style: `--c:${COLOR_HEX[c]}`,
+      onclick: e => {
+        picked = c;
+        sw.querySelectorAll('.sw').forEach(b => { const on = b === e.currentTarget; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
+      },
+    }, icon('check'))));
+    const content = h('div', { class: 'dlg-body' }, input, h('div', { class: 'dlg-label', text: 'Color (also used in Google Calendar)' }), sw);
+    const v = await openDialog(title, content, [{ label: 'Cancel', value: null }, { label: ok, primary: true, value: 'ok' }]);
+    if (v !== 'ok') return null;
+    return { name: input ? input.value.replace(/\s+/g, ' ').trim().slice(0, 60) : name, color: picked };
+  }
+
+  function settingsDlg() {
+    const s = S.settings;
+    const hours = h('select', { class: 'select', 'aria-label': 'Digest time', disabled: !s.digest, onchange: e => saveSettings({ digestHour: Number(e.target.value) }) },
+      Array.from({ length: 24 }, (_, i) => h('option', { value: String(i), selected: i === s.digestHour, text: fmtTime(pad(i) + ':00') })));
+    const toggleRow = (label, desc, checked, onChange, extra) => h('label', { class: 'set-row' },
+      h('div', { class: 'grow' }, h('div', { class: 'set-label', text: label }), h('div', { class: 'set-desc', text: desc })),
+      extra || null, h('input', { class: 'switch', type: 'checkbox', checked, 'aria-label': label, onchange: e => onChange(e.target.checked) }));
+    const content = h('div', {},
+      h('div', { class: 'set-title', text: 'Google Calendar' }),
+      h('div', { class: 'set-group' },
+        toggleRow('Auto-sync new due dates', 'Create calendar events as soon as a task gets a date. Tasks already on the calendar always stay up to date.', !!s.autoSync, v => saveSettings({ autoSync: v })),
+        h('div', { class: 'set-row' }, h('div', { class: 'grow' }, h('div', { class: 'set-label', text: 'Sync everything now' }), h('div', { class: 'set-desc', text: 'Creates, updates and removes events for all tasks.' })),
+          h('button', { class: 'btn', type: 'button', onclick: sync }, icon('sync'), 'Sync'))),
+      h('div', { class: 'set-title', text: 'Daily digest' }),
+      h('div', { class: 'set-group' },
+        toggleRow('Morning email', 'Overdue, due-today and starred tasks, sent to you once a day.', !!s.digest, v => { hours.disabled = !v; saveSettings({ digest: v }); }),
+        h('div', { class: 'set-row' }, h('div', { class: 'grow' }, h('div', { class: 'set-label', text: 'Send at' })), hours),
+        h('div', { class: 'set-row' }, h('div', { class: 'grow' }, h('div', { class: 'set-label', text: 'Send one now' }), h('div', { class: 'set-desc', text: 'Preview what the email looks like.' })),
+          h('button', { class: 'btn', type: 'button', onclick: async () => { const m = await send('sendDigest'); if (m) snack(m); } }, icon('mail'), 'Send'))),
+      s.sheetUrl ? h('p', {}, h('a', { href: s.sheetUrl, target: '_blank', rel: 'noopener', style: 'color:var(--accent)', text: 'Open the task spreadsheet ↗' })) : null);
+    openDialog('Settings', content, [{ label: 'Done', primary: true, value: true }]);
+  }
+
+  function shortcutsDlg() {
+    const rows = [['/', 'Search'], ['c', 'Create task (full form)'], ['n', 'Quick-add in the current list'], ['j k', 'Next / previous task'],
+      ['h l', 'Previous / next list'], ['Enter', 'Open task details'], ['x', 'Complete task'], ['s', 'Star / unstar'],
+      ['Del', 'Move to trash'], [']  [', 'Indent / outdent'], ['Alt ↑ ↓', 'Move task up / down'], ['1–6', 'All · Starred · Today · Upcoming · Insights · Trash'],
+      ['m', 'Show / hide menu'], ['Esc', 'Close panel or menu']];
+    const grid = h('div', { class: 'keys' }, rows.map(([k, d]) => [h('div', {}, k.split(' ').filter(Boolean).map(x => h('kbd', { text: x }))), h('div', { text: d })]));
+    const tips = h('div', {}, h('p', { text: 'Quick-add understands:' }),
+      h('p', { style: 'font-size:13px' }, h('kbd', { text: 'tomorrow 3pm' }), ' ', h('kbd', { text: 'fri' }), ' ', h('kbd', { text: 'oct 5' }), ' ', h('kbd', { text: 'in 2 weeks' }), ' ',
+        h('kbd', { text: 'every monday' }), ' ', h('kbd', { text: '!high' }), ' ', h('kbd', { text: '#ListName' }), ' ', h('kbd', { text: '*' }), ' (star)'));
+    openDialog('Keyboard shortcuts', h('div', {}, grid, tips), [{ label: 'Close', primary: true, value: true }]);
+  }
+
+  let snackTimer;
+  function snack(text, action, onAction) {
+    const bar = $('snack'), btn = $('snackAction');
+    $('snackText').textContent = text;
+    btn.hidden = !action;
+    if (action) { btn.textContent = action; btn.onclick = () => { hideSnack(); onAction(); }; }
+    bar.classList.add('show');
+    clearTimeout(snackTimer);
+    snackTimer = setTimeout(hideSnack, action ? 6000 : 3200);
+  }
+  const hideSnack = () => $('snack').classList.remove('show');
+
+  function animateOut(ids, done) {
+    const board = $('board');
+    const nodes = ids.map(id => board.querySelector(`.task[data-id="${CSS.escape(id)}"]`)).filter(Boolean);
+    if (!nodes.length || matchMedia('(prefers-reduced-motion: reduce)').matches) return done();
+    nodes.forEach(n => n.classList.add('leaving'));
+    setTimeout(done, 190);
+  }
+
+  /* ======================================================================
+   * Drag & drop (pointer events: mouse drags the row, touch uses the grip)
+   * ==================================================================== */
+  const drag = { active: false };
+  function onPointerDown(e) {
+    if (e.button !== 0 || drag.start || drag.active) return;
+    const row = e.target.closest('.task');
+    if (!row || !row.querySelector('.grip')) return;
+    const onGrip = !!e.target.closest('.grip');
+    if (!onGrip && (e.pointerType !== 'mouse' || e.target.closest('button, input, textarea, select, a'))) return;
+    drag.start = { x: e.clientX, y: e.clientY, row, id: row.dataset.id, pid: e.pointerId };
+    if (onGrip) e.preventDefault();
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerCancel);
+  }
+  function onPointerMove(e) {
+    if (!drag.start || e.pointerId !== drag.start.pid) return;
+    drag.x = e.clientX;
+    drag.y = e.clientY;
+    if (!drag.active) {
+      if (Math.hypot(e.clientX - drag.start.x, e.clientY - drag.start.y) < 6) return;
+      if (!beginDrag()) return onPointerCancel();
+    }
+    e.preventDefault();
+    moveGhost();
+    placeDrop();
+  }
+  function beginDrag() {
+    const { row, id } = drag.start, t = byId.get(id);
+    if (!t || !row.isConnected) return false;
+    closeMenu(false);
+    drag.active = true;
+    drag.id = id;
+    drag.task = t;
+    drag.canNest = !hasLiveKids(id);
+    const r = row.getBoundingClientRect();
+    drag.dx = drag.start.x - r.left;
+    drag.dy = drag.start.y - r.top;
+    drag.ghost = row.cloneNode(true);
+    drag.ghost.classList.add('ghost');
+    drag.ghost.classList.remove('enter');
+    drag.ghost.style.width = r.width + 'px';
+    document.body.append(drag.ghost);
+    drag.src = row.parentElement.classList.contains('subtasks') ? row : (row.closest('.group') || row);
+    drag.ph = h('div', { class: 'drop-ph' + (row.classList.contains('sub') ? ' sub' : '') });
+    drag.ph.style.height = r.height + 'px';
+    drag.src.before(drag.ph);
+    drag.src.classList.add('drag-src');
+    drag.target = null;
+    document.body.classList.add('dragging');
+    autoScroll();
+    return true;
+  }
+  function moveGhost() {
+    drag.ghost.style.left = (drag.x - drag.dx) + 'px';
+    drag.ghost.style.top = (drag.y - drag.dy) + 'px';
+  }
+  function placeDrop() {
+    const hit = document.elementFromPoint(drag.x, drag.y);
+    const card = hit && hit.closest('.card[data-drop]');
+    $('board').querySelectorAll('.card.drop-hover').forEach(c => { if (c !== card) c.classList.remove('drop-hover'); });
+    if (!card) return;
+    card.classList.add('drop-hover');
+    const body = card.querySelector('.card-body');
+    if (card.dataset.drop === 'day') {
+      if (drag.ph.parentElement !== body) body.prepend(drag.ph);
+      drag.ph.classList.remove('sub');
+      drag.target = { kind: 'day', date: card.dataset.date };
+      return;
+    }
+    const rows = [...body.querySelectorAll('.task')].filter(r => !r.closest('.drag-src'));
+    let container = body, before = null, row = null, upper = false;
+    for (const r of rows) {
+      const b = r.getBoundingClientRect();
+      if (drag.y < b.bottom) { row = r; upper = drag.y < b.top + b.height / 2; break; }
+    }
+    if (row) {
+      const g = row.closest('.group');
+      const rect = row.getBoundingClientRect();
+      if (row.classList.contains('sub')) {
+        if (drag.canNest) { container = row.parentElement; before = upper ? row : row.nextElementSibling; }
+        else before = upper ? g : g.nextElementSibling;
+      } else if (!upper && drag.canNest && drag.x > rect.left + 64 && g) {
+        container = g.querySelector('.subtasks');
+        before = container.firstElementChild;
+      } else before = upper ? g : g.nextElementSibling;
+    }
+    while (before && (before === drag.ph || before.classList.contains('drag-src'))) before = before.nextElementSibling;
+    if (drag.ph.parentElement !== container || drag.ph.nextElementSibling !== before) container.insertBefore(drag.ph, before);
+    drag.ph.classList.toggle('sub', container !== body);
+    drag.target = { kind: 'list', list: card.dataset.list };
+  }
+  function autoScroll() {
+    drag.raf = requestAnimationFrame(autoScroll);
+    if (drag.x == null) return;
+    const board = $('board'), br = board.getBoundingClientRect(), edge = 56;
+    const speed = d => Math.ceil((edge - d) / 3);
+    let moved = false;
+    if (drag.x < br.left + edge && board.scrollLeft > 0) { board.scrollLeft -= speed(drag.x - br.left); moved = true; }
+    else if (drag.x > br.right - edge) { const before = board.scrollLeft; board.scrollLeft += speed(br.right - drag.x); moved = board.scrollLeft !== before; }
+    if (drag.y < br.top + edge && board.scrollTop > 0) { board.scrollTop -= speed(drag.y - br.top); moved = true; }
+    else if (drag.y > br.bottom - edge) { const before = board.scrollTop; board.scrollTop += speed(br.bottom - drag.y); moved = moved || board.scrollTop !== before; }
+    const hit = document.elementFromPoint(drag.x, drag.y), sc = hit && hit.closest('.card-scroll');
+    if (sc && sc.scrollHeight > sc.clientHeight) {
+      const r = sc.getBoundingClientRect(), before = sc.scrollTop;
+      if (drag.y < r.top + 40) sc.scrollTop -= Math.ceil((r.top + 40 - drag.y) / 3);
+      else if (drag.y > r.bottom - 40) sc.scrollTop += Math.ceil((drag.y - (r.bottom - 40)) / 3);
+      moved = moved || sc.scrollTop !== before;
+    }
+    if (moved) placeDrop();
+  }
+  function onPointerUp(e) {
+    if (drag.start && e.pointerId !== drag.start.pid) return;
+    if (drag.active) { finishDrag(true); suppressClick(); }
+    else resetDrag();
+  }
+  function onPointerCancel() { if (drag.active) finishDrag(false); else resetDrag(); }
+  function resetDrag() {
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerCancel);
+    Object.keys(drag).forEach(k => { delete drag[k]; });
+    drag.active = false;
+  }
+  function finishDrag(commit) {
+    cancelAnimationFrame(drag.raf);
+    const { target, ph, id, task } = drag;
+    let action = null;
+    if (commit && target && ph.isConnected) {
+      if (target.kind === 'day') {
+        if (task.due !== target.date) action = () => { patch(id, { due: target.date }); snack(`Moved to ${relDayLower(target.date)}`); };
+      } else {
+        const container = ph.parentElement;
+        const parent = container.classList.contains('subtasks') ? container.dataset.parent : '';
+        const ids = [...container.children].map(n => (n === ph ? id : n.classList.contains('drag-src') ? null : n.dataset.id)).filter(Boolean);
+        const before = siblingsOf(task).map(x => x.id).join();
+        if (task.list !== target.list || (isTop(task) ? '' : task.parent) !== parent || before !== ids.join()) action = () => reorder(target.list, parent, ids);
+      }
+    }
+    drag.ghost.remove();
+    ph.remove();
+    drag.src.classList.remove('drag-src');
+    document.body.classList.remove('dragging');
+    $('board').querySelectorAll('.card.drop-hover').forEach(c => c.classList.remove('drop-hover'));
+    resetDrag();
+    if (action) action();
+    if (renderBlocked || action) { renderBlocked = false; renderNow(); }
+  }
+  let swallowClick = false;
+  function suppressClick() { swallowClick = true; setTimeout(() => { swallowClick = false; }, 60); }
+  window.addEventListener('click', e => { if (swallowClick) { e.stopPropagation(); e.preventDefault(); swallowClick = false; } }, true);
+
+  /* ======================================================================
+   * Keyboard
+   * ==================================================================== */
+  function focusedTask() {
+    const a = document.activeElement;
+    const row = a && a.closest && a.closest('.task');
+    return row && $('board').contains(row) ? byId.get(row.dataset.id) : null;
+  }
+  function moveFocus(dir) {
+    const rows = [...$('board').querySelectorAll('.task')];
+    if (!rows.length) return;
+    const i = rows.indexOf(document.activeElement.closest && document.activeElement.closest('.task'));
+    const next = rows[i < 0 ? 0 : Math.max(0, Math.min(rows.length - 1, i + dir))];
+    next.focus();
+    next.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+  function moveCard(dir) {
+    const cards = [...$('board').querySelectorAll('.card')];
+    const cur = document.activeElement.closest && document.activeElement.closest('.card');
+    const i = cards.indexOf(cur), card = cards[Math.max(0, Math.min(cards.length - 1, i + dir))];
+    if (!card) return;
+    const target = card.querySelector('.task') || card.querySelector('.qa-input');
+    if (target) { target.focus(); target.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+  }
+  function focusQuickAdd() {
+    const cur = document.activeElement.closest && document.activeElement.closest('.card');
+    const input = (cur && cur.querySelector('.qa-input')) || $('board').querySelector('.qa-input');
+    if (input) { input.focus(); input.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+    else openNew();
+  }
+
+  document.addEventListener('keydown', e => {
+    if (dialogOpen()) return;
+    if ($('layer').querySelector('.menu')) return;
+    const tag = e.target.tagName, typing = /^(INPUT|TEXTAREA|SELECT)$/.test(tag) || e.target.isContentEditable;
+    if (e.key === 'Escape') {
+      if (e.target === $('search')) { clearSearch(); $('search').blur(); return; }
+      if (S.panel && (!typing || $('panel').contains(e.target))) { e.preventDefault(); closePanel(); return; }
+      if (isNarrow() && $('app').classList.contains('drawer-open')) { closeDrawer(); return; }
+      hideSnack();
+      return;
+    }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && S.panel) {
+      e.preventDefault();
+      if (S.panel.mode === 'new') submitNew(); else closePanel();
+      return;
+    }
+    if (typing) return;
+    const t = focusedTask();
+    if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      if (t) { e.preventDefault(); moveBy(t.id, e.key === 'ArrowUp' ? -1 : 1); }
+      return;
+    }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key;
+    const act = {
+      '/': () => { $('search').focus(); $('topbar').classList.add('searching'); },
+      c: () => openNew(), n: focusQuickAdd, '?': shortcutsDlg, m: toggleDrawer,
+      j: () => moveFocus(1), ArrowDown: () => moveFocus(1), k: () => moveFocus(-1), ArrowUp: () => moveFocus(-1),
+      h: () => moveCard(-1), ArrowLeft: () => moveCard(-1), l: () => moveCard(1), ArrowRight: () => moveCard(1),
+      x: () => t && (t.archived ? uncomplete(t.id) : complete(t.id, document.activeElement)),
+      ' ': () => t && (t.archived ? uncomplete(t.id) : complete(t.id, document.activeElement)),
+      s: () => t && !t.archived && patch(t.id, { starred: !t.starred }),
+      e: () => t && openPanel(t.id), Enter: () => t && t.archType !== 'Deleted' && openPanel(t.id),
+      Delete: () => t && t.archType !== 'Deleted' && trash(t.id), Backspace: () => t && t.archType !== 'Deleted' && trash(t.id),
+      ']': () => t && indent(t.id), '[': () => t && outdent(t.id),
+    };
+    const views = { 1: 'board', 2: 'starred', 3: 'today', 4: 'upcoming', 5: 'insights', 6: 'trash' };
+    if (views[k]) { e.preventDefault(); setView(views[k]); return; }
+    if (act[k]) {
+      if ((k === ' ' || k === 'Enter') && (!t || /^(BUTTON|A|SUMMARY)$/.test(e.target.tagName))) return;
+      e.preventDefault();
+      act[k]();
+    }
+  });
+
+  /* ======================================================================
+   * Shell wiring
+   * ==================================================================== */
+  function toggleDrawer() {
+    if (isNarrow()) { $('app').classList.toggle('drawer-open'); return; }
+    prefs.drawer = !prefs.drawer;
+    savePrefs();
+    renderTop();
+  }
+  const closeDrawer = () => $('app').classList.remove('drawer-open');
+
+  let searchTimer;
+  function onSearch() {
+    const v = $('search').value;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      if (v.trim()) { if (S.view !== 'search') S.prevView = S.view; S.query = v; S.view = 'search'; }
+      else if (S.view === 'search') { S.query = ''; S.view = S.prevView; }
+      renderNow();
+    }, 120);
+  }
+  function clearSearch() {
+    $('search').value = '';
+    $('topbar').classList.remove('searching');
+    if (S.view === 'search') { S.query = ''; S.view = S.prevView; renderNow(); }
+  }
+
+  function initShell() {
+    $('brand').append(icon('logo'), h('span', { text: 'Tasks' }));
+    $('btnCreate').append(icon('add'), h('span', { text: 'Create' }));
+    $('btnCreate').addEventListener('click', () => { openNew(); if (isNarrow()) closeDrawer(); });
+    $('btnNewList').append(icon('add'));
+    $('btnNewList').addEventListener('click', newList);
+    $('btnDrawer').append(icon('menu'));
+    $('btnDrawer').addEventListener('click', toggleDrawer);
+    $('drawerScrim').addEventListener('click', closeDrawer);
+    $('searchBox').prepend(icon('search'));
+    $('searchBox').addEventListener('click', () => { $('topbar').classList.add('searching'); $('search').focus(); });
+    $('search').addEventListener('input', onSearch);
+    $('search').addEventListener('blur', () => { if (!$('search').value) $('topbar').classList.remove('searching'); });
+    $('btnClearSearch').append(icon('close'));
+    $('btnClearSearch').addEventListener('click', e => { e.preventDefault(); clearSearch(); $('search').focus(); });
+    $('btnRefresh').append(icon('refresh'));
+    $('btnRefresh').addEventListener('click', async () => {
+      const b = $('btnRefresh');
+      b.classList.add('spin');
+      await Q.chain;
+      await boot(true);
+      b.classList.remove('spin');
+    });
+    $('btnSync').append(icon('event'));
+    $('btnSync').addEventListener('click', sync);
+    $('btnSettings').append(icon('settings'));
+    $('btnSettings').addEventListener('click', settingsDlg);
+    $('fab').append(icon('add'), h('span', { text: 'Create' }));
+    $('fab').addEventListener('click', () => openNew());
+    $('board').addEventListener('pointerdown', onPointerDown);
+    $('board').addEventListener('wheel', e => {
+      const b = $('board');
+      if (e.target !== b || e.deltaX || !e.deltaY || b.scrollWidth <= b.clientWidth) return;
+      b.scrollLeft += e.deltaY;
+      e.preventDefault();
+    }, { passive: false });
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => { if (S.view === 'insights') drawCharts(); if (!isNarrow()) closeDrawer(); }, 150);
+    });
+    window.addEventListener('pagehide', flushSaves);
+    $('board').addEventListener('compositionstart', () => { composing = true; });
+    $('board').addEventListener('compositionend', () => { composing = false; if (renderBlocked) { renderBlocked = false; renderNow(); } });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') { flushSaves(); return; }
+      if (!S.ready || Q.pending || drag.active) return;
+      const a = document.activeElement;
+      if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return;
+      if (Date.now() - S.loadedAt > 120000) boot(true);
+    });
+    let midnight = todayISO();
+    setInterval(() => { if (todayISO() !== midnight) { midnight = todayISO(); schedule(); } }, 60000);
+  }
+
+  initShell();
+  render();
+  boot();
+  </script>
+</body>
+</html>
