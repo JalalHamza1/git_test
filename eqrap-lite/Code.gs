@@ -508,11 +508,13 @@ function apiSavePerson(p) {
     const row = Number(p.row) || 0;
     need_(!people.some(x => x.email === v[1] && x.row !== row), 'Tento e-mail už v seznamu je.');
     const sh = sheet_(TAB.people);
+    // Role and Aktivní have a dropdown check in the Sheet: write them plain ('' = no role), text columns as text.
+    const cells = [v[0] ? "'" + v[0] : '', "'" + v[1], v[2], v[3] ? "'" + v[3] : '', v[4]];
     if (row) {
       need_(people.some(x => x.row === row), 'Osoba nenalezena.');
-      sh.getRange(row, 1, 1, 5).setValues([v.map(x => "'" + x)]);
+      sh.getRange(row, 1, 1, 5).setValues([cells]);
     } else {
-      sh.appendRow(v.map(x => "'" + x));
+      sh.appendRow(cells);
     }
     log_('SPRÁVA', 'Lidé: ' + v[0] + ' <' + v[1] + '> ' + (v[2] || 'bez role') + (v[4] === 'NE' ? ' (neaktivní)' : ''));
     clearCache();
