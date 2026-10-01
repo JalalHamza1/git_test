@@ -119,7 +119,7 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await badgeIs(p, /Rozhodnutí/);
   check(true, '③ complete → ④ Rozhodnutí');
   await p.goBack();
-  await p.waitForSelector('.tiles');
+  await p.waitForSelector('.stats');
   check(true, 'browser back → board');
 
   // ---------------- leader: shifts and signature
@@ -218,11 +218,11 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await badgeIs(M, /Zrušeno/);
   check(true, 'manager reopen + cancel');
   // dashboard
-  await M.click('nav >> text=Přehled');
+  await M.click('header >> text=Přehled manažera');
   await M.waitForSelector('svg.viz');
-  check((await M.$$('.hbar')).length > 0 && (await M.$$('.tiles-6 .tile')).length === 6, 'dashboard tiles and bars');
+  check((await M.$$('.hbar')).length > 0 && (await M.$$('.stats .stat')).length === 4, 'dashboard tiles and bars');
   await M.hover('.viz-group >> nth=7');
-  check(await M.isVisible('.viz-tip') && /Nové/.test(await M.textContent('.viz-tip')), 'chart tooltip on hover');
+  check(await M.isVisible('.viz-tip') && /Nahlášeno/.test(await M.textContent('.viz-tip')), 'chart tooltip on hover');
   await M.screenshot({ path: SHOTS + '/10-dashboard.png', fullPage: true });
   await M.click('text=Zobrazit tabulku');
   check(await M.isVisible('.card table.roles'), 'chart has a table view');
@@ -247,7 +247,7 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   // ---------------- kiosk: operator minimum, then leader and manager sign by name on the same kiosk
   const K = await open(KIOSK, '', null, true);
   await K.waitForSelector('.row:not(.head)');
-  check(await K.textContent('.who') === 'Kiosk', 'kiosk account → kiosk mode');
+  check(/^Kiosk/.test(await K.textContent('.who')), 'kiosk account → kiosk mode');
   await K.click('.hero-btn');
   const kn = () => K.click('button:has-text("Pokračovat →")');
   await pick(K, 'SAFETY', 'NE');
@@ -304,7 +304,7 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await K.screenshot({ path: SHOTS + '/06-kiosk-closed.png', fullPage: true });
   await K.click('header button:has-text("+ Nahlásit problém")');
   await K.clock.fastForward(130000);
-  await K.waitForSelector('.tiles', { timeout: 5000 });
+  await K.waitForSelector('.stats', { timeout: 5000 });
   check(true, 'kiosk returns to the board by itself');
 
   // ---------------- phone

@@ -5,212 +5,272 @@
 <meta charset="utf-8">
 <style>
 /* =====================================================================
-   eQRAP – stylesheet. Plain "document" look: white page, black text,
-   thin rules instead of boxes, one green for actions. Nothing else.
-   Change the green in one place: --accent.
+   eQRAP – stylesheet. White panels on a faint green-grey page, thin
+   borders, one green. Palette: #66B539 · #151B1F · #374148 · #E8F7DD.
+   Change colours only here (:root).
    ===================================================================== */
 :root {
-  --ink: #16191d; --ink-2: #4b535c; --ink-3: #848c95;
-  --rule: #e4e7eb; --rule-2: #cdd2d8; --field: #ffffff; --page: #ffffff; --soft: #f5f6f7;
-  --accent: #2b7a4b; --accent-ink: #1f5d38; --accent-soft: #eef5f0;
-  --bad: #b3261e; --warn: #8a5300;
-  --series-1: #2a78d6; --series-2: #eb6834; /* chart colours (validated for colour-blind readers) */
-  --text: var(--ink); --muted: var(--ink-3); --line: var(--rule); --line2: var(--rule-2); --accent-d: var(--accent-ink); --accent-s: var(--accent-soft);
+  --ink: #151B1F; --ink-2: #374148; --ink-3: #6b757e;
+  --line: #e2e6e9; --line-2: #cfd5da; --page: #f5f8f3; --panel: #ffffff; --soft: #f7f9f8; --zebra: #fafbfa;
+  --accent: #66B539; --accent-ink: #3f7d1f; --accent-dark: #57a02e; --accent-soft: #E8F7DD;
+  --bad: #b8322a; --warn: #8a5300;
+  --viz: #4f9a2a; --viz-track: #e3e8e4;  /* chart: one green series, validated >= 3:1 on white */
+  --r: 10px;
+  --text: var(--ink); --muted: var(--ink-3);
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
-body { background: var(--page); color: var(--ink); font: 15px/1.55 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; }
-h1 { font-size: 26px; line-height: 1.2; font-weight: 650; letter-spacing: -.01em; margin: 0; }
-h2 { font-size: 15px; font-weight: 650; margin: 0; }
+body { background: var(--page); color: var(--ink); font: 15px/1.5 "Segoe UI", -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+h1 { font-size: 24px; line-height: 1.25; font-weight: 700; margin: 0; letter-spacing: -.01em; }
+h2 { font-size: 16px; font-weight: 650; margin: 0; }
+h3 { font-size: 14px; font-weight: 650; margin: 0 0 12px; }
 p { margin: 0 0 8px; }
 a { color: var(--accent-ink); }
-button { font: inherit; cursor: pointer; }
+button { font: inherit; cursor: pointer; color: inherit; }
 [hidden] { display: none !important; }
 .grow { flex: 1; }
 .muted, .sub { color: var(--ink-3); }
 .sub { font-size: 13px; }
 .small { font-size: 13px; }
 .pre { white-space: pre-wrap; }
-.late-txt { color: var(--bad); font-weight: 600; }
+.late-txt { font-weight: 700; color: var(--ink); }
 .wide { grid-column: 1 / -1; }
+.ico { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ---------- top bar ---------- */
-.top { border-bottom: 1px solid var(--rule); background: #fff; position: sticky; top: 0; z-index: 10; }
-.top-in { max-width: 1160px; margin: 0 auto; padding: 0 24px; height: 56px; display: flex; align-items: center; gap: 28px; }
-.brand { display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 0; font-weight: 700; font-size: 15px; color: var(--ink); }
-.logo { width: 22px; height: 22px; border-radius: 4px; background: var(--accent); color: #fff; font-size: 12px; display: grid; place-items: center; }
-nav { display: flex; gap: 22px; height: 100%; }
-.nav { background: none; border: 0; padding: 0; height: 100%; color: var(--ink-2); font-weight: 500; border-bottom: 2px solid transparent; }
+.top { background: #fff; border-bottom: 1px solid var(--line); border-top: 3px solid var(--accent); position: sticky; top: 0; z-index: 10; }
+.top-in { padding: 0 32px; height: 60px; display: flex; align-items: center; gap: 32px; }
+.brand { display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 0; font-weight: 700; font-size: 16px; color: var(--ink); }
+.logo { width: 30px; height: 30px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 15px; font-weight: 800; display: grid; place-items: center; }
+nav { display: flex; gap: 4px; height: 100%; }
+.nav { background: none; border: 0; padding: 0 12px; height: 100%; color: var(--ink-2); font-weight: 550; border-bottom: 3px solid transparent; margin-bottom: -1px; }
 .nav:hover { color: var(--ink); }
-.nav.on { color: var(--ink); border-bottom-color: var(--ink); }
-.who { font-size: 13px; color: var(--ink-3); display: flex; gap: 6px; align-items: center; }
-.role { color: var(--ink-2); }
-.role::before { content: '· '; }
-.view-as { width: auto; min-height: 0; padding: 4px 6px; font-size: 13px; }
-main { max-width: 1160px; margin: 0 auto; padding: 32px 24px 80px; }
-.narrow { max-width: 820px; margin: 0 auto; }
+.nav.on { color: var(--accent-ink); border-bottom-color: var(--accent); }
+.top-right { display: flex; align-items: center; gap: 10px; }
+.who { display: flex; flex-direction: column; line-height: 1.2; font-size: 13px; font-weight: 600; padding-left: 12px; border-left: 1px solid var(--line); }
+.who small { color: var(--ink-3); font-weight: 400; font-size: 12px; }
+.view-as { width: auto; height: 34px; min-height: 0; padding: 0 8px; font-size: 13px; }
+main { padding: 28px 32px 80px; }
+
+/* ---------- page head + breadcrumb ---------- */
+.crumbs { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--ink-3); margin-bottom: 10px; }
+.crumbs button { background: none; border: 0; padding: 0; color: var(--ink-3); }
+.crumbs button:hover { color: var(--ink); text-decoration: underline; }
+.crumbs b { color: var(--ink); font-weight: 600; }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+.page-head .sub { margin-top: 4px; font-size: 14px; }
+.head-btns { display: flex; gap: 10px; flex-wrap: wrap; }
 
 /* ---------- buttons ---------- */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 6px;
-  border: 1px solid var(--rule-2); background: #fff; color: var(--ink); font-weight: 600; font-size: 14px; white-space: nowrap; }
-.btn:hover { border-color: var(--ink-3); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 8px;
+  border: 1px solid var(--line-2); background: #fff; color: var(--ink); font-weight: 600; font-size: 14px; white-space: nowrap; }
+.btn:hover { background: var(--soft); border-color: var(--ink-3); }
 .btn:disabled { opacity: .5; cursor: default; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn.primary:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
-.btn.ghost { border-color: transparent; background: none; color: var(--ink-2); padding: 0 8px; }
+.btn.primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+.btn.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
+.btn.ghost { border-color: transparent; background: none; color: var(--ink-2); padding: 0 10px; }
 .btn.ghost:hover { color: var(--ink); background: var(--soft); }
 .btn.small { height: 32px; padding: 0 12px; font-size: 13px; }
 .btn.danger { color: var(--bad); }
-.btn-cta { height: 44px; padding: 0 22px; font-size: 15px; }
+.btn-cta { height: 44px; padding: 0 24px; font-size: 15px; }
 .btn-muted { height: 44px; }
+.hero-btn { height: 48px; padding: 0 26px; font-size: 16px; }
+body.kiosk .hero-btn { height: 64px; padding: 0 40px; font-size: 20px; }
 .link { background: none; border: 0; padding: 0; color: var(--accent-ink); font-weight: 600; }
 .link:hover { text-decoration: underline; }
+
+/* ---------- panels ---------- */
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 20px 22px; margin-bottom: 16px; }
+.card > h2 { margin-bottom: 14px; }
+.p-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.p-head h2 { margin: 0; }
 
 /* ---------- fields ---------- */
 .fld { display: block; }
 .fld-l { display: block; font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
 .req { color: var(--bad); font-weight: 400; }
 .fld small { display: block; font-size: 13px; color: var(--ink-3); margin-top: 6px; }
-input, select, textarea { width: 100%; height: 42px; padding: 0 12px; border: 1px solid var(--rule-2); border-radius: 6px; background: var(--field);
+input, select, textarea { width: 100%; height: 42px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 8px; background: #fff;
   font: inherit; color: var(--ink); }
 textarea { height: auto; padding: 10px 12px; resize: vertical; line-height: 1.5; }
-input[type=checkbox], input[type=radio] { width: 16px; height: 16px; margin: 0; padding: 0; accent-color: var(--accent); flex: none; }
+input[type=checkbox], input[type=radio] { width: 18px; height: 18px; margin: 0; padding: 0; accent-color: var(--accent-ink); flex: none; }
 input[type=file] { height: auto; border: 0; padding: 0; }
-input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
-.fld.invalid input, .fld.invalid select, .fld.invalid textarea { border-color: var(--bad); box-shadow: 0 0 0 1px var(--bad); }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+input[type=checkbox]:focus, input[type=radio]:focus { box-shadow: none; }
+input[type=checkbox]:focus-visible, input[type=radio]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fld.invalid input, .fld.invalid select, .fld.invalid textarea { border-color: var(--bad); box-shadow: 0 0 0 3px #f8e3e1; }
 .fld.invalid .fld-l { color: var(--bad); }
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 24px; align-items: start; }
-.sub-h { grid-column: 1 / -1; font-size: 13px; font-weight: 600; color: var(--ink-3); padding-top: 14px; border-top: 1px solid var(--rule); margin-top: 6px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 28px; align-items: start; }
+.sub-h { grid-column: 1 / -1; font-size: 12px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em;
+  padding-top: 16px; border-top: 1px solid var(--line); margin-top: 4px; }
 .grid > .sub-h:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
-.checks { display: flex; flex-direction: column; gap: 10px; }
-.check, .check-line { display: flex; align-items: center; gap: 10px; font-size: 15px; cursor: pointer; font-weight: 400; }
-.check.on { color: var(--ink); }
-.choices { display: flex; flex-direction: column; gap: 10px; }
-.choice { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
-.choice input { margin-top: 3px; }
-.choice b { font-weight: 500; }
+.checks { display: flex; flex-wrap: wrap; gap: 10px; }
+.check, .check-line { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; cursor: pointer; font-weight: 400; }
+.checks .check { border: 1px solid var(--line-2); border-radius: 8px; padding: 9px 14px; background: #fff; }
+.checks .check.on, .checks .check:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.choices { display: flex; flex-direction: column; gap: 8px; }
+.choice { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; border: 1px solid var(--line-2); border-radius: 8px; padding: 11px 14px; background: #fff; }
+.choice:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.choice input { margin-top: 2px; }
+.choice b { font-weight: 600; }
 .choice small { display: block; color: var(--ink-3); font-size: 13px; }
-.choices.inline { flex-direction: row; gap: 24px; flex-wrap: wrap; }
+.choices.inline { flex-direction: row; gap: 8px; flex-wrap: wrap; }
+.choices.inline .choice { padding: 9px 18px; align-items: center; }
+.choices.inline .choice input { margin: 0; }
 .with-btn { display: flex; gap: 8px; }
 .with-btn input { flex: 1; min-width: 0; }
 .form-btns { display: flex; gap: 10px; align-items: center; margin-top: 22px; flex-wrap: wrap; }
 .note { font-size: 14px; color: var(--ink-2); padding: 10px 0; }
 .note.warn { color: var(--warn); }
 
-/* ---------- new QRAP: steps on the left, one column of questions ---------- */
-.shell { max-width: 1000px; margin: 0 auto; }
-.shell-head { padding-bottom: 24px; border-bottom: 1px solid var(--rule); margin-bottom: 28px; }
-.shell-head .sub { font-size: 15px; margin-top: 6px; }
-.shell-grid { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; align-items: start; }
-.wiz-steps { position: sticky; top: 80px; height: auto; display: block; }
-.wiz-list { display: flex; flex-direction: column; }
-.wiz-step { display: grid; grid-template-columns: 26px 1fr; grid-template-rows: auto auto; text-align: left; background: none; border: 0;
-  border-left: 2px solid var(--rule); padding: 9px 0 9px 14px; color: var(--ink-3); font-size: 14px; }
-.wiz-step small { grid-column: 2; font-size: 12px; color: var(--ink-3); }
-.wiz-n { font-variant-numeric: tabular-nums; }
-.wiz-step.done { color: var(--ink-2); }
-.wiz-step.on { color: var(--ink); font-weight: 650; border-left-color: var(--accent); }
-.shell-body { max-width: 620px; }
-.shell-sub { font-size: 21px; font-weight: 650; margin-bottom: 26px; outline: none; }
-.shell .grid { grid-template-columns: 1fr; }
-.shell .sec { margin: 0 0 8px; }
+/* ---------- new QRAP: tab header + one panel ---------- */
+.shell { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.wiz-steps { display: block; background: var(--soft); border-bottom: 1px solid var(--line); overflow-x: auto; }
+.wiz-list { display: flex; min-width: max-content; }
+.wiz-step { flex: 1 1 0; display: flex; align-items: center; gap: 10px; min-width: 150px; padding: 16px 20px; background: none; border: 0;
+  border-right: 1px solid var(--line); border-bottom: 3px solid transparent; color: var(--ink-2); font-size: 14px; font-weight: 550; text-align: left; white-space: nowrap; }
+.wiz-step:last-child { border-right: 0; }
+.wiz-step .ico { width: 20px; height: 20px; color: var(--ink-3); }
+.wiz-step:hover { background: #fff; }
+.wiz-step.done { color: var(--ink); }
+.wiz-step.done .ico { color: var(--accent-ink); }
+.wiz-step.on { background: #fff; color: var(--accent-ink); font-weight: 650; border-bottom-color: var(--accent); }
+.wiz-step.on .ico { color: var(--accent-ink); }
+.shell-body { padding: 28px 32px 8px; }
+.shell-inner { max-width: 1100px; }
+.shell-sub { font-size: 20px; font-weight: 700; margin-bottom: 4px; outline: none; }
+.shell-hint { color: var(--ink-3); font-size: 14px; margin-bottom: 24px; }
+.shell .sec { margin: 0; padding: 0; border: 0; background: none; }
 .shell .sec-head { display: none; }
-.shell-foot { display: flex; gap: 10px; align-items: center; margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--rule); }
-.shell-note { display: none; }
+.shell .sec-body { padding: 0; }
+.shell .sec-body > div > .grid + .grid { margin-top: 26px; }
+.shell .sec-body > div > .grid:first-child > .sub-h:first-child { display: none; }
+.review-part { padding: 20px 0; border-top: 1px solid var(--line); }
+.review-part:first-of-type { border-top: 0; padding-top: 4px; }
+.review-part > h3 { color: var(--accent-ink); }
+.shell-foot { display: flex; gap: 10px; align-items: center; padding: 16px 32px; margin-top: 24px; border-top: 1px solid var(--line); background: var(--soft); }
 
 /* ---------- board ---------- */
-.hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 26px; }
-.hero .sub { margin-top: 6px; font-size: 14px; }
-.hero-btn { height: 48px; padding: 0 24px; font-size: 16px; }
-body.kiosk .hero-btn { height: 64px; padding: 0 36px; font-size: 20px; }
-.flash { display: flex; gap: 16px; align-items: center; padding: 12px 0; margin-bottom: 18px; border-bottom: 1px solid var(--rule); color: var(--accent-ink); font-weight: 600; }
-.tiles { display: flex; gap: 28px; border-bottom: 1px solid var(--rule); margin-bottom: 18px; flex-wrap: wrap; }
-.tile { background: none; border: 0; border-bottom: 2px solid transparent; padding: 0 0 10px; color: var(--ink-3); font-size: 14px; display: flex; gap: 8px; align-items: baseline; }
-.tile b { font-size: 14px; color: var(--ink-2); font-weight: 600; font-variant-numeric: tabular-nums; }
-.tile span { font-weight: 500; }
-.tile:hover { color: var(--ink); }
-.tile.on { color: var(--ink); border-bottom-color: var(--ink); }
-.tile.on b { color: var(--ink); }
-.tile.alert b { color: var(--bad); }
-.toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
-.toolbar select { width: auto; min-width: 180px; }
-.toolbar input[type=search] { width: 340px; max-width: 100%; }
-.list { border-top: 1px solid var(--ink); }
-.row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 150px 210px 100px 110px; gap: 18px; align-items: start; padding: 14px 4px; border-bottom: 1px solid var(--rule); cursor: pointer; }
-.row:hover { background: var(--soft); }
-.row.head { cursor: default; padding: 8px 4px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
-.row.head:hover { background: none; }
-.c-id { font-weight: 600; font-variant-numeric: tabular-nums; }
-.c-what b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.c-what .sub, .c-area .sub, .c-st .sub, .c-age .sub { margin-top: 2px; }
-.row-tags { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; font-weight: 500; }
+.flash { display: flex; gap: 14px; align-items: center; padding: 12px 16px; margin-bottom: 18px; border: 1px solid #cfe8bf; background: var(--accent-soft);
+  border-radius: var(--r); color: var(--accent-ink); font-weight: 600; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; text-align: left; display: flex; flex-direction: column; gap: 2px; }
+button.stat:hover { border-color: var(--line-2); }
+.stat.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.stat-top { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink-2); font-weight: 550; margin-bottom: 10px; }
+.ibox { width: 32px; height: 32px; border: 1px solid var(--line-2); border-radius: 8px; display: grid; place-items: center; color: var(--ink-2); flex: none; background: #fff; }
+.stat.on .ibox { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); }
+.stat b { font-size: 30px; font-weight: 650; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat small { font-size: 12.5px; color: var(--ink-3); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.chg { display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--line-2); border-radius: 6px; padding: 0 6px; font-size: 12px; color: var(--ink-2); font-weight: 600; }
+.chg .ico { width: 12px; height: 12px; stroke-width: 2.4; }
+.toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+.toolbar select { width: auto; min-width: 150px; height: 38px; font-size: 14px; }
+.search { position: relative; width: 340px; max-width: 100%; }
+.search .ico { position: absolute; left: 11px; top: 10px; color: var(--ink-3); }
+.search input { padding-left: 36px; height: 38px; font-size: 14px; }
+.tbl-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.tbl-scroll { overflow-x: auto; }
+table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
+.list th, .list td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); vertical-align: top; }
+.list th:last-child, .list td:last-child { border-right: 0; }
+.list th { background: var(--soft); font-size: 13px; font-weight: 600; color: var(--ink-2); white-space: nowrap; padding-top: 11px; padding-bottom: 11px; }
+.list th.sortable { cursor: pointer; user-select: none; }
+.list th.sortable:hover { color: var(--ink); }
+.list th .ico { width: 14px; height: 14px; vertical-align: -2px; margin-left: 4px; color: var(--ink-3); }
+.list th.sorted { color: var(--accent-ink); }
+.list th.sorted .ico { color: var(--accent-ink); }
+.list tbody tr:nth-child(even) { background: var(--zebra); }
+.list tbody tr.row { cursor: pointer; }
+.list tbody tr.row:hover { background: var(--accent-soft); }
+.list tbody tr:last-child td { border-bottom: 0; }
+.c-id { font-weight: 650; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.c-what { min-width: 260px; }
+.c-what b { display: block; font-weight: 550; }
+.c-when, .c-who { white-space: nowrap; }
+.row-tags { display: flex; gap: 8px; margin-top: 3px; flex-wrap: wrap; }
 .row-tags:empty { display: none; }
-.prog { display: flex; align-items: center; gap: 8px; padding-top: 6px; }
+.st-txt { font-weight: 600; white-space: nowrap; }
+.prog { display: flex; align-items: center; gap: 8px; min-width: 120px; padding-top: 4px; }
 .prog-bar { display: flex; gap: 2px; flex: 1; }
-.prog-bar span { flex: 1; height: 4px; background: var(--rule); }
-.prog-bar span.on { background: var(--ink-2); }
+.prog-bar span { flex: 1; height: 6px; background: var(--line); border-radius: 1px; }
+.prog-bar span.on { background: var(--accent); }
 .prog small { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .empty { padding: 40px 0; color: var(--ink-3); text-align: center; }
-.more { padding-top: 16px; font-size: 14px; color: var(--ink-3); }
-.list.flat { border-top: 0; }
-.list.flat .row { grid-template-columns: 110px minmax(0, 1fr) 160px; }
-.list.flat .c-prog, .list.flat .c-age, .list.flat .c-area { display: none; }
+.tbl-foot { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-2); flex-wrap: wrap; }
+.tbl-foot select { width: auto; height: 32px; font-size: 13px; padding: 0 8px; }
+.pager { display: flex; gap: 6px; }
+.pager .btn { width: 32px; padding: 0; }
+.more { padding-top: 14px; font-size: 14px; color: var(--ink-3); }
 
-/* status words: plain text, colour only where it carries meaning */
+/* status words: plain text */
 .badge { font-size: 13px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
 .badge.ok { color: var(--accent-ink); }
-.badge.warn { color: var(--warn); }
 .badge.bad { color: var(--bad); }
-.badge.info { color: var(--ink); }
 .badge.muted { color: var(--ink-3); }
-.tag { font-size: 12px; font-weight: 600; color: var(--ink-2); }
-.tag.bad { color: var(--bad); }
-.tag + .tag::before { content: '· '; color: var(--ink-3); }
-.tags { display: flex; gap: 6px 16px; flex-wrap: wrap; }
-.tags .tag { font-size: 15px; font-weight: 400; color: var(--ink); }
-.tags .tag + .tag::before { content: ''; }
+.tag { font-size: 11.5px; font-weight: 700; color: var(--ink-2); letter-spacing: .03em; }
+.tag.bad { color: var(--ink); }
+.tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.tags .tag { font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--ink); border: 1px solid var(--line-2); border-radius: 6px; padding: 3px 10px; }
 
-/* ---------- QRAP detail: a document, sections divided by rules ---------- */
-.d-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin: 10px 0 18px; }
-.d-head h1 { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
-.d-head .sub { margin-top: 6px; font-size: 14px; }
-.tracker { display: flex; flex-wrap: wrap; gap: 4px 0; margin: 0 0 22px; font-size: 13px; }
-.trk { color: var(--ink-3); }
-.trk:not(:last-child)::after { content: '›'; margin: 0 10px; color: var(--rule-2); }
-.trk.done { color: var(--ink-2); }
-.trk.now { color: var(--ink); font-weight: 650; }
-.next { padding: 14px 0; margin-bottom: 8px; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule); display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
-.next.bad b { color: var(--bad); }
+/* ---------- QRAP detail: form on the left, status on the right ---------- */
+.d-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin: 0 0 20px; flex-wrap: wrap; }
+.d-head h1 { display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; }
+.d-head h1 .badge { font-size: 15px; }
+.d-head .sub { margin-top: 4px; font-size: 14px; }
+.d-grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 20px; align-items: start; }
+.d-side { order: 2; position: sticky; top: 84px; }
+.d-main { order: 1; min-width: 0; }
+.tracker { list-style: none; margin: 0; padding: 0; }
+.trk { display: flex; gap: 12px; align-items: center; padding: 7px 0; color: var(--ink-3); font-size: 14px; position: relative; }
+.trk .ico { width: 20px; height: 20px; }
+.trk.done { color: var(--ink); }
+.trk.done .ico { color: var(--accent-ink); }
+.trk.now { color: var(--accent-ink); font-weight: 650; }
+.next { display: flex; flex-direction: column; gap: 4px; }
+.next .lbl { font-size: 12px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; }
+.next b { font-size: 16px; }
 .next.ok b { color: var(--accent-ink); }
-.band, .band.dark { font-size: 12px; font-weight: 600; color: var(--ink-3); margin: 34px 0 0; text-transform: uppercase; letter-spacing: .06em; }
-.card { padding: 22px 0; border-bottom: 1px solid var(--rule); }
-.card > h2, .card h2 { margin-bottom: 12px; }
-.sec { padding: 22px 0; border-bottom: 1px solid var(--rule); }
-.sec-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
-.sec-head h2 { font-size: 17px; text-transform: lowercase; }
+.next.bad .late-txt { font-weight: 700; }
+.band { font-size: 12px; font-weight: 700; color: var(--ink-3); margin: 26px 0 10px; text-transform: uppercase; letter-spacing: .06em; }
+.band:first-child { margin-top: 0; }
+.sec { padding: 0; overflow: hidden; }
+.sec-head { display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-bottom: 1px solid var(--line); }
+.sec-head h2 { font-size: 16px; text-transform: lowercase; }
 .sec-head h2::first-letter { text-transform: uppercase; }
-.num { color: var(--ink-3); font-weight: 600; font-size: 15px; min-width: 18px; font-variant-numeric: tabular-nums; }
-.sec.wait h2, .sec.skip h2, .sec.wait .sec-body, .sec.skip .sec-body { color: var(--ink-3); }
-.big-text { font-size: 18px; font-weight: 500; margin: 0 0 6px; white-space: pre-wrap; }
-.kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px 28px; margin-top: 14px; }
-.kv span { display: block; font-size: 13px; color: var(--ink-3); margin-bottom: 1px; }
+.sec-body { padding: 18px 22px 20px; }
+.num { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; flex: none;
+  background: var(--soft); color: var(--ink-3); border: 1px solid var(--line); }
+.sec.done .num { background: var(--accent-soft); color: var(--accent-ink); border-color: #cfe8bf; }
+.sec.now .num { background: var(--accent); color: #fff; border-color: var(--accent); }
+.sec.now { border-color: #bfe0a8; }
+.sec.wait .sec-head h2, .sec.skip .sec-head h2 { color: var(--ink-3); }
+.sec.wait .sec-body, .sec.skip .sec-body { color: var(--ink-3); }
+.big-text { font-size: 18px; font-weight: 550; margin: 0 0 6px; white-space: pre-wrap; }
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0; margin-top: 14px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.kv > div { padding: 10px 14px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 -1px -1px 0; }
+.kv span { display: block; font-size: 12.5px; color: var(--ink-3); margin-bottom: 2px; }
 .by { font-size: 13px; color: var(--ink-3); margin-top: 10px; }
-.box { margin-top: 16px; padding: 14px 0 0; border-top: 1px dashed var(--rule-2); }
+.box { margin-top: 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); }
+.box.ok { background: var(--accent-soft); border-color: #cfe8bf; }
 .box.ok > b { color: var(--accent-ink); }
+.box.bad { border-color: #e9c3bf; }
 .box.bad > b { color: var(--bad); }
 .whys { list-style: none; margin: 0; padding: 0; }
-.whys li { padding: 6px 0; display: grid; grid-template-columns: 44px 1fr; }
+.whys li { padding: 7px 0; display: grid; grid-template-columns: 44px 1fr; border-bottom: 1px solid var(--line); }
+.whys li:last-child { border-bottom: 0; }
 .whys li b { color: var(--ink-3); font-size: 13px; font-weight: 600; }
-.whys li.root-step { font-weight: 600; }
+.whys li.root-step { font-weight: 650; }
 .whys .badge { margin-left: 10px; }
 .root { margin-top: 10px; }
-.act { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; gap: 14px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--rule); }
+.act { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto auto; gap: 14px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--line); }
 .act:last-child { border-bottom: 0; }
-.act-no { color: var(--ink-3); font-size: 13px; font-weight: 600; }
+.act-no { color: var(--ink-3); font-size: 13px; font-weight: 700; }
 .act.done .act-text { color: var(--ink-3); }
 .act-btns { display: flex; gap: 6px; }
-.act-form, .ia-row { padding: 18px 0; border-top: 1px dashed var(--rule-2); margin-top: 8px; }
-.ia-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-weight: 600; }
+.act-form, .ia-row { padding: 18px; border: 1px solid var(--line); border-radius: 8px; margin-top: 12px; background: var(--soft); }
+.ia-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-weight: 650; }
 .why-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; margin-bottom: 12px; }
 .why-root { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); padding-bottom: 12px; white-space: nowrap; cursor: pointer; }
 .checklist { list-style: none; margin: 10px 0; padding: 0; }
@@ -219,105 +279,143 @@ body.kiosk .hero-btn { height: 64px; padding: 0 36px; font-size: 20px; }
 .checklist .no { color: var(--bad); font-weight: 700; }
 .slots-wrap { overflow-x: auto; }
 .slots, table.roles, table.people { width: 100%; border-collapse: collapse; font-size: 14px; }
-.slots th, .slots td, .roles th, .roles td, .people th, .people td { text-align: left; padding: 9px 10px 9px 0; border-bottom: 1px solid var(--rule); vertical-align: middle; }
-.slots th, .roles th, .people th { font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.slots th, .slots td, .roles th, .roles td, .people th, .people td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.slots th, .roles th, .people th { font-size: 12.5px; font-weight: 600; color: var(--ink-2); background: var(--soft); }
 .roles td:not(:first-child), .roles th:not(:first-child) { text-align: center; width: 110px; }
 .slots input, .slots select { height: 36px; min-width: 120px; }
 .people tr.inactive td { color: var(--ink-3); }
-.assess-item { padding: 10px 0; border-bottom: 1px solid var(--rule); }
-.assess-item .badge { margin-right: 10px; }
-.photo-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.pslot > b { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.assess-item { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.assess-item .badge { margin-right: 12px; }
+.photo-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 340px)); gap: 18px; }
+.pslot > b { display: block; font-size: 13px; font-weight: 650; margin-bottom: 8px; }
 .pslot.wrong > b { color: var(--bad); }
 .pslot.right > b { color: var(--accent-ink); }
-.ph { width: 100%; height: 170px; border: 1px dashed var(--rule-2); border-radius: 6px; background: var(--soft); display: grid; place-items: center;
+.ph { width: 100%; height: 190px; border: 1px dashed var(--line-2); border-radius: 8px; background: var(--soft); display: grid; place-items: center;
   color: var(--ink-3); font-size: 13px; overflow: hidden; padding: 0; margin-bottom: 8px; position: relative; cursor: pointer; }
 .ph img { width: 100%; height: 100%; object-fit: cover; }
 .ph .x { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff; }
 .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: grid; place-items: center; z-index: 50; cursor: zoom-out; }
 .lightbox img { max-width: 94vw; max-height: 94vh; }
 .timeline { list-style: none; margin: 0; padding: 0; }
-.timeline li { padding: 8px 0; border-bottom: 1px solid var(--rule); }
+.timeline li { padding: 9px 0 9px 16px; border-left: 2px solid var(--line); position: relative; }
+.timeline li::before { content: ''; position: absolute; left: -5px; top: 15px; width: 8px; height: 8px; border-radius: 50%; background: var(--line-2); }
 .inline-form { display: flex; gap: 10px; flex-wrap: wrap; }
 
-/* ---------- Přehled (dashboard) ---------- */
-.tiles-6, .tiles-3 { display: grid; gap: 0; border: 0; border-top: 1px solid var(--ink); margin: 0 0 8px; }
-.tiles-6 { grid-template-columns: repeat(6, 1fr); }
-.tiles-3 { grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--rule); }
-.tiles-6 .tile, .tiles-3 .tile { flex-direction: column; align-items: flex-start; gap: 2px; padding: 16px 16px 16px 0; border-bottom: 1px solid var(--rule); text-align: left; }
-.tiles-6 .tile b, .tiles-3 .tile b { font-size: 28px; font-weight: 600; color: var(--ink); line-height: 1.1; }
-.tiles-6 .tile.alert b { color: var(--bad); }
-.kpi { cursor: default; }
-.kpi small { color: var(--ink-3); font-size: 12px; }
-.cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 48px; }
-.cols3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-.legend { display: flex; gap: 18px; font-size: 13px; color: var(--ink-2); margin-bottom: 8px; }
-.dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
-.dot.s1 { background: var(--series-1); } .dot.s2 { background: var(--series-2); }
+/* ---------- Přehled manažera ---------- */
+.dash-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; }
+.cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.cols3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.cols3 > .card, .cols2 > .card, .dash-row > .card { margin-bottom: 0; }
+.dash-row, .cols3.dash { margin-bottom: 16px; }
+.big-n { font-size: 28px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 18px; font-size: 13px; color: var(--ink-2); }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--viz); }
+.dot.track { background: var(--viz-track); }
+.dot.avg { width: 14px; height: 0; border-top: 2px dashed var(--ink-2); border-radius: 0; vertical-align: 3px; background: none; }
 .viz-box { position: relative; }
 .viz { width: 100%; height: auto; display: block; }
-.viz-grid { stroke: #eef0f2; stroke-width: 1; }
-.viz-base { stroke: var(--rule-2); stroke-width: 1; }
+.viz-grid { stroke: #edf0ee; stroke-width: 1; }
+.viz-base { stroke: var(--line-2); stroke-width: 1; }
 .viz-axis { fill: var(--ink-3); font-size: 12px; }
-.viz-s1 { fill: var(--series-1); } .viz-s2 { fill: var(--series-2); }
+.viz-bar { fill: var(--viz); }
+.viz-avg { stroke: var(--ink-2); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.viz-avg-l { fill: var(--ink-2); font-size: 11px; font-weight: 600; }
 .viz-hit { fill: transparent; }
-.viz-group:hover .viz-hit { fill: #f4f5f6; }
-.viz-tip { position: absolute; top: 4px; transform: translateX(-50%); background: #fff; border: 1px solid var(--rule-2); border-radius: 6px; padding: 8px 10px;
-  font-size: 12px; pointer-events: none; white-space: nowrap; }
-.hbar { display: grid; grid-template-columns: 170px 1fr 32px; gap: 12px; align-items: center; padding: 6px 0; font-size: 14px; }
+.viz-group:hover .viz-hit { fill: #f1f5ef; }
+.viz-tip { position: absolute; top: 4px; transform: translateX(-50%); background: #fff; border: 1px solid var(--line-2); border-radius: 8px; padding: 9px 12px;
+  font-size: 13px; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 14px rgba(21,27,31,.08); }
+.viz-tip b { display: block; margin-bottom: 4px; }
+.viz-tip div { display: flex; justify-content: space-between; gap: 18px; color: var(--ink-2); }
+.donut-wrap { display: grid; place-items: center; position: relative; margin: 6px 0 14px; }
+.donut { width: 190px; height: 190px; }
+.donut-c { position: absolute; text-align: center; }
+.donut-c b { display: block; font-size: 28px; font-weight: 650; }
+.donut-c span { font-size: 12px; color: var(--ink-3); }
+.d-legend { list-style: none; margin: 0; padding: 0; }
+.d-legend li { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.d-legend li b { margin-left: auto; font-variant-numeric: tabular-nums; }
+.hbar { display: grid; grid-template-columns: 150px 1fr 32px; gap: 12px; align-items: center; padding: 6px 0; font-size: 14px; }
 .hbar.click { cursor: pointer; }
 .hbar.click:hover .hbar-l { text-decoration: underline; }
 .hbar-l { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hbar-t { height: 10px; background: #f1f2f4; }
-.hbar-f { display: block; height: 10px; background: var(--series-1); min-width: 2px; }
+.hbar-t { height: 10px; background: var(--viz-track); border-radius: 0 3px 3px 0; }
+.hbar-f { display: block; height: 10px; background: var(--viz); min-width: 2px; border-radius: 0 3px 3px 0; }
 .hbar b { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* ---------- help ---------- */
-.flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 24px; padding: 8px 0 24px; border-bottom: 1px solid var(--rule); counter-reset: f; }
+.flow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+.flow > div { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; }
+.flow .num { margin-bottom: 10px; background: var(--accent-soft); color: var(--accent-ink); border-color: #cfe8bf; }
 .flow b { display: block; margin-bottom: 4px; }
-.flow b::before { counter-increment: f; content: counter(f) '  '; color: var(--ink-3); }
 
 /* ---------- toast ---------- */
-.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 6px;
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 8px;
   font-size: 14px; font-weight: 500; z-index: 60; max-width: 92vw; }
 .toast.bad { background: var(--bad); }
 
+/* ---------- kiosk: bigger touch targets ---------- */
+body.kiosk { font-size: 16px; }
+body.kiosk .btn { height: 46px; }
+body.kiosk .btn.small { height: 40px; }
+body.kiosk input, body.kiosk select { height: 48px; }
+
+/* ---------- tablet ---------- */
+@media (max-width: 1180px) {
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .d-grid { grid-template-columns: 1fr; }
+  .d-side { order: 0; position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .d-side .card { margin-bottom: 0; }
+  .d-side + .d-main, .d-main { margin-top: 0; }
+  .dash-row, .cols3 { grid-template-columns: 1fr; }
+  .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .wiz-step { min-width: 0; padding: 14px 14px; }
+}
 /* ---------- phone ---------- */
-@media (max-width: 820px) {
-  .top-in { padding: 0 16px; gap: 16px; height: auto; min-height: 52px; flex-wrap: wrap; }
-  nav { order: 3; width: 100%; height: 40px; overflow-x: auto; }
-  .who { display: none; }
-  main { padding: 20px 16px 60px; }
-  h1 { font-size: 22px; }
-  .hero-btn { width: 100%; }
-  .grid { grid-template-columns: 1fr; }
-  .shell-grid { grid-template-columns: 1fr; gap: 20px; }
-  .wiz-steps { position: static; }
-  .wiz-list { flex-direction: row; overflow-x: auto; }
-  .wiz-step { border-left: 0; border-bottom: 2px solid var(--rule); padding: 8px 10px; grid-template-columns: auto; white-space: nowrap; }
-  .wiz-step span:not(.wiz-n), .wiz-step small { display: none; }
-  .wiz-step.on span:not(.wiz-n) { display: inline; margin-left: 6px; }
-  .wiz-step.on { border-bottom-color: var(--accent); display: flex; }
-  .shell-foot { flex-wrap: wrap; }
+@media (max-width: 760px) {
+  .top-in { padding: 0 16px; gap: 12px; height: auto; min-height: 56px; flex-wrap: wrap; }
+  nav { order: 3; width: 100%; height: 42px; overflow-x: auto; }
+  .who, .top-right .btn-dash span { display: none; }
+  main { padding: 18px 16px 60px; }
+  h1 { font-size: 21px; }
+  .page-head .hero-btn { width: 100%; }
+  .grid, .cols2 { grid-template-columns: 1fr; }
+  .stats { gap: 10px; }
+  .stat { padding: 12px 14px; }
+  .stat b { font-size: 24px; }
+  .stat-top { margin-bottom: 6px; font-size: 13px; }
+  .toolbar .search { width: 100%; }
+  .toolbar select { flex: 1 1 40%; min-width: 0; }
+  .toolbar .grow { display: none; }
+  .d-side { grid-template-columns: 1fr; }
+  .shell-body { padding: 20px 16px 4px; }
+  .shell-foot { padding: 12px 16px; flex-wrap: wrap; }
   .shell-foot .btn-cta { flex: 1; }
-  .row { grid-template-columns: 1fr auto; gap: 4px 12px; }
-  .row.head { display: none; }
-  .c-id { order: 1; } .c-st { order: 2; text-align: right; } .c-what { order: 3; grid-column: 1 / -1; }
-  .c-area { order: 4; } .c-age { order: 5; text-align: right; } .c-prog { order: 6; grid-column: 1 / -1; }
-  .tiles { gap: 18px; overflow-x: auto; flex-wrap: nowrap; }
-  .tiles-6, .tiles-3 { grid-template-columns: 1fr 1fr; }
-  .cols2, .cols3, .flow { grid-template-columns: 1fr; }
+  .wiz-step span { display: none; }
+  .wiz-step.on span { display: inline; }
+  .wiz-step { flex: 0 0 auto; padding: 14px 12px; }
+  .wiz-step.on { flex: 1 0 auto; }
+  /* the table becomes a list of cards */
+  table.list, .list tbody, .list tr, .list td { display: block; }
+  .list thead { display: none; }
+  .list tbody tr { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .list td { border: 0; padding: 0; }
+  .list .c-id { order: 1; } .list .c-st { order: 2; text-align: right; } .list .c-what { order: 3; grid-column: 1 / -1; min-width: 0; margin: 4px 0; }
+  .list .c-where { order: 4; font-size: 13px; color: var(--ink-3); } .list .c-when { order: 5; text-align: right; font-size: 13px; color: var(--ink-3); }
+  .list .c-who { display: none; } .list .c-prog { order: 6; grid-column: 1 / -1; }
   .kv { grid-template-columns: 1fr 1fr; }
-  .act { grid-template-columns: 32px minmax(0, 1fr); }
+  .act { grid-template-columns: 36px minmax(0, 1fr); }
   .act-st, .act-btns { grid-column: 2; }
-  .d-head { flex-direction: column; }
+  .sec-head, .sec-body { padding-left: 16px; padding-right: 16px; }
   .photo-slots { grid-template-columns: 1fr 1fr; }
+  .flow { grid-template-columns: 1fr; }
   .hbar { grid-template-columns: 110px 1fr 28px; }
 }
 @media print {
-  .top, .no-print, .btn, .toast, .tracker { display: none !important; }
+  body { background: #fff; }
+  .top, .no-print, .btn, .toast, .d-side { display: none !important; }
   main { padding: 0; }
-  .sec { break-inside: avoid; }
+  .d-grid { display: block; }
+  .card { border-color: #ccc; break-inside: avoid; }
 }
 </style>
 </head>
@@ -344,7 +442,7 @@ const S = {
   me: BOOT.me || {}, cfg: BOOT.cfg || {}, lists: BOOT.lists || {}, people: BOOT.people || [],
   qraps: BOOT.qraps || [], actions: BOOT.actions || [], effects: BOOT.effects || [], assess: BOOT.assess || [], all: false,
   kiosk: !!(BOOT.params && BOOT.params.kiosk === '1') || (BOOT.me && BOOT.me.role === 'KIOSK'),
-  view: 'board', id: null, edit: null, filter: 'open', area: '', search: '', history: {}, flash: null, adm: null
+  view: 'board', id: null, edit: null, filter: 'open', area: '', range: '', search: '', sort: null, page: 0, per: 25, history: {}, flash: null, adm: null
 };
 const isManager = () => S.me.role === 'MANAŽER' || S.me.role === 'ADMIN';
 const isAdmin = () => S.me.role === 'ADMIN';
@@ -512,6 +610,24 @@ function kv(pairs) {
     .map(p => h('div', null, h('span', null, p[0]), p[1])));
 }
 
+/** Small line icons (24×24, drawn with the text colour). */
+const ICONS = {
+  circle: ['c:12,12,9'], check: ['c:12,12,9', 'M8 12.5l2.7 2.7L16.2 9.6'], dot: ['c:12,12,9', 'c:12,12,3.5'],
+  inbox: ['M4 13h4.5l1.5 2.5h4l1.5-2.5H20', 'M6.5 5h11L20 13v6H4v-6z'], user: ['c:12,8,4', 'M4.5 20.5c1.4-3.8 4.3-5.5 7.5-5.5s6.1 1.7 7.5 5.5'],
+  clock: ['c:12,12,9', 'M12 7.5V12l3 2'], done: ['M5 12.5l4.5 4.5L19 7.5'], alert: ['M12 3.5l9 16H3z', 'M12 10v4.5', 'M12 17.3v.2'],
+  search: ['c:11,11,7', 'M20.5 20.5L16 16'], chart: ['M4 20h16', 'M7 16v-5', 'M12 16V6', 'M17 16v-8'], print: ['M7 9V3.5h10V9', 'M7 17H4.5V10.5a1.5 1.5 0 0 1 1.5-1.5h12a1.5 1.5 0 0 1 1.5 1.5V17H17', 'M7 14h10v6.5H7z'],
+  plus: ['M12 5v14', 'M5 12h14'], sort: ['M8 9.5l4-4 4 4', 'M8 14.5l4 4 4-4'], up: ['M12 19V5', 'M6 11l6-6 6 6'], down: ['M12 5v14', 'M6 13l6 6 6-6'],
+  refresh: ['M19.5 12a7.5 7.5 0 1 1-2.2-5.3', 'M19.5 4v4.5H15'], left: ['M15 6l-6 6 6 6'], right: ['M9 6l6 6-6 6'], shield: ['M12 3l7.5 3v5.5c0 4.5-3.2 8-7.5 9.5-4.3-1.5-7.5-5-7.5-9.5V6z']
+};
+function icon(name) {
+  return svg('svg', { viewBox: '0 0 24 24', class: 'ico', 'aria-hidden': 'true' }, (ICONS[name] || []).map(d => {
+    if (d.slice(0, 2) !== 'c:') return svg('path', { d: d });
+    const c = d.slice(2).split(',');
+    return svg('circle', { cx: c[0], cy: c[1], r: c[2] });
+  }));
+}
+const ibox = name => h('span', { class: 'ibox' }, icon(name));
+
 // ------------------------------------------------------------------ 3. HEADER AND ROUTING
 /** Show another page. replace = true: do not keep the current page in the browser's Back history. */
 function go(view, id, replace) {
@@ -546,16 +662,25 @@ function render() {
 
 function header() {
   const nav = (label, view) => h('button', { class: 'nav' + (S.view === view ? ' on' : ''), onclick: () => go(view) }, label);
-  const who = S.kiosk ? h('span', { class: 'who' }, 'Kiosk')
-    : h('span', { class: 'who', title: S.me.email }, S.me.name || S.me.email || '', S.me.role ? h('span', { class: 'role' }, roleName(S.me.role)) : null);
+  const who = S.kiosk ? h('span', { class: 'who' }, 'Kiosk', h('small', null, 'sdílený terminál'))
+    : h('span', { class: 'who', title: S.me.email }, S.me.name || S.me.email || '', h('small', null, roleName(S.me.role) || 'uživatel'));
   return h('header', { class: 'top' }, h('div', { class: 'top-in' },
     h('button', { class: 'brand', onclick: () => go('board') }, h('span', { class: 'logo' }, 'Q'), S.cfg.NAZEV || 'eQRAP'),
-    h('nav', null, nav('Tabule', 'board'), isManager() ? nav('Přehled', 'dash') : null, isAdmin() ? nav('Správa', 'admin') : null,
-      nav('Jak to funguje', 'help')),
+    h('nav', null, nav('Tabule', 'board'), nav('Jak to funguje', 'help'), isAdmin() ? nav('Správa', 'admin') : null),
     h('div', { class: 'grow' }),
-    h('button', { class: 'btn primary', onclick: () => go('new') }, '+ Nahlásit problém'),
-    S.me.owner ? viewAsSelect() : null,
-    who));
+    h('div', { class: 'top-right' },
+      isManager() ? h('button', { class: 'btn btn-dash' + (S.view === 'dash' ? ' on' : ''), onclick: () => go('dash') }, icon('chart'), h('span', null, 'Přehled manažera')) : null,
+      h('button', { class: 'btn primary', onclick: () => go('new') }, '+ Nahlásit problém'),
+      S.me.owner ? viewAsSelect() : null,
+      who)));
+}
+
+/** Page title with an optional breadcrumb and buttons on the right. */
+function pageHead(title, sub, right, crumb) {
+  return h('div', null,
+    crumb ? h('div', { class: 'crumbs' }, h('button', { onclick: () => go('board') }, 'Tabule'), h('span', null, '/'), h('b', null, crumb)) : null,
+    h('div', { class: 'page-head' }, h('div', null, h('h1', null, title), sub ? h('div', { class: 'sub' }, sub) : null),
+      right ? h('div', { class: 'head-btns' }, right) : null));
 }
 
 /** Owner only: "Zobrazit jako" – try the app as another role (the server enforces that role too). */
@@ -610,37 +735,80 @@ function progressEl(q) {
 }
 
 let redrawBoard = null;
+const RANGES = [['', 'Kdykoli'], ['1', 'Posledních 24 h'], ['7', 'Posledních 7 dní'], ['30', 'Posledních 30 dní']];
+const COLUMNS = [
+  ['id', 'Číslo', q => q.id], ['what', 'Problém', q => q.what], ['where', 'Kde', q => q.zone + ' ' + q.location],
+  ['when', 'Kdy', q => q.when || q.created], ['who', 'Nahlásil', q => q.finder], ['status', 'Stav', q => stage(q) + (isLate(q) ? 10 : 0)],
+  ['prog', 'Krok ①–⑦', q => stage(q)]
+];
 function boardPage() {
-  const keys = S.kiosk ? ['open', 'decide', 'approve', 'late', 'closed'] : ['open', 'mine', 'decide', 'late', 'closed'];
-  if (!keys.includes(S.filter) && S.filter !== 'cancelled') S.filter = 'open';
-  const tiles = h('div', { class: 'tiles' });
-  const listBox = h('div', { class: 'list' });
-  const countEl = h('span', { class: 'sub' });
+  const keys = S.kiosk ? ['open', 'decide', 'approve', 'late'] : ['open', 'mine', 'late', 'closed'];
+  const sel = Object.keys(FILTERS).filter(k => (k !== 'mine' || !S.kiosk) && (k !== 'cancelled' || isManager()));
+  if (!sel.includes(S.filter)) S.filter = 'open';
+  S.sort = S.sort || { key: '', dir: 1 };
+  S.per = S.per || 25;
+  S.page = S.page || 0;
+  const stats = h('div', { class: 'stats' });
+  const tbody = h('tbody');
+  const thead = h('thead');
+  const foot = h('div', { class: 'tbl-foot' });
   const inArea = q => !S.area || q.zone === S.area;
+  const inRange = q => !S.range || Date.now() - new Date(q.when || q.created).getTime() <= Number(S.range) * DAY;
+  const notes = {
+    open: () => S.qraps.filter(q => isOpen(q) && q.safety === 'ANO').length + '× SAFETY',
+    mine: () => 'čeká na vás', decide: () => 'podepisuje vedoucí', approve: () => 'uzavírá manažer', late: () => 'nutno řešit hned',
+    closed: () => 'za posledních ' + (S.cfg.ZOBRAZIT_UZAVRENE_DNI || 60) + ' dní'
+  };
+  const icons = { open: 'inbox', mine: 'user', decide: 'user', approve: 'shield', late: 'clock', closed: 'done' };
 
-  const drawList = () => {
+  const rowsNow = () => {
     const words = S.search.trim().toLowerCase();
     const test = FILTERS[S.filter].test;
-    const rows = S.qraps.filter(q => inArea(q) && (words ? q.status !== 'ZRUŠENO' && haystack(q).includes(words) : test(q))).sort(order);
-    countEl.textContent = words ? 'Nalezeno: ' + rows.length : rows.length + ' ' + (rows.length === 1 ? 'QRAP' : 'QRAP');
-    fill(listBox,
-      h('div', { class: 'row head' }, h('div', null, 'Číslo'), h('div', null, 'Problém'), h('div', null, 'Kde'),
-        h('div', null, 'Stav'), h('div', null, 'Průběh ①–⑦'), h('div', null, 'Zjištěno')),
-      rows.length ? rows.map(rowEl) : h('div', { class: 'empty' }, words ? 'Nic nenalezeno.' : 'Žádné QRAP v tomto filtru.'));
+    let rows = S.qraps.filter(q => inArea(q) && inRange(q) && (words ? q.status !== 'ZRUŠENO' && haystack(q).includes(words) : test(q)));
+    const col = COLUMNS.find(c => c[0] === S.sort.key);
+    if (col) rows.sort((a, b) => String(col[2](a)).localeCompare(String(col[2](b)), 'cs', { numeric: true }) * S.sort.dir);
+    else rows.sort(order);
+    return rows;
   };
-  const drawTiles = () => fill(tiles, keys.map(k => {
+  const drawList = () => {
+    const rows = rowsNow();
+    const pages = Math.max(1, Math.ceil(rows.length / S.per));
+    S.page = Math.min(S.page, pages - 1);
+    const from = S.page * S.per;
+    const shown = rows.slice(from, from + S.per);
+    fill(thead, h('tr', { class: 'head' }, COLUMNS.map(c => h('th', {
+      class: 'sortable' + (S.sort.key === c[0] ? ' sorted' : ''), title: 'Seřadit',
+      onclick: () => { S.sort = S.sort.key !== c[0] ? { key: c[0], dir: 1 } : S.sort.dir === 1 ? { key: c[0], dir: -1 } : { key: '', dir: 1 }; drawList(); }
+    }, c[1], icon(S.sort.key !== c[0] ? 'sort' : S.sort.dir === 1 ? 'up' : 'down')))));
+    fill(tbody, shown.length ? shown.map(rowEl)
+      : h('tr', null, h('td', { colspan: COLUMNS.length, class: 'empty' }, S.search ? 'Nic nenalezeno.' : 'Žádné QRAP v tomto výběru.')));
+    const per = h('select', { onchange: e => { S.per = Number(e.target.value); S.page = 0; drawList(); } }, [10, 25, 50, 100].map(n => h('option', { value: n }, n)));
+    per.value = String(S.per);
+    const pg = (ic, to, off) => h('button', { class: 'btn small', disabled: off, title: ic === 'left' ? 'Předchozí' : 'Další', onclick: () => { S.page = to; drawList(); } }, icon(ic));
+    fill(foot, h('span', null, rows.length ? 'Zobrazeno ' + (from + 1) + '–' + (from + shown.length) + ' z ' + rows.length : '0 QRAP'),
+      h('div', { class: 'grow' }), h('span', null, 'Řádků na stránku'), per,
+      h('div', { class: 'pager' }, pg('left', S.page - 1, S.page === 0), pg('right', S.page + 1, S.page >= pages - 1)));
+  };
+  const drawStats = () => fill(stats, keys.map(k => {
     const n = S.qraps.filter(q => inArea(q) && FILTERS[k].test(q)).length;
-    return h('button', { class: 'tile' + (S.filter === k && !S.search ? ' on' : '') + (FILTERS[k].alert && n ? ' alert' : ''),
-      onclick: () => { S.filter = k; S.search = ''; search.value = ''; draw(); } }, h('b', null, n), h('span', null, FILTERS[k].label));
+    return h('button', { class: 'stat' + (S.filter === k && !S.search ? ' on' : ''),
+      onclick: () => { S.filter = k; S.search = ''; S.page = 0; search.value = ''; stSel.value = k; draw(); } },
+      h('div', { class: 'stat-top' }, ibox(icons[k]), FILTERS[k].label), h('b', null, n), h('small', null, notes[k]()));
   }));
-  const draw = () => { drawTiles(); drawList(); };
+  const draw = () => { drawStats(); drawList(); };
   redrawBoard = draw;
 
-  const areaSel = h('select', { onchange: e => { S.area = e.target.value; draw(); } },
-    h('option', { value: '' }, 'Všechny zóny'), (S.lists.zones || []).map(a => h('option', { value: a }, a)));
+  const stSel = h('select', { title: 'Stav', onchange: e => { S.filter = e.target.value; S.page = 0; draw(); } },
+    sel.map(k => h('option', { value: k }, 'Stav: ' + FILTERS[k].label)));
+  stSel.value = S.filter;
+  const areaSel = h('select', { title: 'Zóna', onchange: e => { S.area = e.target.value; S.page = 0; draw(); } },
+    h('option', { value: '' }, 'Zóna: všechny'), (S.lists.zones || []).map(a => h('option', { value: a }, a)));
   areaSel.value = S.area;
-  const search = h('input', { type: 'search', placeholder: 'Hledat: číslo QRAP, materiál, HU, dodací list, text…', value: S.search,
-    oninput: e => { S.search = e.target.value; draw(); } });
+  const rangeSel = h('select', { title: 'Období', onchange: e => { S.range = e.target.value; S.page = 0; draw(); } },
+    RANGES.map(r => h('option', { value: r[0] }, r[1])));
+  rangeSel.value = S.range || '';
+  const search = h('input', { type: 'search', placeholder: 'Hledat číslo, problém, materiál, HU…', value: S.search,
+    oninput: e => { S.search = e.target.value; S.page = 0; draw(); } });
   draw();
 
   const open = S.qraps.filter(isOpen);
@@ -648,20 +816,18 @@ function boardPage() {
   S.flash = null;
   const cancelled = S.qraps.filter(FILTERS.cancelled.test).length;
   return h('div', null,
-    h('div', { class: 'hero' },
-      h('div', null, h('h1', null, 'Tabule QRAP'),
-        h('div', { class: 'sub' }, open.length + ' otevřených · ' + open.filter(isLate).length + ' po termínu · kliknutím otevřete formulář')),
+    pageHead('Tabule QRAP', open.length + ' otevřených · ' + open.filter(isLate).length + ' po termínu · kliknutím na řádek otevřete formulář',
       h('button', { class: 'btn primary hero-btn', onclick: () => go('new') }, '+ Nahlásit problém')),
-    flash ? h('div', { class: 'flash' }, h('span', null, '✓ ' + flash.text),
-      flash.id && !S.kiosk ? h('button', { class: 'link', onclick: () => go('detail', flash.id) }, 'Otevřít ' + flash.id) : null) : null,
+    flash ? h('div', { class: 'flash' }, icon('check'), h('span', null, flash.text), h('div', { class: 'grow' }),
+      flash.id && !S.kiosk ? h('button', { class: 'btn small', onclick: () => go('detail', flash.id) }, 'Otevřít ' + flash.id) : null) : null,
+    stats,
     myActions(),
-    tiles,
-    h('div', { class: 'toolbar' }, areaSel, search, h('div', { class: 'grow' }), countEl,
-      h('button', { class: 'btn ghost small', onclick: e => refresh(false, e.currentTarget) }, '⟳ Obnovit')),
-    listBox,
+    h('div', { class: 'toolbar' }, h('label', { class: 'search' }, icon('search'), search), stSel, areaSel, rangeSel, h('div', { class: 'grow' }),
+      h('button', { class: 'btn small', onclick: e => refresh(false, e.currentTarget) }, icon('refresh'), 'Obnovit')),
+    h('div', { class: 'tbl-wrap' }, h('div', { class: 'tbl-scroll' }, h('table', { class: 'list' }, thead, tbody)), foot),
     h('div', { class: 'more' },
       S.all ? null : h('button', { class: 'link', onclick: e => refresh(false, e.currentTarget, true) }, 'Zobrazit i starší uzavřené'),
-      isManager() && cancelled ? [' · ', h('button', { class: 'link', onclick: () => { S.filter = 'cancelled'; render(); } }, 'Zrušené (' + cancelled + ')')] : null));
+      isManager() && cancelled ? [' · ', h('button', { class: 'link', onclick: () => { S.filter = 'cancelled'; S.page = 0; render(); } }, 'Zrušené (' + cancelled + ')')] : null));
 }
 
 function haystack(q) {
@@ -677,24 +843,25 @@ function order(a, b) {
 function rowEl(q) {
   const st = STATUS[q.status] || {};
   const open = () => go('detail', q.id);
-  return h('div', { class: 'row', tabindex: 0, onclick: open, onkeydown: e => { if (e.key === 'Enter') open(); } },
-    h('div', { class: 'c-id' }, q.id,
+  return h('tr', { class: 'row', tabindex: 0, onclick: open, onkeydown: e => { if (e.key === 'Enter') open(); } },
+    h('td', { class: 'c-id' }, q.id,
       h('div', { class: 'row-tags' }, q.safety === 'ANO' ? h('span', { class: 'tag bad' }, 'SAFETY') : null,
-        q.decision === 'ESKALACE' ? h('span', { class: 'tag' }, 'Eskalováno') : null)),
-    h('div', { class: 'c-what' }, h('b', null, q.what), h('div', { class: 'sub' },
+        q.decision === 'ESKALACE' ? h('span', { class: 'tag' }, 'ESKALACE') : null)),
+    h('td', { class: 'c-what' }, h('b', null, q.what), h('div', { class: 'sub' },
       [q.how, q.qty === '' ? '' : q.qty + ' ' + q.unit, q.materialNo, q.huNo].filter(Boolean).join(' · '))),
-    h('div', { class: 'c-area' }, h('div', null, q.zone), h('div', { class: 'sub' }, q.location)),
-    h('div', { class: 'c-st' }, badge(q), h('div', { class: 'sub' },
-      isLate(q) ? h('span', { class: 'late-txt' }, 'po termínu') : (st.who ? 'čeká: ' + st.who : ''))),
-    h('div', { class: 'c-prog' }, progressEl(q)),
-    h('div', { class: 'c-age sub' }, fmtDT(q.when || q.created), h('div', null, ago(q.when || q.created))));
+    h('td', { class: 'c-where' }, h('div', null, q.zone), h('div', { class: 'sub' }, q.location)),
+    h('td', { class: 'c-when' }, fmtDT(q.when || q.created), h('div', { class: 'sub' }, ago(q.when || q.created))),
+    h('td', { class: 'c-who' }, q.finder || '–'),
+    h('td', { class: 'c-st' }, h('span', { class: 'st-txt' }, badge(q)), h('div', { class: 'sub' },
+      isLate(q) ? h('span', { class: 'late-txt' }, 'po termínu!') : (st.who ? 'čeká: ' + st.who : ''))),
+    h('td', { class: 'c-prog' }, progressEl(q)));
 }
 
 function myActions() {
   if (S.kiosk || !S.me.email) return null;
   const mine = S.actions.filter(a => a.canDone && a.ownerEmail === S.me.email);
   if (!mine.length) return null;
-  return h('div', { class: 'card' }, h('h2', null, 'MOJE KONEČNÉ AKCE (' + mine.length + ')'),
+  return h('div', { class: 'card' }, h('h2', null, 'Moje konečné akce (' + mine.length + ')'),
     mine.map(a => h('div', { class: 'act' },
       h('div', { class: 'act-no' }, '⑥'),
       h('div', null, h('div', null, a.text), h('div', { class: 'sub' }, a.qrapId + ' · plán ',
@@ -718,19 +885,19 @@ function newPage() {
   });
   const g = (...i) => h('div', null, i.map(x => groups[x]));
   const steps = [
-    { name: 'Problém', el: section(1, 'now', g(0)) },
-    { name: 'Kdy a kde', el: section(1, 'now', g(1)) },
-    { name: 'Množství a kdo', el: section(1, 'now', g(2, 3, 4)) },
-    { name: 'Fotky', el: section(1, 'now', g(5)), check: () => {
+    { name: 'Problém', hint: '① Co se stalo a jak to bylo objeveno.', el: section(1, 'now', g(0)) },
+    { name: 'Kdy a kde', hint: '① Kdy a kde byl problém nalezen.', el: section(1, 'now', g(1)) },
+    { name: 'Množství a kdo', hint: '① Kolik kusů, kdo problém našel a čísla materiálu / HU.', el: section(1, 'now', g(2, 3, 4)) },
+    { name: 'Fotky', hint: '① Vyfoťte ŠPATNÝ a SPRÁVNÝ stav.', el: section(1, 'now', g(5)), check: () => {
       const p = pf.photos.get();
       const d = pf.F.peek();
       if (!(p.WRONG && p.RIGHT) && !(d.photoExc && d.photoException)) return pf.F.mark('photoExc', 'Vyfoťte ŠPATNĚ i SPRÁVNĚ, nebo zaškrtněte výjimku s důvodem.');
       return true;
     } },
-    { name: '② Upozornění', el: section(2, 'now', pf.two) },
-    { name: '③ Riziko', el: section(3, 'now', h('div', null, riskEl, h('p', { class: 'sub', style: 'margin-top:12px' },
+    { name: 'Upozornění', hint: '② Kdo byl o problému upozorněn a kdo má dostat e-mail.', el: section(2, 'now', pf.two) },
+    { name: 'Riziko', hint: '③ Jediná otázka pro operátora – zbytek doplní TL.', el: section(3, 'now', h('div', null, riskEl, h('p', { class: 'sub', style: 'margin-top:12px' },
       'Ostatní okamžitá opatření ③ doplní TL / vedoucí do ' + hours3() + ' h od KDY.'))) },
-    { name: 'Kontrola', el: null }
+    { name: 'Kontrola', hint: 'Zkontrolujte údaje. Cokoli můžete ještě opravit přímo zde.', el: null }
   ];
   let at = 0;
   const bar = h('div', { class: 'wiz-list' });
@@ -750,6 +917,7 @@ function newPage() {
     go('board', null, true);
   } }, 'Odeslat ✓');
   const titleEl = h('h2', { class: 'shell-sub' });
+  const hintEl = h('p', { class: 'shell-hint' });
   titleEl.tabIndex = -1;
   function valid(i) {
     const st = steps[i];
@@ -768,10 +936,10 @@ function newPage() {
     at = Math.max(0, Math.min(i, steps.length - 1));
     const last = at === steps.length - 1;
     fill(bar, steps.map((st, k) => h('button', { class: 'wiz-step' + (k < at ? ' done' : k === at ? ' on' : ''), type: 'button',
-      onclick: () => show(k) }, h('span', { class: 'wiz-n' }, k + 1), h('span', null, st.name),
-      k < at ? h('small', null, 'hotovo') : null)));
-    titleEl.textContent = last ? 'Kontrola a odeslání' : steps[at].name;
-    fill(body, last ? [h('p', { class: 'sub' }, 'Zkontrolujte údaje. Cokoli můžete ještě opravit přímo zde.')].concat(steps.slice(0, -1).map(st => st.el)) : steps[at].el);
+      title: (k + 1) + '. ' + st.name, onclick: () => show(k) }, icon(k < at ? 'check' : 'circle'), h('span', null, st.name))));
+    titleEl.textContent = (at + 1) + '. ' + (last ? 'Kontrola a odeslání' : steps[at].name);
+    hintEl.textContent = steps[at].hint;
+    fill(body, last ? steps.slice(0, -1).map(st => h('div', { class: 'review-part' }, h('h3', null, st.name), st.el)) : steps[at].el);
     back.hidden = at === 0;
     next.hidden = last;
     send.hidden = !last;
@@ -779,14 +947,13 @@ function newPage() {
     const f = body.querySelector('input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select');
     if (f && !last) f.focus({ preventScroll: true });
   }
-  const page = h('div', { class: 'shell' },
-    h('div', { class: 'shell-head' }, h('h1', null, 'Nový QRAP'),
-      h('p', { class: 'sub' }, 'Vyplňuje operátor, který problém našel. Povinné údaje jsou označené *.')),
-    h('div', { class: 'shell-grid' },
+  const page = h('div', null,
+    pageHead('Nový QRAP', 'Vyplňuje operátor, který problém našel. Povinné údaje jsou označené *.', null, 'Nový QRAP'),
+    h('div', { class: 'shell' },
       h('nav', { class: 'wiz-steps', 'aria-label': 'Kroky' }, bar),
-      h('div', { class: 'shell-body' }, titleEl, body,
-        h('div', { class: 'shell-foot' }, back, h('div', { class: 'grow' }),
-          h('button', { class: 'btn btn-muted', onclick: () => go('board') }, 'Zrušit'), next, send))));
+      h('div', { class: 'shell-body' }, h('div', { class: 'shell-inner' }, titleEl, hintEl, body)),
+      h('div', { class: 'shell-foot' }, back, h('div', { class: 'grow' }),
+        h('button', { class: 'btn btn-muted', onclick: () => go('board') }, 'Zrušit'), next, send)));
   show(0);
   return page;
 }
@@ -810,37 +977,45 @@ const saveSection = (q, part, read, n) => b => { const d = read(); if (d) submit
 
 function detailPage() {
   const q = byId(S.id);
-  if (!q) return h('div', { class: 'narrow card' }, 'Načítám ' + (S.id || '') + '…');
+  if (!q) return h('div', { class: 'card' }, 'Načítám ' + (S.id || '') + '…');
   const pf = S.edit === 'popis' ? popisForm(q, false) : null;
-  return h('div', { class: 'narrow' },
-    h('button', { class: 'link no-print', onclick: () => go('board') }, '← Tabule'),
+  const trk = steps(q);
+  return h('div', null,
+    h('div', { class: 'crumbs no-print' }, h('button', { onclick: () => go('board') }, 'Tabule'), h('span', null, '/'), h('b', null, q.id)),
     h('div', { class: 'd-head' },
-      h('div', null, h('h1', null, q.id, ' ', badge(q), q.safety === 'ANO' ? [' ', h('span', { class: 'tag bad' }, 'SAFETY')] : null,
-        q.decision === 'ESKALACE' ? [' ', h('span', { class: 'tag' }, 'Eskalováno')] : null),
-        h('div', { class: 'sub' }, [q.zone, q.location, 'KDY ' + fmtDT(q.when)].filter(Boolean).join(' · '))),
-      h('button', { class: 'btn no-print', onclick: () => window.print() }, 'Tisk / PDF')),
-    steps(q), nextBox(q),
-    h('div', { class: 'band' }, 'QR vyplňuje OPERÁTOR, který nalezl problém'), sec1(q, pf), sec2(q, pf), sec3(q),
-    h('div', { class: 'band dark' }, 'Vyplňuje Supervizor'), sec4(q),
-    h('div', { class: 'band' }, 'Vyplňují pověření pracovníci (piloti), na základě rozhodnutí Supervizora'), sec5(q), sec6(q),
-    h('div', { class: 'band dark' }, 'Supervizor / Manažer'), sec7(q),
-    historyBox(q), adminBox(q));
+      h('div', null, h('h1', null, q.id, badge(q), q.safety === 'ANO' ? h('span', { class: 'tag bad' }, 'SAFETY') : null,
+        q.decision === 'ESKALACE' ? h('span', { class: 'tag' }, 'ESKALACE') : null),
+        h('div', { class: 'sub' }, [q.zone, q.location, 'KDY ' + fmtDT(q.when), q.finder ? 'nahlásil(a) ' + q.finder : ''].filter(Boolean).join(' · '))),
+      h('button', { class: 'btn no-print', onclick: () => window.print() }, icon('print'), 'Tisk / PDF')),
+    h('div', { class: 'd-grid' },
+      h('aside', { class: 'd-side' }, h('div', { class: 'card' }, nextBox(q)),
+        trk ? h('div', { class: 'card' }, h('h2', null, 'Průběh QRAP'), trk) : null),
+      h('div', { class: 'd-main' },
+        h('div', { class: 'band' }, 'QR vyplňuje operátor, který nalezl problém'), sec1(q, pf), sec2(q, pf), sec3(q),
+        h('div', { class: 'band' }, 'Vyplňuje supervizor'), sec4(q),
+        h('div', { class: 'band' }, 'Vyplňují pověření pracovníci (piloti), na základě rozhodnutí supervizora'), sec5(q), sec6(q),
+        h('div', { class: 'band' }, 'Supervizor / manažer'), sec7(q),
+        historyBox(q), adminBox(q))));
 }
 
 function steps(q) {
   if (q.status === 'ZRUŠENO') return null;
-  const names = ['Nahlášeno', 'Opatření', 'Rozhodnutí', '5 Proč', 'Akce', 'Ověření 5 směn', 'Uzavřeno'];
+  const names = ['Nahlášeno ① ②', 'Okamžitá opatření ③', 'Rozhodnutí ④', '5 Proč ⑤', 'Konečné akce ⑥', 'Ověření 5 směn ⑥', 'Uzavřeno'];
   const at = { 'OPATŘENÍ': 1, 'ROZHODNUTÍ': 2, 'ANALÝZA': 3, 'AKCE': 4, 'OVĚŘENÍ': 5, 'SCHVÁLENÍ': 6, 'UZAVŘENO': 7 }[q.status] || 0;
-  return h('div', { class: 'tracker no-print' }, names.map((n, i) =>
-    h('div', { class: 'trk ' + (i < at ? 'done' : i === at ? 'now' : '') }, h('span', null, n))));
+  const skip = q.decision === 'VYŘEŠENO';
+  return h('ul', { class: 'tracker' }, names.map((n, i) => {
+    if (skip && i >= 3 && i <= 5) return null;
+    const done = i < at || q.status === 'UZAVŘENO';
+    return h('li', { class: 'trk ' + (done ? 'done' : i === at ? 'now' : '') }, icon(done ? 'check' : i === at ? 'dot' : 'circle'), h('span', null, n));
+  }));
 }
 
 function nextBox(q) {
   if (q.status === 'UZAVŘENO') {
-    return h('div', { class: 'next ok' }, h('b', null, '✓ Uzavřeno ' + fmtDT(q.closedAt)),
-      h('span', { class: 'sub' }, (q.decision === 'VYŘEŠENO' ? '· vyřešeno bez 5 Proč' : '· po ověření 5 směn') + ' · uzavřel(a) ' + q.closedBy));
+    return h('div', { class: 'next ok' }, h('span', { class: 'lbl' }, 'Stav'), h('b', null, '✓ Uzavřeno ' + fmtDT(q.closedAt)),
+      h('span', { class: 'sub' }, (q.decision === 'VYŘEŠENO' ? 'vyřešeno bez 5 Proč' : 'po ověření 5 směn') + ' · uzavřel(a) ' + q.closedBy));
   }
-  if (q.status === 'ZRUŠENO') return h('div', { class: 'next grey' }, h('b', null, 'Zrušeno: '), q.cancelReason);
+  if (q.status === 'ZRUŠENO') return h('div', { class: 'next' }, h('span', { class: 'lbl' }, 'Stav'), h('b', null, 'Zrušeno'), h('span', { class: 'sub' }, q.cancelReason));
   const st = STATUS[q.status];
   const late = isLate(q);
   let who = st.who;
@@ -850,8 +1025,8 @@ function nextBox(q) {
   if (q.status === 'AKCE') extra = 'otevřené akce: ' + actsOf(q.id, '⑥').filter(a => !a.done).length;
   if (q.status === 'OVĚŘENÍ') extra = 'efektivní na ' + q.eff.ok + ' z 5 směn';
   return h('div', { class: 'next' + (late ? ' bad' : '') },
-    h('span', null, 'Další krok:'), h('b', null, st.next), h('span', { class: 'sub' }, '· dělá: ' + who),
-    extra ? h('span', { class: late ? 'late-txt' : 'sub' }, '· ' + extra + (late ? ' – po termínu!' : '')) : null);
+    h('span', { class: 'lbl' }, 'Další krok'), h('b', null, st.next), h('span', { class: 'sub' }, 'Dělá: ' + who),
+    extra ? h('span', { class: late ? 'late-txt' : 'sub' }, extra + (late ? ' – po termínu!' : '')) : null);
 }
 
 function sec1(q, pf) {
@@ -1073,7 +1248,7 @@ function historyBox(q) {
   };
   const draw = () => {
     const rows = S.history[q.id];
-    fill(box, h('div', { class: 'sec-head' }, h('h2', null, 'HISTORIE ZMĚN'), h('div', { class: 'grow' }),
+    fill(box, h('div', { class: 'p-head' }, h('h2', null, 'Historie změn'), h('div', { class: 'grow' }),
       rows ? null : h('button', { class: 'btn small ghost', onclick: load }, 'Zobrazit')),
     rows ? (rows.length ? h('ul', { class: 'timeline' }, rows.map(r => h('li', null,
       h('div', { class: 'sub' }, fmtDT(r.at) + ' · ' + personName(r.by)), h('div', null, r.text)))) : note('Žádné záznamy.')) : null);
@@ -1092,7 +1267,7 @@ function adminBox(q) {
     const b = h('button', { class: 'btn ' + (cls || ''), onclick: () => { const d = F.read(); if (d) submit(b, 'apiAdmin', [q.id, code, d.reason, d.signer || ''], 1); } }, label);
     return b;
   };
-  return h('div', { class: 'card no-print' }, h('h2', null, 'SPRÁVA QRAP (MANAŽER)'),
+  return h('div', { class: 'card no-print' }, h('h2', null, 'Správa QRAP (manažer)'),
     h('div', { class: 'grid' }, reason, signer),
     h('div', { class: 'form-btns' },
       open && q.decision ? op('Odemknout ①–④ (zrušit rozhodnutí)', 'unlock') : null,
@@ -1597,56 +1772,92 @@ function barPath(x, y, w, hgt) {
     'Q' + (x + w) + ',' + y + ' ' + (x + w) + ',' + (y + r) + 'V' + (y + hgt) + 'Z';
 }
 
-/** New vs. closed QRAPs per week (last 8 weeks): grouped bars, legend, hover tooltip, table view. */
-function weekChart() {
-  const start = mondayOf(Date.now() - 7 * 7 * DAY);
-  const weeks = Array.from({ length: 8 }, (_, i) => {
-    const from = new Date(start.getTime() + i * 7 * DAY);
-    const to = new Date(from.getTime() + 7 * DAY);
-    const inW = iso => iso && new Date(iso) >= from && new Date(iso) < to;
-    return { label: shortD(from), range: shortD(from) + ' – ' + shortD(new Date(to.getTime() - DAY)),
-      created: S.qraps.filter(q => inW(q.created)).length, closed: S.qraps.filter(q => q.status === 'UZAVŘENO' && inW(q.closedAt)).length };
+/** Reported QRAPs per week or month: one green series, dashed average, hover tooltip (with closed), table view. */
+function trendChart() {
+  const months = S.dashPeriod === 'm';
+  const n = months ? 12 : 8;
+  const now = new Date();
+  const buckets = Array.from({ length: n }, (_, i) => {
+    let from, to, label, range;
+    if (months) {
+      from = new Date(now.getFullYear(), now.getMonth() - (n - 1 - i), 1);
+      to = new Date(from.getFullYear(), from.getMonth() + 1, 1);
+      label = MONTHS[from.getMonth()];
+      range = MONTHS_LONG[from.getMonth()] + ' ' + from.getFullYear();
+    } else {
+      from = new Date(mondayOf(now).getTime() - (n - 1 - i) * 7 * DAY);
+      to = new Date(from.getTime() + 7 * DAY);
+      label = shortD(from);
+      range = 'Týden ' + shortD(from) + ' – ' + shortD(new Date(to.getTime() - DAY));
+    }
+    const inB = iso => iso && new Date(iso) >= from && new Date(iso) < to;
+    return { label, range, created: S.qraps.filter(q => q.status !== 'ZRUŠENO' && inB(q.created)).length,
+      closed: S.qraps.filter(q => q.status === 'UZAVŘENO' && inB(q.closedAt)).length };
   });
-  const W = 1080, H = 240, L = 34, R = 8, T = 12, B = 28;
-  const max = Math.max(4, ...weeks.map(w => Math.max(w.created, w.closed)));
-  const top = Math.ceil(max / 4) * 4;
+  const total = buckets.reduce((m, b) => m + b.created, 0);
+  const closed = buckets.reduce((m, b) => m + b.closed, 0);
+  const avg = total / n;
+  const W = 760, H = 250, L = 30, R = 6, T = 12, B = 26;
+  const top = Math.ceil(Math.max(4, ...buckets.map(b => b.created)) / 4) * 4;
   const y = v => T + (H - T - B) * (1 - v / top);
-  const gw = (W - L - R) / weeks.length;
-  const bw = Math.min(22, (gw - 18) / 2);
+  const gw = (W - L - R) / n;
+  const bw = Math.min(30, gw * 0.42);
   const tip = h('div', { class: 'viz-tip', hidden: true });
-  const chart = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'viz', role: 'img', 'aria-label': 'Nové a uzavřené QRAP po týdnech' },
+  const chart = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'viz', role: 'img', 'aria-label': 'Nahlášené QRAP ' + (months ? 'po měsících' : 'po týdnech') },
     [0, 1, 2, 3, 4].map(i => {
       const v = top * i / 4;
       return [svg('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), class: 'viz-grid' }),
-        svg('text', { x: L - 6, y: y(v) + 4, class: 'viz-axis', 'text-anchor': 'end' }, String(v))];
+        svg('text', { x: L - 8, y: y(v) + 4, class: 'viz-axis', 'text-anchor': 'end' }, String(v))];
     }),
-    weeks.map((w, i) => {
+    buckets.map((b, i) => {
       const gx = L + i * gw;
-      const x1 = gx + (gw - (bw * 2 + 2)) / 2;
       const g = svg('g', { class: 'viz-group' },
         svg('rect', { x: gx, y: T, width: gw, height: H - T - B, class: 'viz-hit' }),
-        svg('path', { d: barPath(x1, y(w.created), bw, y(0) - y(w.created)), class: 'viz-s1' }),
-        svg('path', { d: barPath(x1 + bw + 2, y(w.closed), bw, y(0) - y(w.closed)), class: 'viz-s2' }),
-        svg('text', { x: gx + gw / 2, y: H - 9, class: 'viz-axis', 'text-anchor': 'middle' }, w.label));
-      g.addEventListener('mouseenter', e => {
-        fill(tip, h('b', null, 'Týden ' + w.range), h('div', null, h('i', { class: 'dot s1' }), 'Nové: ' + w.created),
-          h('div', null, h('i', { class: 'dot s2' }), 'Uzavřené: ' + w.closed));
+        svg('path', { d: barPath(gx + (gw - bw) / 2, y(b.created), bw, y(0) - y(b.created)), class: 'viz-bar' }),
+        svg('text', { x: gx + gw / 2, y: H - 9, class: 'viz-axis', 'text-anchor': 'middle' }, b.label));
+      g.addEventListener('mouseenter', () => {
+        fill(tip, h('b', null, b.range), h('div', null, h('span', null, h('i', { class: 'dot' }), 'Nahlášeno'), h('b', null, b.created)),
+          h('div', null, h('span', null, 'Uzavřeno'), h('b', null, b.closed)));
         tip.hidden = false;
-        tip.style.left = Math.min(78, (i + 0.5) / weeks.length * 100) + '%';
+        tip.style.left = Math.max(12, Math.min(86, (L + (i + 0.5) * gw) / W * 100)) + '%';
       });
       g.addEventListener('mouseleave', () => { tip.hidden = true; });
       return g;
     }),
+    avg > 0 ? svg('line', { x1: L, x2: W - R, y1: y(avg), y2: y(avg), class: 'viz-avg' }) : null,
     svg('line', { x1: L, x2: W - R, y1: y(0), y2: y(0), class: 'viz-base' }));
   const table = h('table', { class: 'roles', hidden: true },
-    h('tr', null, h('th', null, 'Týden'), h('th', null, 'Nové'), h('th', null, 'Uzavřené')),
-    weeks.map(w => h('tr', null, h('td', null, w.range), h('td', null, w.created), h('td', null, w.closed))));
-  const toggle = h('button', { class: 'link', onclick: () => { table.hidden = !table.hidden; box.hidden = !table.hidden; toggle.textContent = table.hidden ? 'Zobrazit tabulku' : 'Zobrazit graf'; } }, 'Zobrazit tabulku');
+    h('tr', null, h('th', null, months ? 'Měsíc' : 'Týden'), h('th', null, 'Nahlášeno'), h('th', null, 'Uzavřeno')),
+    buckets.map(b => h('tr', null, h('td', null, b.range), h('td', null, b.created), h('td', null, b.closed))));
   const box = h('div', { class: 'viz-box' }, chart, tip);
+  const toggle = h('button', { class: 'btn small', onclick: () => { table.hidden = !table.hidden; box.hidden = !table.hidden; toggle.textContent = table.hidden ? 'Zobrazit tabulku' : 'Zobrazit graf'; } }, 'Zobrazit tabulku');
+  const per = h('select', { style: 'width:auto;height:32px;font-size:13px', onchange: e => { S.dashPeriod = e.target.value; render(); } },
+    h('option', { value: 'w' }, 'Posledních 8 týdnů'), h('option', { value: 'm' }, 'Posledních 12 měsíců'));
+  per.value = months ? 'm' : 'w';
   return h('div', { class: 'card' },
-    h('div', { class: 'sec-head' }, h('h2', null, 'NOVÉ A UZAVŘENÉ QRAP – POSLEDNÍCH 8 TÝDNŮ'), h('div', { class: 'grow' }), toggle),
-    h('div', { class: 'legend' }, h('span', null, h('i', { class: 'dot s1' }), 'Nové'), h('span', null, h('i', { class: 'dot s2' }), 'Uzavřené')),
+    h('div', { class: 'p-head' }, h('h2', null, 'Nahlášené QRAP'), h('div', { class: 'grow' }), per, toggle),
+    h('div', { class: 'p-head' }, h('span', { class: 'big-n' }, total), h('span', { class: 'sub' }, 'nahlášeno · ' + closed + ' uzavřeno ve stejném období'),
+      h('div', { class: 'grow' }), h('div', { class: 'legend' }, h('span', null, h('i', { class: 'dot' }), 'Nahlášeno'), h('span', null, h('i', { class: 'dot avg' }), 'Průměr ' + avg.toFixed(1).replace('.', ',') + (months ? ' / měsíc' : ' / týden')))),
     box, table);
+}
+const MONTHS = ['led', 'úno', 'bře', 'dub', 'kvě', 'čvn', 'čvc', 'srp', 'zář', 'říj', 'lis', 'pro'];
+const MONTHS_LONG = ['Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen', 'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec'];
+
+/** One share as a ring (meter): ③ done within the deadline. */
+function onTimeDonut(ok, all) {
+  const r = 70, c = 2 * Math.PI * r;
+  const pct = all ? ok / all : 0;
+  return h('div', { class: 'card' },
+    h('div', { class: 'p-head' }, h('h2', null, 'Okamžitá opatření ③ včas')),
+    all ? [h('div', { class: 'donut-wrap' },
+      svg('svg', { viewBox: '0 0 180 180', class: 'donut', role: 'img', 'aria-label': Math.round(pct * 100) + ' % včas' },
+        svg('circle', { cx: 90, cy: 90, r: r, fill: 'none', stroke: 'var(--viz-track)', 'stroke-width': 22 }),
+        svg('circle', { cx: 90, cy: 90, r: r, fill: 'none', stroke: 'var(--viz)', 'stroke-width': 22, 'stroke-dasharray': (c * pct) + ' ' + c,
+          transform: 'rotate(-90 90 90)' })),
+      h('div', { class: 'donut-c' }, h('b', null, Math.round(pct * 100) + ' %'), h('span', null, 'do ' + hours3() + ' h'))),
+    h('ul', { class: 'd-legend' },
+      h('li', null, h('i', { class: 'dot' }), 'Včas (do ' + hours3() + ' h)', h('b', null, ok)),
+      h('li', null, h('i', { class: 'dot track' }), 'Po lhůtě', h('b', null, all - ok)))] : note('Zatím žádná data.'));
 }
 
 /** Horizontal bars for one series (one colour), value written next to each bar. */
@@ -1672,38 +1883,58 @@ function dashPage() {
   const avgDays = closed.length ? closed.reduce((m, q) => m + (new Date(q.closedAt) - new Date(q.when || q.created)) / DAY, 0) / closed.length : null;
   const withS3 = all.filter(q => q.s3Done);
   const s3in = withS3.filter(q => new Date(q.s3Done) - new Date(q.when || q.created) <= hours3() * 3600e3).length;
-  const tile = (n, label, filter, alert) => h('button', { class: 'tile' + (alert && n ? ' alert' : ''),
-    onclick: () => { S.filter = filter; S.search = ''; go('board'); } }, h('b', null, n), h('span', null, label));
-  const kpi = (value, label, sub) => h('div', { class: 'tile kpi' }, h('b', null, value), h('span', null, label), sub ? h('small', null, sub) : null);
+  const now = new Date();
+  const m0 = new Date(now.getFullYear(), now.getMonth(), 1), m1 = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const closedIn = (from, to) => closed.filter(q => new Date(q.closedAt) >= from && new Date(q.closedAt) < to).length;
+  const thisM = closedIn(m0, new Date(9e15)), lastM = closedIn(m1, m0);
+  const diff = thisM - lastM;
   const lateActs = S.actions.filter(a => a.part === '⑥' && actLate(a) && !a.removed);
   const byOwner = {};
   lateActs.forEach(a => { (byOwner[a.owner] = byOwner[a.owner] || []).push(a); });
-  const watch = open.filter(q => q.safety === 'ANO' || q.decision === 'ESKALACE');
+  const toBoard = f => () => { S.filter = f; S.search = ''; S.page = 0; go('board'); };
+  const stat = (ic, label, n, sub, onClick) => h(onClick ? 'button' : 'div', { class: 'stat', onclick: onClick || null },
+    h('div', { class: 'stat-top' }, ibox(ic), label), h('b', null, n), h('small', null, sub));
+
+  // "Čeká na vás" – a list with its own switch and search
+  const LISTS = {
+    approve: ['Čeká na uzavření', q => FILTERS.approve.test(q)],
+    watch: ['SAFETY a eskalace', q => q.safety === 'ANO' || q.decision === 'ESKALACE'],
+    late: ['Po termínu', isLate]
+  };
+  S.dashList = S.dashList || 'approve';
+  const tbody = h('tbody');
+  let words = '';
+  const drawRows = () => {
+    const rows = open.filter(LISTS[S.dashList][1]).filter(q => !words || haystack(q).includes(words)).sort(order);
+    fill(tbody, rows.length ? rows.map(rowEl) : h('tr', null, h('td', { colspan: COLUMNS.length, class: 'empty' }, 'Nic tu není.')));
+  };
+  const listSel = h('select', { style: 'width:auto;height:34px;font-size:13px', onchange: e => { S.dashList = e.target.value; drawRows(); } },
+    Object.keys(LISTS).map(k => h('option', { value: k }, LISTS[k][0] + ' (' + open.filter(LISTS[k][1]).length + ')')));
+  listSel.value = S.dashList;
+  drawRows();
+
   return h('div', null,
-    h('div', { class: 'hero' }, h('div', null, h('h1', null, 'Přehled'),
-      h('div', { class: 'sub' }, 'Data: ' + (S.all ? 'všechny QRAP' : 'otevřené + uzavřené za posledních ' + (S.cfg.ZOBRAZIT_UZAVRENE_DNI || 60) + ' dní'))),
-      S.all ? null : h('button', { class: 'btn', onclick: e => refresh(false, e.currentTarget, true) }, 'Načíst všechna data')),
-    h('div', { class: 'tiles tiles-6' },
-      tile(open.length, 'Otevřené', 'open'), tile(open.filter(isLate).length, 'Po termínu', 'late', true),
-      tile(open.filter(FILTERS.decide.test).length, 'Čeká na rozhodnutí', 'decide'),
-      tile(open.filter(FILTERS.approve.test).length, 'Čeká na manažera', 'approve'),
-      tile(open.filter(q => q.safety === 'ANO').length, 'SAFETY otevřené', 'open', true),
-      tile(open.filter(q => q.decision === 'ESKALACE').length, 'Eskalované', 'open')),
-    h('div', { class: 'tiles tiles-3' },
-      kpi(avgDays === null ? '–' : avgDays.toFixed(1).replace('.', ',') + ' dne', 'Průměrná doba do uzavření', closed.length + ' uzavřených QRAP'),
-      kpi(withS3.length ? Math.round(s3in / withS3.length * 100) + ' %' : '–', 'Okamžitá opatření ③ do ' + hours3() + ' h', s3in + ' z ' + withS3.length),
-      kpi(recent.filter(q => q.repeat7 === 'ANO').length, 'Opakované problémy (90 dní)', 'odpověď „Stejný problém v posledních 7 dnech“')),
-    weekChart(),
-    h('div', { class: 'cols2' },
-      barList('JAK BYL OBJEVEN (90 DNÍ)', count(recent, 'how'), label => { S.search = label; go('board'); }),
-      barList('PODLE ZÓNY (90 DNÍ)', count(recent, 'zone'), label => { S.area = label; S.filter = 'open'; go('board'); })),
-    h('div', { class: 'cols2' },
-      h('div', { class: 'card' }, h('h2', null, 'KONEČNÉ AKCE PO TERMÍNU'),
-        lateActs.length ? h('table', { class: 'roles' }, h('tr', null, h('th', null, 'Pilot'), h('th', null, 'Počet'), h('th', null, 'Nejstarší plán')),
+    pageHead('Přehled manažera', 'Data: ' + (S.all ? 'všechny QRAP' : 'otevřené + uzavřené za posledních ' + (S.cfg.ZOBRAZIT_UZAVRENE_DNI || 60) + ' dní'),
+      [S.all ? null : h('button', { class: 'btn', onclick: e => refresh(false, e.currentTarget, true) }, 'Načíst všechna data'),
+        h('button', { class: 'btn no-print', onclick: () => window.print() }, icon('print'), 'Tisk / PDF')], 'Přehled manažera'),
+    h('div', { class: 'stats' },
+      stat('inbox', 'Otevřené', open.length, open.filter(isLate).length + ' po termínu · ' + open.filter(q => q.safety === 'ANO').length + '× SAFETY', toBoard('open')),
+      stat('shield', 'Čeká na vás', open.filter(FILTERS.approve.test).length, 'uzavření manažerem', toBoard('approve')),
+      stat('done', 'Uzavřeno tento měsíc', thisM, [h('span', { class: 'chg' }, icon(diff >= 0 ? 'up' : 'down'), (diff > 0 ? '+' : '') + diff), 'vs. minulý měsíc']),
+      stat('clock', 'Průměrná doba uzavření', avgDays === null ? '–' : avgDays.toFixed(1).replace('.', ',') + ' dne', 'z ' + closed.length + ' uzavřených QRAP')),
+    h('div', { class: 'dash-row' }, trendChart(), onTimeDonut(s3in, withS3.length)),
+    h('div', { class: 'card', style: 'padding:0;overflow:hidden' },
+      h('div', { class: 'p-head', style: 'padding:16px 18px 0' }, h('h2', null, 'Čeká na vás'), listSel, h('div', { class: 'grow' }),
+        h('label', { class: 'search' }, icon('search'), h('input', { type: 'search', placeholder: 'Hledat…', oninput: e => { words = e.target.value.trim().toLowerCase(); drawRows(); } }))),
+      h('div', { class: 'tbl-scroll' }, h('table', { class: 'list' },
+        h('thead', null, h('tr', { class: 'head' }, COLUMNS.map(c => h('th', null, c[1])))), tbody))),
+    h('div', { class: 'cols3 dash' },
+      barList('Podle zóny (90 dní)', count(recent, 'zone'), label => { S.area = label; S.filter = 'open'; go('board'); }),
+      barList('Jak byl objeven (90 dní)', count(recent, 'how'), label => { S.search = label; go('board'); }),
+      h('div', { class: 'card' }, h('h2', null, 'Konečné akce po termínu'),
+        lateActs.length ? h('table', { class: 'people' }, h('tr', null, h('th', null, 'Pilot'), h('th', null, 'Počet'), h('th', null, 'Nejstarší plán')),
           Object.entries(byOwner).sort((a, b) => b[1].length - a[1].length).map(([o, list]) => h('tr', null, h('td', null, o), h('td', null, list.length),
-            h('td', null, fmtD(list.map(a => a.due).sort()[0]))))) : note('Žádné akce po termínu.')),
-      h('div', { class: 'card' }, h('h2', null, 'SAFETY A ESKALACE (OTEVŘENÉ)'),
-        watch.length ? h('div', { class: 'list flat' }, watch.map(rowEl)) : note('Nic otevřeného.'))));
+            h('td', null, fmtD(list.map(a => a.due).sort()[0]))))) : note('Žádné akce po termínu.'))));
 }
 
 // ------------------------------------------------------------------ 9b. SPRÁVA (admin only)
@@ -1751,7 +1982,7 @@ function adminPage() {
   function peopleCard() {
     const people = S.adm.people.slice().sort((a, b) => (b.active - a.active) || a.name.localeCompare(b.name, 'cs'));
     return h('div', { class: 'card' },
-      h('div', { class: 'sec-head' }, h('h2', null, 'LIDÉ A ROLE (' + people.length + ')'), h('div', { class: 'grow' }),
+      h('div', { class: 'p-head' }, h('h2', null, 'Lidé a role (' + people.length + ')'), h('div', { class: 'grow' }),
         S.edit === 'person:new' ? null : h('button', { class: 'btn small primary', onclick: () => { S.edit = 'person:new'; draw(); } }, '+ Přidat osobu')),
       S.edit === 'person:new' ? personForm(null) : null,
       h('div', { class: 'slots-wrap' }, h('table', { class: 'people' },
@@ -1764,7 +1995,7 @@ function adminPage() {
       h('p', { class: 'sub' }, 'Lidé se nemažou – nastavte „neaktivní“. Role: VEDOUCÍ (③ ④ ⑤ ⑥ ⑦), MANAŽER (navíc uzavírá QRAP a Přehled), ADMIN (navíc Správa), KIOSK (sdílený účet kiosku).'));
   }
   function listsCard() {
-    return h('div', { class: 'card' }, h('h2', null, 'SEZNAMY VE FORMULÁŘI'),
+    return h('div', { class: 'card' }, h('h2', null, 'Seznamy ve formuláři'),
       h('p', { class: 'sub' }, 'Jedna položka na řádek. Staré QRAP si ponechají původní hodnoty.'),
       h('div', { class: 'cols3' }, S.adm.lists.map(l => {
         const ta = h('textarea', { rows: Math.max(4, l.values.length + 1) });
@@ -1780,7 +2011,7 @@ function adminPage() {
       Object.keys(inputs).forEach(k => { o[k] = inputs[k].value.trim(); });
       call(b, 'apiSaveSettings', [o]);
     } }, 'Uložit nastavení');
-    return h('div', { class: 'card' }, h('h2', null, 'NASTAVENÍ'),
+    return h('div', { class: 'card' }, h('h2', null, 'Nastavení'),
       h('div', { class: 'grid' }, S.adm.settings.map(x => {
         const el = x.key === 'EMAILY' ? h('select', null, h('option', { value: 'ANO' }, 'ANO'), h('option', { value: 'NE' }, 'NE'))
           : h('input', { type: /^(LHUTA|ZOBRAZIT|KIOSK)/.test(x.key) ? 'number' : 'text', min: 1 });
@@ -1793,8 +2024,7 @@ function adminPage() {
   if (S.adm) draw();
   else api('apiAdminData').then(res => { S.adm = res; draw(); }).catch(e => { fill(box, note(errText(e))); });
   return h('div', null,
-    h('div', { class: 'hero' }, h('div', null, h('h1', null, 'Správa'),
-      h('div', { class: 'sub' }, 'Lidé, seznamy a nastavení aplikace. Změny platí hned (ostatní uživatelé po obnovení stránky).'))),
+    pageHead('Správa', 'Lidé, seznamy a nastavení aplikace. Změny platí hned (ostatní uživatelé po obnovení stránky).', null, 'Správa'),
     box);
 }
 
@@ -1810,23 +2040,24 @@ function helpPage() {
     ['Uzavřít QRAP (i „vyřešeno bez 5 Proč“)', no, no, yes],
     ['Zrušit / znovu otevřít / odemknout ①–④, Přehled', no, no, yes]
   ];
-  return h('div', { class: 'narrow' },
-    h('div', { class: 'hero' }, h('div', null, h('h1', null, 'Jak to funguje'),
-      h('div', { class: 'sub' }, 'Elektronická verze formuláře QRAP V3.0 pro sklad a expedici – stejné otázky ① až ⑦.'))),
-    h('div', { class: 'flow' },
-      h('div', null, h('b', null, 'Operátor'), h('span', { class: 'sub' }, '① popis + fotky, ② kdo byl upozorněn, ③ riziko ano/ne → Odeslat. Vedoucí zóny dostane e-mail.')),
-      h('div', null, h('b', null, 'TL / vedoucí'), h('span', { class: 'sub' }, '③ doplní okamžitá opatření do ' + hours3() + ' h, ④ informuje směny a podepíše rozhodnutí.')),
-      h('div', null, h('b', null, 'Piloti'), h('span', { class: 'sub' }, '⑤ 5 Proč a kořenová příčina, ⑥ konečné akce s termínem.')),
-      h('div', null, h('b', null, 'Ověření'), h('span', { class: 'sub' }, '⑥ efektivní na 5 různých směnách (zapisuje TL u tabule).')),
-      h('div', null, h('b', null, 'Manažer'), h('span', { class: 'sub' }, 'uzavře QRAP. ⑦ hodnocení QRQC.'))),
-    h('div', { class: 'card', style: 'margin-top:14px' }, h('h2', null, 'KDO CO MŮŽE'),
+  const flow = [
+    ['Operátor', '① popis + fotky, ② kdo byl upozorněn, ③ riziko ano/ne → Odeslat. Vedoucí zóny dostane e-mail.'],
+    ['TL / vedoucí', '③ doplní okamžitá opatření do ' + hours3() + ' h, ④ informuje směny a podepíše rozhodnutí.'],
+    ['Piloti', '⑤ 5 Proč a kořenová příčina, ⑥ konečné akce s termínem.'],
+    ['Ověření', '⑥ efektivní na 5 různých směnách (zapisuje TL u tabule).'],
+    ['Manažer', 'uzavře QRAP. ⑦ hodnocení QRQC.']
+  ];
+  return h('div', null,
+    pageHead('Jak to funguje', 'Elektronická verze formuláře QRAP V3.0 pro sklad a expedici – stejné otázky ① až ⑦.', null, 'Jak to funguje'),
+    h('div', { class: 'flow' }, flow.map((f, i) => h('div', null, h('span', { class: 'num' }, i + 1), h('b', null, f[0]), h('span', { class: 'sub' }, f[1])))),
+    h('div', { class: 'cols2' }, h('div', { class: 'card' }, h('h2', null, 'Kdo co může'),
       h('div', { class: 'slots-wrap' }, h('table', { class: 'roles' },
         h('tr', null, h('th', null, ''), h('th', null, 'Kdokoli'), h('th', null, 'Vedoucí'), h('th', null, 'Manažer')),
         rows.map(r => h('tr', null, r.map(c => h('td', null, c)))))),
       h('p', { class: 'sub', style: 'margin-top:10px' }, 'Vaše role: ' + (S.me.role === 'ADMIN' ? 'manažer' : (roleName(S.me.role) || 'běžný uživatel')).toLowerCase() + '.')),
-    h('div', { class: 'card' }, h('h2', null, 'KIOSK'),
+    h('div', { class: 'card' }, h('h2', null, 'Kiosk'),
       h('p', null, 'Na kiosku se dá udělat všechno. Kde je potřeba podpis (④, uzavření, ⑤ ⑥, ⑦), aplikace se zeptá „Kdo podepisuje?“ – napište své jméno a vyberte ho z nabídky. Aplikace ověří vaši roli a do historie zapíše vaše jméno a čas.'),
-      h('p', null, 'Po chvíli bez dotyku se kiosk sám vrátí na tabuli.')));
+      h('p', null, 'Po chvíli bez dotyku se kiosk sám vrátí na tabuli.'))));
 }
 
 async function refresh(quiet, btn, all) {
@@ -1866,7 +2097,7 @@ function startKiosk() {
 
 function start() {
   if (BOOT.error) {
-    fill(document.getElementById('app'), h('main', null, h('div', { class: 'narrow card' },
+    fill(document.getElementById('app'), h('main', null, h('div', { class: 'card' },
       h('h1', null, 'Aplikaci se nepodařilo spustit'), h('p', null, BOOT.error),
       h('p', { class: 'muted' }, 'Kontaktujte správce aplikace.'))));
     return;
