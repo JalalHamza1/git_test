@@ -418,4 +418,15 @@ head[head.indexOf('Zóna (přejmenováno)')] = '① KDE? – zóna';
 call('setup');
 eq(t.data[0].filter(x => x === '① KDE? – zóna').length, 1, 'setup does not duplicate headers');
 
+// ---------------------------------------------------------------- "Zobrazit jako" (owner only)
+as(MGR);
+throws(() => call('apiViewAs', 'VEDOUCÍ'), /vlastníka/, 'only the owner can switch view');
+as(OWNER);
+eq(call('apiViewAs', '-').me.role, '', 'owner seen as a normal user');
+throws(() => call('apiAdminData'), /jen pro admina/, '…and really without admin rights');
+eq(call('apiViewAs', 'MANAŽER').me.role, 'MANAŽER', 'owner seen as manager');
+eq(call('apiViewAs', '').me.role, 'ADMIN', 'back to admin');
+ok(call('apiAdminData').people.length > 0, 'admin rights back');
+
 console.log('ALL OK –', n, 'checks');
+

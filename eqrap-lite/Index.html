@@ -365,6 +365,7 @@ table.people { width: 100%; border-collapse: collapse; font-size: 14px; }
 .people th, .people td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 .people th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .people tr.inactive td { color: var(--muted); }
+.view-as { width: auto; padding: 6px 8px; font-size: 13px; border-color: var(--accent); }
 @media (max-width: 820px) {
   .hero-btn { width: 100%; }
   .row { grid-template-columns: 1fr auto; }
@@ -372,6 +373,57 @@ table.people { width: 100%; border-collapse: collapse; font-size: 14px; }
   .tiles-6, .tiles-3 { grid-template-columns: repeat(2, 1fr); }
   .cols2, .cols3 { grid-template-columns: 1fr; }
   .hbar { grid-template-columns: 110px 1fr 30px; }
+}
+
+/* ===== Form-card look (title bar · check-icon tabs · 3 columns · green call-to-action) ===== */
+input, select, textarea { border-radius: 4px; border-color: #d5dbe1; min-height: 42px; }
+textarea { min-height: 0; }
+input[type=checkbox], input[type=radio], input[type=file] { min-height: 0; }
+.fld-l { font-weight: 500; color: #4a5560; font-size: 13px; }
+.req { color: #e0413c; }
+.btn { border-radius: 4px; }
+.btn-cta { text-transform: uppercase; letter-spacing: .06em; padding: 13px 28px; font-size: 15px; min-width: 170px; }
+.btn-muted { background: #b7c0cc; border-color: #b7c0cc; color: #fff; text-transform: uppercase; letter-spacing: .06em; padding: 13px 26px; }
+.btn-muted:hover { background: #a3adba; }
+.shell { max-width: 1040px; margin: 0 auto; background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 2px 10px rgba(20, 40, 25, .06); overflow: hidden; }
+.shell-head { padding: 24px 28px 20px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.shell-head h1 { margin: 0; font-size: 26px; }
+.wiz-steps { display: flex; gap: 0; margin: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow-x: auto; }
+.wiz-step { flex: 1 0 auto; display: flex; align-items: center; gap: 8px; justify-content: flex-start; padding: 14px 18px; font-size: 14px; font-weight: 500;
+  color: #4a5560; border: 0; border-right: 1px solid var(--line); border-bottom: 3px solid transparent; background: #fff; white-space: nowrap; }
+.wiz-step:last-child { border-right: 0; }
+.wiz-step.done { color: #4a5560; border-bottom-color: transparent; }
+.wiz-step.on { color: var(--accent-d); background: var(--accent-s); border-bottom-color: var(--accent); }
+.wiz-ic { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid #9aa5b1; display: inline-grid; place-items: center; font-size: 11px; font-style: normal; flex: none; }
+.wiz-step.done .wiz-ic { border-color: var(--accent); color: var(--accent); }
+.wiz-step.on .wiz-ic { border-color: var(--accent); }
+.shell-body { padding: 26px 28px 8px; }
+.shell-sub { font-size: 19px; font-weight: 700; letter-spacing: 0; margin: 0 0 18px; text-transform: none; }
+.shell-note { color: var(--muted); font-size: 12px; margin: 22px 0 10px; }
+.shell-foot { display: flex; gap: 12px; align-items: center; padding: 18px 28px 26px; }
+.shell .sec { border: 0; box-shadow: none; margin: 0 0 6px; }
+.shell .sec .sec-head { background: transparent; border-bottom: 0; padding: 0 0 6px; }
+.shell .sec .sec-body { padding: 4px 0 8px; }
+.shell .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 22px; }
+.shell .sub-h { border-top: 0; padding-top: 6px; color: #2b343c; font-size: 13px; }
+/* detail: progress line with check circles */
+.tracker { display: flex; align-items: center; gap: 0; margin: 4px 0 18px; overflow-x: auto; padding: 4px 0; }
+.trk { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.trk:not(:last-child)::after { content: ''; width: 34px; height: 1px; background: #c9d2cc; margin: 0 10px; }
+.trk i { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid #b5c0b9; display: inline-grid; place-items: center; font-style: normal; font-size: 11px; color: #fff; }
+.trk.done i { background: var(--accent-d); border-color: var(--accent-d); }
+.trk.done { color: var(--text); }
+.trk.now i { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-s); }
+.trk.now { color: var(--accent-d); font-weight: 600; }
+@media (max-width: 820px) {
+  .shell .grid { grid-template-columns: 1fr; }
+  .shell-head, .shell-body, .shell-foot { padding-left: 16px; padding-right: 16px; }
+  .wiz-step span { display: none; }
+  .wiz-step { flex: 1; justify-content: center; padding: 12px 6px; }
+  .shell-foot { flex-wrap: wrap; }
+  .btn-cta, .btn-muted { min-width: 0; flex: 1; }
+  .trk span { display: none; }
+  .trk.now span { display: inline; }
 }
 </style>
 </head>
@@ -608,7 +660,27 @@ function header() {
       nav('Jak to funguje', 'help')),
     h('div', { class: 'grow' }),
     h('button', { class: 'btn primary', onclick: () => go('new') }, '+ Nahlásit problém'),
+    S.me.owner ? viewAsSelect() : null,
     who));
+}
+
+/** Owner only: "Zobrazit jako" – try the app as another role (the server enforces that role too). */
+function viewAsSelect() {
+  const sel = h('select', { class: 'view-as', title: 'Zobrazit aplikaci jako jiná role', onchange: async e => {
+    sel.disabled = true;
+    try {
+      const b = await api('apiViewAs', e.target.value);
+      Object.assign(S, { me: b.me, cfg: b.cfg, lists: b.lists, people: b.people, qraps: b.qraps, actions: b.actions,
+        effects: b.effects, assess: b.assess, all: false, kiosk: b.me.role === 'KIOSK', adm: null, edit: null });
+      document.body.classList.toggle('kiosk', S.kiosk);
+      toast(e.target.value ? 'Zobrazeno jako: ' + e.target.selectedOptions[0].textContent : 'Zpět jako Admin');
+      go('board');
+    } catch (err) { toast(errText(err), true); sel.disabled = false; }
+  } },
+  [['', 'Admin (vy)'], ['-', 'jako: běžný uživatel'], ['VEDOUCÍ', 'jako: vedoucí'], ['MANAŽER', 'jako: manažer'], ['KIOSK', 'jako: kiosk']]
+    .map(o => h('option', { value: o[0] }, o[1])));
+  sel.value = S.me.viewAs || '';
+  return sel;
 }
 
 // ------------------------------------------------------------------ 4. BOARD (TABULE = HOME)
@@ -769,9 +841,9 @@ function newPage() {
   let at = 0;
   const bar = h('div', { class: 'wiz-steps' });
   const body = h('div');
-  const back = h('button', { class: 'btn', onclick: () => show(at - 1) }, '← Zpět');
-  const next = h('button', { class: 'btn primary', onclick: () => { if (valid(at)) show(at + 1); } }, 'Další →');
-  const send = h('button', { class: 'btn primary', onclick: async () => {
+  const back = h('button', { class: 'btn ghost', onclick: () => show(at - 1) }, '← Zpět');
+  const next = h('button', { class: 'btn primary btn-cta', onclick: () => { if (valid(at)) show(at + 1); } }, 'Pokračovat →');
+  const send = h('button', { class: 'btn primary btn-cta', onclick: async () => {
     const data = pf.read();
     if (!data) return;
     const s3 = RF.read();
@@ -783,6 +855,7 @@ function newPage() {
     S.filter = 'open';
     go('board', null, true);
   } }, 'Odeslat ✓');
+  const titleEl = h('h2', { class: 'shell-sub' });
   function valid(i) {
     const st = steps[i];
     if (i === 5) return !!RF.read();
@@ -800,7 +873,8 @@ function newPage() {
     at = Math.max(0, Math.min(i, steps.length - 1));
     const last = at === steps.length - 1;
     fill(bar, steps.map((st, k) => h('button', { class: 'wiz-step' + (k < at ? ' done' : k === at ? ' on' : ''), type: 'button',
-      onclick: () => show(k) }, (k + 1) + '', h('span', null, ' ' + st.name))));
+      onclick: () => show(k) }, h('i', { class: 'wiz-ic' }, k < at ? '✓' : ''), h('span', null, st.name))));
+    titleEl.textContent = last ? 'Kontrola a odeslání' : 'Krok ' + (at + 1) + ' z ' + steps.length + ' · ' + steps[at].name;
     fill(body, last ? [h('p', { class: 'sub' }, 'Zkontrolujte údaje. Cokoli můžete ještě opravit přímo zde.')].concat(steps.slice(0, -1).map(st => st.el)) : steps[at].el);
     back.hidden = at === 0;
     next.hidden = last;
@@ -809,12 +883,14 @@ function newPage() {
     const f = body.querySelector('input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select');
     if (f && !last) f.focus({ preventScroll: true });
   }
-  const page = h('div', { class: 'narrow' },
-    h('div', { class: 'band' }, 'QR vyplňuje OPERÁTOR, který nalezl problém'),
-    h('div', { class: 'page-head' }, h('div', null, h('h1', null, 'Nový QRAP'),
-      h('div', { class: 'sub' }, 'Krok za krokem. Povinné údaje jsou označené hvězdičkou *.'))),
-    bar, body,
-    h('div', { class: 'wiz-nav' }, back, h('button', { class: 'btn ghost', onclick: () => go('board') }, 'Zrušit'), next, send));
+  const page = h('div', { class: 'shell' },
+    h('div', { class: 'shell-head' }, h('h1', null, 'Nový QRAP'),
+      h('span', { class: 'sub' }, 'QR vyplňuje OPERÁTOR, který nalezl problém')),
+    bar,
+    h('div', { class: 'shell-body' }, titleEl, body,
+      h('p', { class: 'shell-note' }, 'Povinné údaje jsou označené hvězdičkou (*). Po odeslání dostane vedoucí zóny e-mail.')),
+    h('div', { class: 'shell-foot' }, back, h('div', { class: 'grow' }),
+      h('button', { class: 'btn btn-muted', onclick: () => go('board') }, 'Zrušit'), next, send));
   show(0);
   return page;
 }
@@ -859,8 +935,8 @@ function steps(q) {
   if (q.status === 'ZRUŠENO') return null;
   const names = ['Nahlášeno', 'Opatření', 'Rozhodnutí', '5 Proč', 'Akce', 'Ověření 5 směn', 'Uzavřeno'];
   const at = { 'OPATŘENÍ': 1, 'ROZHODNUTÍ': 2, 'ANALÝZA': 3, 'AKCE': 4, 'OVĚŘENÍ': 5, 'SCHVÁLENÍ': 6, 'UZAVŘENO': 7 }[q.status] || 0;
-  return h('div', { class: 'steps no-print' }, names.map((n, i) =>
-    h('div', { class: 'step ' + (i < at ? 'done' : i === at ? 'now' : '') }, n)));
+  return h('div', { class: 'tracker no-print' }, names.map((n, i) =>
+    h('div', { class: 'trk ' + (i < at ? 'done' : i === at ? 'now' : '') }, h('i', null, i < at ? '✓' : ''), h('span', null, n))));
 }
 
 function nextBox(q) {

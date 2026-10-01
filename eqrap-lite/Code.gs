@@ -477,6 +477,20 @@ function apiAdmin(id, op, reason, signer) {
   });
 }
 
+/**
+ * "Zobrazit jako" – only the owner of the script: see and use the app exactly as another role.
+ * role: '' = back to ADMIN, '-' = běžný uživatel, or VEDOUCÍ / MANAŽER / KIOSK. Returns fresh start data.
+ */
+function apiViewAs(role) {
+  need_(me_().owner, 'Jen pro vlastníka aplikace.');
+  role = String(role || '');
+  need_(['', '-', 'VEDOUCÍ', 'MANAŽER', 'KIOSK'].indexOf(role) >= 0, 'Neplatná role.');
+  const props = PropertiesService.getScriptProperties();
+  if (role) props.setProperty('VIEW_AS', role); else props.deleteProperty('VIEW_AS');
+  ME_ = null;
+  return startData_({});
+}
+
 // ---- Správa (ADMIN only): people, lists and settings from the web page instead of the Sheet
 
 /** Everything the page "Správa" shows. */
@@ -688,8 +702,16 @@ function me_() {
   try { email = String(Session.getActiveUser().getEmail() || '').toLowerCase(); } catch (e) { email = ''; }
   const p = cfg_().people.filter(x => x.active && x.email && x.email === email)[0];
   let role = p ? p.role : '';
-  if (email && email === ownerEmail_()) role = 'ADMIN';
+  const owner = !!email && email === ownerEmail_();
+  let viewAs = '';
+  if (owner) {
+    // The owner is always ADMIN (so nobody can lock themselves out), unless "Zobrazit jako" is switched on.
+    viewAs = String(PropertiesService.getScriptProperties().getProperty('VIEW_AS') || '');
+    role = viewAs ? (viewAs === '-' ? '' : viewAs) : 'ADMIN';
+  }
   ME_ = person_(email, p ? p.name : (email ? email.split('@')[0] : ''), role, p ? p.area : '');
+  ME_.owner = owner;
+  ME_.viewAs = viewAs;
   return ME_;
 }
 

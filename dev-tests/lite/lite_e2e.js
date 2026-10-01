@@ -46,8 +46,8 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   // ---------------- new QRAP: ① ② ③ with the original questions
   await p.click('text=+ Nahlásit problém');
   await p.waitForSelector('.wiz-steps');
-  const nextStep = () => p.click('button:has-text("Další →")');
-  const onStep = async n => (await p.textContent('.wiz-step.on')).startsWith(String(n));
+  const nextStep = () => p.click('button:has-text("Pokračovat →")');
+  const onStep = async n => (await p.$$eval('.wiz-step', els => els.findIndex(e => e.classList.contains('on')))) === n - 1;
   await nextStep();
   await p.waitForSelector('.toast.bad');
   const msg = await p.textContent('#toast');
@@ -249,7 +249,7 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await K.waitForSelector('.row:not(.head)');
   check(await K.textContent('.who') === 'Kiosk', 'kiosk account → kiosk mode');
   await K.click('.hero-btn');
-  const kn = () => K.click('button:has-text("Další →")');
+  const kn = () => K.click('button:has-text("Pokračovat →")');
   await pick(K, 'SAFETY', 'NE');
   await K.selectOption(fld('JAK byl objeven') + ' select', 'inventura');
   await K.fill(fld('CO je za problém') + ' textarea', 'V krabici 48 ks místo 50');
