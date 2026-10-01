@@ -219,13 +219,13 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   check(true, 'manager reopen + cancel');
   // dashboard
   await M.click('header >> text=Přehled manažera');
-  await M.waitForSelector('svg.viz');
-  check((await M.$$('.hbar')).length > 0 && (await M.$$('.stats .stat')).length === 4, 'dashboard tiles and bars');
-  await M.hover('.viz-group >> nth=7');
-  check(await M.isVisible('.viz-tip') && /Nahlášeno/.test(await M.textContent('.viz-tip')), 'chart tooltip on hover');
+  await M.waitForSelector('.stats .stat');
+  check((await M.$$('.stats .stat')).length === 4 && !!(await M.$('svg.spark')), 'dashboard: four compact cards with a mini chart');
+  check((await M.$$('.tbl-wrap .row')).length >= 1, 'dashboard: open QRAP table is the main block');
+  check(!(await M.isVisible('.hbar')), 'more statistics are collapsed');
+  await M.click('summary:has-text("Další statistiky")');
+  check((await M.$$('.hbar')).length > 0, 'more statistics open on click');
   await M.screenshot({ path: SHOTS + '/10-dashboard.png', fullPage: true });
-  await M.click('text=Zobrazit tabulku');
-  check(await M.isVisible('.card table.roles'), 'chart has a table view');
   check(!(await M.$('nav >> text=Správa')), 'manager has no Správa');
   await M.click('text=Jak to funguje');
   await M.waitForSelector('table.roles');

@@ -16,6 +16,11 @@
   --bad: #b8322a; --warn: #8a5300;
   --viz: #4f9a2a; --viz-track: #e3e8e4;  /* chart: one green series, validated >= 3:1 on white */
   --r: 10px;
+  /* layout: flexible caps, side margins grow with the screen */
+  --gutter: clamp(16px, 4vw, 72px); --w-wide: 84rem; --w-mid: 72rem; --w-form: 56rem;
+  /* one spacing scale */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 64px;
+  --tap: 44px; --tap-s: 36px;
   --text: var(--ink); --muted: var(--ink-3);
 }
 * { box-sizing: border-box; }
@@ -39,7 +44,7 @@ button { font: inherit; cursor: pointer; color: inherit; }
 
 /* ---------- top bar ---------- */
 .top { background: #fff; border-bottom: 1px solid var(--line); border-top: 3px solid var(--accent); position: sticky; top: 0; z-index: 10; }
-.top-in { padding: 0 32px; height: 60px; display: flex; align-items: center; gap: 32px; }
+.top-in { width: 100%; max-width: calc(var(--w-wide) + 2 * var(--gutter)); margin: 0 auto; padding: 0 var(--gutter); height: 64px; display: flex; align-items: center; gap: 32px; }
 .brand { display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 0; font-weight: 700; font-size: 16px; color: var(--ink); }
 .logo { width: 30px; height: 30px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 15px; font-weight: 800; display: grid; place-items: center; }
 nav { display: flex; gap: 4px; height: 100%; }
@@ -50,7 +55,9 @@ nav { display: flex; gap: 4px; height: 100%; }
 .who { display: flex; flex-direction: column; line-height: 1.2; font-size: 13px; font-weight: 600; padding-left: 12px; border-left: 1px solid var(--line); }
 .who small { color: var(--ink-3); font-weight: 400; font-size: 12px; }
 .view-as { width: auto; height: 34px; min-height: 0; padding: 0 8px; font-size: 13px; }
-main { padding: 28px 32px 80px; }
+main { width: 100%; max-width: calc(var(--w-wide) + 2 * var(--gutter)); margin: 0 auto; padding: var(--s5) var(--gutter) var(--s7); }
+main.w-mid { max-width: calc(var(--w-mid) + 2 * var(--gutter)); }
+main.w-form { max-width: calc(var(--w-form) + 2 * var(--gutter)); }
 
 /* ---------- page head + breadcrumb ---------- */
 .crumbs { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--ink-3); margin-bottom: 10px; }
@@ -62,7 +69,7 @@ main { padding: 28px 32px 80px; }
 .head-btns { display: flex; gap: 10px; flex-wrap: wrap; }
 
 /* ---------- buttons ---------- */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 8px;
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--tap); height: auto; padding: 0 16px; border-radius: 8px;
   border: 1px solid var(--line-2); background: #fff; color: var(--ink); font-weight: 600; font-size: 14px; white-space: nowrap; }
 .btn:hover { background: var(--soft); border-color: var(--ink-3); }
 .btn:disabled { opacity: .5; cursor: default; }
@@ -71,10 +78,10 @@ main { padding: 28px 32px 80px; }
 .btn.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
 .btn.ghost { border-color: transparent; background: none; color: var(--ink-2); padding: 0 10px; }
 .btn.ghost:hover { color: var(--ink); background: var(--soft); }
-.btn.small { height: 32px; padding: 0 12px; font-size: 13px; }
+.btn.small { min-height: var(--tap-s); padding: 0 12px; font-size: 13px; }
 .btn.danger { color: var(--bad); }
-.btn-cta { height: 44px; padding: 0 24px; font-size: 15px; }
-.btn-muted { height: 44px; }
+.btn-cta { min-height: 48px; padding: 0 24px; font-size: 15px; }
+.btn-muted { min-height: 48px; }
 .hero-btn { height: 48px; padding: 0 26px; font-size: 16px; }
 body.kiosk .hero-btn { height: 64px; padding: 0 40px; font-size: 20px; }
 .link { background: none; border: 0; padding: 0; color: var(--accent-ink); font-weight: 600; }
@@ -91,10 +98,23 @@ body.kiosk .hero-btn { height: 64px; padding: 0 40px; font-size: 20px; }
 .fld-l { display: block; font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
 .req { color: var(--bad); font-weight: 400; }
 .fld small { display: block; font-size: 13px; color: var(--ink-3); margin-top: 6px; }
-input, select, textarea { width: 100%; height: 42px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 8px; background: #fff;
+.info { display: inline-grid; place-items: center; width: 28px; height: 28px; margin: -6px 0 -6px 4px; border-radius: 50%; color: var(--ink-3); cursor: pointer; vertical-align: middle; }
+.info:hover, .info.on { color: var(--accent-ink); background: var(--accent-soft); }
+.info .ico { width: 16px; height: 16px; }
+::placeholder { color: #9aa3ab; }
+details.more-stats > summary { cursor: pointer; font-weight: 600; color: var(--ink-2); padding: var(--s3) 0; list-style: none; min-height: var(--tap); display: flex; align-items: center; gap: var(--s2); }
+details.more-stats > summary::-webkit-details-marker { display: none; }
+details.more-stats[open] > summary .ico { transform: rotate(90deg); }
+.spark { display: block; width: 100%; height: 28px; margin-top: var(--s2); }
+.spark rect { fill: var(--viz); }
+.meter { height: 6px; background: var(--viz-track); border-radius: 3px; margin-top: var(--s3); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--viz); }
+.top-right .hide-board { }
+.stat b { font-size: 26px; }
+input, select, textarea { width: 100%; height: var(--tap); padding: 0 12px; border: 1px solid var(--line-2); border-radius: 8px; background: #fff;
   font: inherit; color: var(--ink); }
 textarea { height: auto; padding: 10px 12px; resize: vertical; line-height: 1.5; }
-input[type=checkbox], input[type=radio] { width: 18px; height: 18px; margin: 0; padding: 0; accent-color: var(--accent-ink); flex: none; }
+input[type=checkbox], input[type=radio] { width: 20px; height: 20px; margin: 0; padding: 0; accent-color: var(--accent-ink); flex: none; }
 input[type=file] { height: auto; border: 0; padding: 0; }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 input[type=checkbox]:focus, input[type=radio]:focus { box-shadow: none; }
@@ -127,8 +147,8 @@ input[type=checkbox]:focus-visible, input[type=radio]:focus-visible { outline: 2
 /* ---------- new QRAP: tab header + one panel ---------- */
 .shell { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
 .wiz-steps { display: block; background: var(--soft); border-bottom: 1px solid var(--line); overflow-x: auto; }
-.wiz-list { display: flex; min-width: max-content; }
-.wiz-step { flex: 1 1 0; display: flex; align-items: center; gap: 10px; min-width: 150px; padding: 16px 20px; background: none; border: 0;
+.wiz-list { display: flex; }
+.wiz-step { flex: 1 1 0; display: flex; align-items: center; gap: 8px; overflow: hidden; text-overflow: ellipsis; min-width: 0; min-height: 56px; padding: 0 14px; background: none; border: 0;
   border-right: 1px solid var(--line); border-bottom: 3px solid transparent; color: var(--ink-2); font-size: 14px; font-weight: 550; text-align: left; white-space: nowrap; }
 .wiz-step:last-child { border-right: 0; }
 .wiz-step .ico { width: 20px; height: 20px; color: var(--ink-3); }
@@ -166,10 +186,10 @@ button.stat:hover { border-color: var(--line-2); }
 .chg { display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--line-2); border-radius: 6px; padding: 0 6px; font-size: 12px; color: var(--ink-2); font-weight: 600; }
 .chg .ico { width: 12px; height: 12px; stroke-width: 2.4; }
 .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
-.toolbar select { width: auto; min-width: 150px; height: 38px; font-size: 14px; }
+.toolbar select { width: auto; min-width: 150px; font-size: 14px; }
 .search { position: relative; width: 340px; max-width: 100%; }
-.search .ico { position: absolute; left: 11px; top: 10px; color: var(--ink-3); }
-.search input { padding-left: 36px; height: 38px; font-size: 14px; }
+.search .ico { position: absolute; left: 11px; top: 50%; margin-top: -9px; color: var(--ink-3); }
+.search input { padding-left: 36px; font-size: 14px; }
 .tbl-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
 .tbl-scroll { overflow-x: auto; }
 table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -201,7 +221,7 @@ table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
 .tbl-foot { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-2); flex-wrap: wrap; }
 .tbl-foot select { width: auto; height: 32px; font-size: 13px; padding: 0 8px; }
 .pager { display: flex; gap: 6px; }
-.pager .btn { width: 32px; padding: 0; }
+.pager .btn { min-width: var(--tap-s); padding: 0; }
 .more { padding-top: 14px; font-size: 14px; color: var(--ink-3); }
 
 /* status words: plain text */
@@ -236,6 +256,7 @@ table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
 .band { font-size: 12px; font-weight: 700; color: var(--ink-3); margin: 26px 0 10px; text-transform: uppercase; letter-spacing: .06em; }
 .band:first-child { margin-top: 0; }
 .sec { padding: 0; overflow: hidden; }
+.d-main > .card { margin-bottom: var(--s3); }
 .sec-head { display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-bottom: 1px solid var(--line); }
 .sec-head h2 { font-size: 16px; text-transform: lowercase; }
 .sec-head h2::first-letter { text-transform: uppercase; }
@@ -355,9 +376,8 @@ table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
 
 /* ---------- kiosk: bigger touch targets ---------- */
 body.kiosk { font-size: 16px; }
-body.kiosk .btn { height: 46px; }
-body.kiosk .btn.small { height: 40px; }
-body.kiosk input, body.kiosk select { height: 48px; }
+body.kiosk { --tap: 52px; --tap-s: 44px; }
+
 
 /* ---------- tablet ---------- */
 @media (max-width: 1180px) {
@@ -616,7 +636,7 @@ const ICONS = {
   inbox: ['M4 13h4.5l1.5 2.5h4l1.5-2.5H20', 'M6.5 5h11L20 13v6H4v-6z'], user: ['c:12,8,4', 'M4.5 20.5c1.4-3.8 4.3-5.5 7.5-5.5s6.1 1.7 7.5 5.5'],
   clock: ['c:12,12,9', 'M12 7.5V12l3 2'], done: ['M5 12.5l4.5 4.5L19 7.5'], alert: ['M12 3.5l9 16H3z', 'M12 10v4.5', 'M12 17.3v.2'],
   search: ['c:11,11,7', 'M20.5 20.5L16 16'], chart: ['M4 20h16', 'M7 16v-5', 'M12 16V6', 'M17 16v-8'], print: ['M7 9V3.5h10V9', 'M7 17H4.5V10.5a1.5 1.5 0 0 1 1.5-1.5h12a1.5 1.5 0 0 1 1.5 1.5V17H17', 'M7 14h10v6.5H7z'],
-  plus: ['M12 5v14', 'M5 12h14'], sort: ['M8 9.5l4-4 4 4', 'M8 14.5l4 4 4-4'], up: ['M12 19V5', 'M6 11l6-6 6 6'], down: ['M12 5v14', 'M6 13l6 6 6-6'],
+  plus: ['M12 5v14', 'M5 12h14'], info: ['c:12,12,9', 'M12 11v5.5', 'M12 7.6v.2'], sort: ['M8 9.5l4-4 4 4', 'M8 14.5l4 4 4-4'], up: ['M12 19V5', 'M6 11l6-6 6 6'], down: ['M12 5v14', 'M6 13l6 6 6-6'],
   refresh: ['M19.5 12a7.5 7.5 0 1 1-2.2-5.3', 'M19.5 4v4.5H15'], left: ['M15 6l-6 6 6 6'], right: ['M9 6l6 6-6 6'], shield: ['M12 3l7.5 3v5.5c0 4.5-3.2 8-7.5 9.5-4.3-1.5-7.5-5-7.5-9.5V6z']
 };
 function icon(name) {
@@ -657,7 +677,8 @@ function edit(key) {
 function render() {
   const pages = { board: boardPage, new: newPage, detail: detailPage, help: helpPage, dash: dashPage, admin: adminPage };
   if ((S.view === 'dash' && !isManager()) || (S.view === 'admin' && !isAdmin())) S.view = 'board';
-  fill(document.getElementById('app'), header(), h('main', null, (pages[S.view] || boardPage)()));
+  const width = { new: 'w-form', admin: 'w-mid', help: 'w-mid', detail: 'w-mid' }[S.view] || '';
+  fill(document.getElementById('app'), header(), h('main', { class: width || null }, (pages[S.view] || boardPage)()));
 }
 
 function header() {
@@ -670,7 +691,7 @@ function header() {
     h('div', { class: 'grow' }),
     h('div', { class: 'top-right' },
       isManager() ? h('button', { class: 'btn btn-dash' + (S.view === 'dash' ? ' on' : ''), onclick: () => go('dash') }, icon('chart'), h('span', null, 'Přehled manažera')) : null,
-      h('button', { class: 'btn primary', onclick: () => go('new') }, '+ Nahlásit problém'),
+      S.view === 'board' ? null : h('button', { class: 'btn primary', onclick: () => go('new') }, '+ Nahlásit problém'),
       S.me.owner ? viewAsSelect() : null,
       who)));
 }
@@ -756,7 +777,7 @@ function boardPage() {
   const inRange = q => !S.range || Date.now() - new Date(q.when || q.created).getTime() <= Number(S.range) * DAY;
   const notes = {
     open: () => S.qraps.filter(q => isOpen(q) && q.safety === 'ANO').length + '× SAFETY',
-    mine: () => 'čeká na vás', decide: () => 'podepisuje vedoucí', approve: () => 'uzavírá manažer', late: () => 'nutno řešit hned',
+    mine: () => '', decide: () => '', approve: () => '', late: () => '',
     closed: () => 'za posledních ' + (S.cfg.ZOBRAZIT_UZAVRENE_DNI || 60) + ' dní'
   };
   const icons = { open: 'inbox', mine: 'user', decide: 'user', approve: 'shield', late: 'clock', closed: 'done' };
@@ -811,12 +832,11 @@ function boardPage() {
     oninput: e => { S.search = e.target.value; S.page = 0; draw(); } });
   draw();
 
-  const open = S.qraps.filter(isOpen);
   const flash = S.flash;
   S.flash = null;
   const cancelled = S.qraps.filter(FILTERS.cancelled.test).length;
   return h('div', null,
-    pageHead('Tabule QRAP', open.length + ' otevřených · ' + open.filter(isLate).length + ' po termínu · kliknutím na řádek otevřete formulář',
+    pageHead('Tabule QRAP', null,
       h('button', { class: 'btn primary hero-btn', onclick: () => go('new') }, '+ Nahlásit problém')),
     flash ? h('div', { class: 'flash' }, icon('check'), h('span', null, flash.text), h('div', { class: 'grow' }),
       flash.id && !S.kiosk ? h('button', { class: 'btn small', onclick: () => go('detail', flash.id) }, 'Otevřít ' + flash.id) : null) : null,
@@ -887,7 +907,7 @@ function newPage() {
   const steps = [
     { name: 'Problém', hint: '① Co se stalo a jak to bylo objeveno.', el: section(1, 'now', g(0)) },
     { name: 'Kdy a kde', hint: '① Kdy a kde byl problém nalezen.', el: section(1, 'now', g(1)) },
-    { name: 'Množství a kdo', hint: '① Kolik kusů, kdo problém našel a čísla materiálu / HU.', el: section(1, 'now', g(2, 3, 4)) },
+    { name: 'Množství', title: 'Množství a kdo', hint: '① Kolik kusů, kdo problém našel a čísla materiálu / HU.', el: section(1, 'now', g(2, 3, 4)) },
     { name: 'Fotky', hint: '① Vyfoťte ŠPATNÝ a SPRÁVNÝ stav.', el: section(1, 'now', g(5)), check: () => {
       const p = pf.photos.get();
       const d = pf.F.peek();
@@ -896,7 +916,7 @@ function newPage() {
     } },
     { name: 'Upozornění', hint: '② Kdo byl o problému upozorněn a kdo má dostat e-mail.', el: section(2, 'now', pf.two) },
     { name: 'Riziko', hint: '③ Jediná otázka pro operátora – zbytek doplní TL.', el: section(3, 'now', h('div', null, riskEl, h('p', { class: 'sub', style: 'margin-top:12px' },
-      'Ostatní okamžitá opatření ③ doplní TL / vedoucí do ' + hours3() + ' h od KDY.'))) },
+      'Zbytek ③ doplní TL do ' + hours3() + ' h.'))) },
     { name: 'Kontrola', hint: 'Zkontrolujte údaje. Cokoli můžete ještě opravit přímo zde.', el: null }
   ];
   let at = 0;
@@ -937,8 +957,7 @@ function newPage() {
     const last = at === steps.length - 1;
     fill(bar, steps.map((st, k) => h('button', { class: 'wiz-step' + (k < at ? ' done' : k === at ? ' on' : ''), type: 'button',
       title: (k + 1) + '. ' + st.name, onclick: () => show(k) }, icon(k < at ? 'check' : 'circle'), h('span', null, st.name))));
-    titleEl.textContent = (at + 1) + '. ' + (last ? 'Kontrola a odeslání' : steps[at].name);
-    hintEl.textContent = steps[at].hint;
+    titleEl.textContent = (at + 1) + '. ' + (last ? 'Kontrola a odeslání' : steps[at].title || steps[at].name);
     fill(body, last ? steps.slice(0, -1).map(st => h('div', { class: 'review-part' }, h('h3', null, st.name), st.el)) : steps[at].el);
     back.hidden = at === 0;
     next.hidden = last;
@@ -948,10 +967,10 @@ function newPage() {
     if (f && !last) f.focus({ preventScroll: true });
   }
   const page = h('div', null,
-    pageHead('Nový QRAP', 'Vyplňuje operátor, který problém našel. Povinné údaje jsou označené *.', null, 'Nový QRAP'),
+    pageHead('Nový QRAP', 'Povinné údaje jsou označené *.', null, 'Nový QRAP'),
     h('div', { class: 'shell' },
       h('nav', { class: 'wiz-steps', 'aria-label': 'Kroky' }, bar),
-      h('div', { class: 'shell-body' }, h('div', { class: 'shell-inner' }, titleEl, hintEl, body)),
+      h('div', { class: 'shell-body' }, h('div', { class: 'shell-inner' }, titleEl, body)),
       h('div', { class: 'shell-foot' }, back, h('div', { class: 'grow' }),
         h('button', { class: 'btn btn-muted', onclick: () => go('board') }, 'Zrušit'), next, send)));
   show(0);
@@ -991,10 +1010,7 @@ function detailPage() {
       h('aside', { class: 'd-side' }, h('div', { class: 'card' }, nextBox(q)),
         trk ? h('div', { class: 'card' }, h('h2', null, 'Průběh QRAP'), trk) : null),
       h('div', { class: 'd-main' },
-        h('div', { class: 'band' }, 'QR vyplňuje operátor, který nalezl problém'), sec1(q, pf), sec2(q, pf), sec3(q),
-        h('div', { class: 'band' }, 'Vyplňuje supervizor'), sec4(q),
-        h('div', { class: 'band' }, 'Vyplňují pověření pracovníci (piloti), na základě rozhodnutí supervizora'), sec5(q), sec6(q),
-        h('div', { class: 'band' }, 'Supervizor / manažer'), sec7(q),
+        sec1(q, pf), sec2(q, pf), sec3(q), sec4(q), sec5(q), sec6(q), sec7(q),
         historyBox(q), adminBox(q))));
 }
 
@@ -1296,9 +1312,20 @@ function makeForm(values) {
   const val = key => (values[key] === null || values[key] === undefined ? '' : values[key]);
   const hiddenNow = i => !i.box.isConnected || !!i.box.closest('[hidden]'); // not on screen = not checked now
   const wrap = (key, label, control, o) => {
+    // Hints: in a plain text field the hint is the placeholder (gone when typing);
+    // anywhere else it hides behind a small ⓘ next to the label – one tap shows one muted line.
+    const text = control.matches && control.matches('textarea, input:not([type]), input[type=text], input[type=email]') ? control : null;
+    let tip = null, info = null;
+    if (o.hint && text && !text.placeholder) text.placeholder = o.hint.replace(/\.$/, '');
+    else if (o.hint) {
+      tip = h('small', { hidden: true }, o.hint);
+      info = h('span', { class: 'info no-print', role: 'button', tabindex: 0, title: o.hint, 'aria-label': 'Nápověda',
+        onclick: e => { e.preventDefault(); tip.hidden = !tip.hidden; info.classList.toggle('on', !tip.hidden); },
+        onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') info.click(); } }, icon('info'));
+    }
     const el = h(o.group ? 'div' : 'label', { class: 'fld' + (o.wide ? ' wide' : '') },
-      label ? h('span', { class: 'fld-l' }, label, o.req ? h('span', { class: 'req' }, ' *') : null) : null,
-      control, o.hint ? h('small', null, o.hint) : null);
+      label ? h('span', { class: 'fld-l' }, label, o.req ? h('span', { class: 'req' }, ' *') : null, info) : null,
+      control, tip);
     items[key].box = el;
     const ok = () => el.classList.remove('invalid');
     el.addEventListener('input', ok);
@@ -1764,100 +1791,22 @@ function svg(tag, attrs, ...kids) {
 function mondayOf(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
 const shortD = d => d.getDate() + '. ' + (d.getMonth() + 1) + '.';
 
-/** Bars with a 4px rounded top, anchored to the baseline. */
-function barPath(x, y, w, hgt) {
-  const r = Math.min(4, w / 2, hgt);
-  if (hgt <= 0) return '';
-  return 'M' + x + ',' + (y + hgt) + 'V' + (y + r) + 'Q' + x + ',' + y + ' ' + (x + r) + ',' + y + 'H' + (x + w - r) +
-    'Q' + (x + w) + ',' + y + ' ' + (x + w) + ',' + (y + r) + 'V' + (y + hgt) + 'Z';
-}
-
-/** Reported QRAPs per week or month: one green series, dashed average, hover tooltip (with closed), table view. */
-function trendChart() {
-  const months = S.dashPeriod === 'm';
-  const n = months ? 12 : 8;
-  const now = new Date();
-  const buckets = Array.from({ length: n }, (_, i) => {
-    let from, to, label, range;
-    if (months) {
-      from = new Date(now.getFullYear(), now.getMonth() - (n - 1 - i), 1);
-      to = new Date(from.getFullYear(), from.getMonth() + 1, 1);
-      label = MONTHS[from.getMonth()];
-      range = MONTHS_LONG[from.getMonth()] + ' ' + from.getFullYear();
-    } else {
-      from = new Date(mondayOf(now).getTime() - (n - 1 - i) * 7 * DAY);
-      to = new Date(from.getTime() + 7 * DAY);
-      label = shortD(from);
-      range = 'Týden ' + shortD(from) + ' – ' + shortD(new Date(to.getTime() - DAY));
-    }
-    const inB = iso => iso && new Date(iso) >= from && new Date(iso) < to;
-    return { label, range, created: S.qraps.filter(q => q.status !== 'ZRUŠENO' && inB(q.created)).length,
-      closed: S.qraps.filter(q => q.status === 'UZAVŘENO' && inB(q.closedAt)).length };
+/** Reported QRAPs in the last 8 weeks as a tiny bar strip (one series; exact numbers in the tooltip). */
+function sparkline() {
+  const start = mondayOf(Date.now() - 7 * 7 * DAY);
+  const weeks = Array.from({ length: 8 }, (_, i) => {
+    const from = new Date(start.getTime() + i * 7 * DAY), to = new Date(from.getTime() + 7 * DAY);
+    return { from, n: S.qraps.filter(q => q.status !== 'ZRUŠENO' && q.created && new Date(q.created) >= from && new Date(q.created) < to).length };
   });
-  const total = buckets.reduce((m, b) => m + b.created, 0);
-  const closed = buckets.reduce((m, b) => m + b.closed, 0);
-  const avg = total / n;
-  const W = 760, H = 250, L = 30, R = 6, T = 12, B = 26;
-  const top = Math.ceil(Math.max(4, ...buckets.map(b => b.created)) / 4) * 4;
-  const y = v => T + (H - T - B) * (1 - v / top);
-  const gw = (W - L - R) / n;
-  const bw = Math.min(30, gw * 0.42);
-  const tip = h('div', { class: 'viz-tip', hidden: true });
-  const chart = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'viz', role: 'img', 'aria-label': 'Nahlášené QRAP ' + (months ? 'po měsících' : 'po týdnech') },
-    [0, 1, 2, 3, 4].map(i => {
-      const v = top * i / 4;
-      return [svg('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), class: 'viz-grid' }),
-        svg('text', { x: L - 8, y: y(v) + 4, class: 'viz-axis', 'text-anchor': 'end' }, String(v))];
-    }),
-    buckets.map((b, i) => {
-      const gx = L + i * gw;
-      const g = svg('g', { class: 'viz-group' },
-        svg('rect', { x: gx, y: T, width: gw, height: H - T - B, class: 'viz-hit' }),
-        svg('path', { d: barPath(gx + (gw - bw) / 2, y(b.created), bw, y(0) - y(b.created)), class: 'viz-bar' }),
-        svg('text', { x: gx + gw / 2, y: H - 9, class: 'viz-axis', 'text-anchor': 'middle' }, b.label));
-      g.addEventListener('mouseenter', () => {
-        fill(tip, h('b', null, b.range), h('div', null, h('span', null, h('i', { class: 'dot' }), 'Nahlášeno'), h('b', null, b.created)),
-          h('div', null, h('span', null, 'Uzavřeno'), h('b', null, b.closed)));
-        tip.hidden = false;
-        tip.style.left = Math.max(12, Math.min(86, (L + (i + 0.5) * gw) / W * 100)) + '%';
-      });
-      g.addEventListener('mouseleave', () => { tip.hidden = true; });
-      return g;
-    }),
-    avg > 0 ? svg('line', { x1: L, x2: W - R, y1: y(avg), y2: y(avg), class: 'viz-avg' }) : null,
-    svg('line', { x1: L, x2: W - R, y1: y(0), y2: y(0), class: 'viz-base' }));
-  const table = h('table', { class: 'roles', hidden: true },
-    h('tr', null, h('th', null, months ? 'Měsíc' : 'Týden'), h('th', null, 'Nahlášeno'), h('th', null, 'Uzavřeno')),
-    buckets.map(b => h('tr', null, h('td', null, b.range), h('td', null, b.created), h('td', null, b.closed))));
-  const box = h('div', { class: 'viz-box' }, chart, tip);
-  const toggle = h('button', { class: 'btn small', onclick: () => { table.hidden = !table.hidden; box.hidden = !table.hidden; toggle.textContent = table.hidden ? 'Zobrazit tabulku' : 'Zobrazit graf'; } }, 'Zobrazit tabulku');
-  const per = h('select', { style: 'width:auto;height:32px;font-size:13px', onchange: e => { S.dashPeriod = e.target.value; render(); } },
-    h('option', { value: 'w' }, 'Posledních 8 týdnů'), h('option', { value: 'm' }, 'Posledních 12 měsíců'));
-  per.value = months ? 'm' : 'w';
-  return h('div', { class: 'card' },
-    h('div', { class: 'p-head' }, h('h2', null, 'Nahlášené QRAP'), h('div', { class: 'grow' }), per, toggle),
-    h('div', { class: 'p-head' }, h('span', { class: 'big-n' }, total), h('span', { class: 'sub' }, 'nahlášeno · ' + closed + ' uzavřeno ve stejném období'),
-      h('div', { class: 'grow' }), h('div', { class: 'legend' }, h('span', null, h('i', { class: 'dot' }), 'Nahlášeno'), h('span', null, h('i', { class: 'dot avg' }), 'Průměr ' + avg.toFixed(1).replace('.', ',') + (months ? ' / měsíc' : ' / týden')))),
-    box, table);
-}
-const MONTHS = ['led', 'úno', 'bře', 'dub', 'kvě', 'čvn', 'čvc', 'srp', 'zář', 'říj', 'lis', 'pro'];
-const MONTHS_LONG = ['Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen', 'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec'];
-
-/** One share as a ring (meter): ③ done within the deadline. */
-function onTimeDonut(ok, all) {
-  const r = 70, c = 2 * Math.PI * r;
-  const pct = all ? ok / all : 0;
-  return h('div', { class: 'card' },
-    h('div', { class: 'p-head' }, h('h2', null, 'Okamžitá opatření ③ včas')),
-    all ? [h('div', { class: 'donut-wrap' },
-      svg('svg', { viewBox: '0 0 180 180', class: 'donut', role: 'img', 'aria-label': Math.round(pct * 100) + ' % včas' },
-        svg('circle', { cx: 90, cy: 90, r: r, fill: 'none', stroke: 'var(--viz-track)', 'stroke-width': 22 }),
-        svg('circle', { cx: 90, cy: 90, r: r, fill: 'none', stroke: 'var(--viz)', 'stroke-width': 22, 'stroke-dasharray': (c * pct) + ' ' + c,
-          transform: 'rotate(-90 90 90)' })),
-      h('div', { class: 'donut-c' }, h('b', null, Math.round(pct * 100) + ' %'), h('span', null, 'do ' + hours3() + ' h'))),
-    h('ul', { class: 'd-legend' },
-      h('li', null, h('i', { class: 'dot' }), 'Včas (do ' + hours3() + ' h)', h('b', null, ok)),
-      h('li', null, h('i', { class: 'dot track' }), 'Po lhůtě', h('b', null, all - ok)))] : note('Zatím žádná data.'));
+  const max = Math.max(1, ...weeks.map(w => w.n));
+  const W = 160, H = 28, gw = W / 8, bw = gw - 4;
+  return { total: weeks.reduce((m, w) => m + w.n, 0), el: svg('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'spark', preserveAspectRatio: 'none',
+    role: 'img', 'aria-label': 'Nahlášeno po týdnech: ' + weeks.map(w => w.n).join(', ') },
+    weeks.map((w, i) => {
+      const hgt = Math.max(2, w.n / max * H);
+      return svg('rect', { x: i * gw + 2, y: H - hgt, width: bw, height: hgt, rx: 1.5 },
+        svg('title', null, 'Týden od ' + shortD(w.from) + ': ' + w.n));
+    })) };
 }
 
 /** Horizontal bars for one series (one colour), value written next to each bar. */
@@ -1872,8 +1821,7 @@ function barList(title, pairs, onClick) {
 function dashPage() {
   const all = S.qraps.filter(q => q.status !== 'ZRUŠENO');
   const open = all.filter(isOpen);
-  const since = Date.now() - 90 * DAY;
-  const recent = all.filter(q => new Date(q.when || q.created).getTime() >= since);
+  const recent = all.filter(q => new Date(q.when || q.created).getTime() >= Date.now() - 90 * DAY);
   const count = (list, key) => {
     const m = {};
     list.forEach(q => { const k = q[key] || '–'; m[k] = (m[k] || 0) + 1; });
@@ -1883,58 +1831,59 @@ function dashPage() {
   const avgDays = closed.length ? closed.reduce((m, q) => m + (new Date(q.closedAt) - new Date(q.when || q.created)) / DAY, 0) / closed.length : null;
   const withS3 = all.filter(q => q.s3Done);
   const s3in = withS3.filter(q => new Date(q.s3Done) - new Date(q.when || q.created) <= hours3() * 3600e3).length;
-  const now = new Date();
-  const m0 = new Date(now.getFullYear(), now.getMonth(), 1), m1 = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const closedIn = (from, to) => closed.filter(q => new Date(q.closedAt) >= from && new Date(q.closedAt) < to).length;
-  const thisM = closedIn(m0, new Date(9e15)), lastM = closedIn(m1, m0);
-  const diff = thisM - lastM;
+  const pct = withS3.length ? Math.round(s3in / withS3.length * 100) : null;
   const lateActs = S.actions.filter(a => a.part === '⑥' && actLate(a) && !a.removed);
   const byOwner = {};
   lateActs.forEach(a => { (byOwner[a.owner] = byOwner[a.owner] || []).push(a); });
-  const toBoard = f => () => { S.filter = f; S.search = ''; S.page = 0; go('board'); };
-  const stat = (ic, label, n, sub, onClick) => h(onClick ? 'button' : 'div', { class: 'stat', onclick: onClick || null },
-    h('div', { class: 'stat-top' }, ibox(ic), label), h('b', null, n), h('small', null, sub));
-
-  // "Čeká na vás" – a list with its own switch and search
+  const spark = sparkline();
   const LISTS = {
+    open: ['Všechny otevřené', () => true],
     approve: ['Čeká na uzavření', q => FILTERS.approve.test(q)],
     watch: ['SAFETY a eskalace', q => q.safety === 'ANO' || q.decision === 'ESKALACE'],
     late: ['Po termínu', isLate]
   };
-  S.dashList = S.dashList || 'approve';
+  S.dashList = LISTS[S.dashList] ? S.dashList : 'open';
+  const pick = k => () => { S.dashList = k; listSel.value = k; drawRows(); };
+  const stat = (ic, label, n, extra, onClick) => h(onClick ? 'button' : 'div', { class: 'stat', onclick: onClick || null },
+    h('div', { class: 'stat-top' }, ibox(ic), label), h('b', null, n), extra);
+
   const tbody = h('tbody');
   let words = '';
   const drawRows = () => {
     const rows = open.filter(LISTS[S.dashList][1]).filter(q => !words || haystack(q).includes(words)).sort(order);
     fill(tbody, rows.length ? rows.map(rowEl) : h('tr', null, h('td', { colspan: COLUMNS.length, class: 'empty' }, 'Nic tu není.')));
   };
-  const listSel = h('select', { style: 'width:auto;height:34px;font-size:13px', onchange: e => { S.dashList = e.target.value; drawRows(); } },
+  const listSel = h('select', { style: 'width:auto', onchange: e => { S.dashList = e.target.value; drawRows(); } },
     Object.keys(LISTS).map(k => h('option', { value: k }, LISTS[k][0] + ' (' + open.filter(LISTS[k][1]).length + ')')));
   listSel.value = S.dashList;
   drawRows();
 
   return h('div', null,
-    pageHead('Přehled manažera', 'Data: ' + (S.all ? 'všechny QRAP' : 'otevřené + uzavřené za posledních ' + (S.cfg.ZOBRAZIT_UZAVRENE_DNI || 60) + ' dní'),
+    pageHead('Přehled manažera', null,
       [S.all ? null : h('button', { class: 'btn', onclick: e => refresh(false, e.currentTarget, true) }, 'Načíst všechna data'),
-        h('button', { class: 'btn no-print', onclick: () => window.print() }, icon('print'), 'Tisk / PDF')], 'Přehled manažera'),
+        h('button', { class: 'btn no-print', onclick: () => window.print() }, icon('print'), 'Tisk / PDF')]),
     h('div', { class: 'stats' },
-      stat('inbox', 'Otevřené', open.length, open.filter(isLate).length + ' po termínu · ' + open.filter(q => q.safety === 'ANO').length + '× SAFETY', toBoard('open')),
-      stat('shield', 'Čeká na vás', open.filter(FILTERS.approve.test).length, 'uzavření manažerem', toBoard('approve')),
-      stat('done', 'Uzavřeno tento měsíc', thisM, [h('span', { class: 'chg' }, icon(diff >= 0 ? 'up' : 'down'), (diff > 0 ? '+' : '') + diff), 'vs. minulý měsíc']),
-      stat('clock', 'Průměrná doba uzavření', avgDays === null ? '–' : avgDays.toFixed(1).replace('.', ',') + ' dne', 'z ' + closed.length + ' uzavřených QRAP')),
-    h('div', { class: 'dash-row' }, trendChart(), onTimeDonut(s3in, withS3.length)),
-    h('div', { class: 'card', style: 'padding:0;overflow:hidden' },
-      h('div', { class: 'p-head', style: 'padding:16px 18px 0' }, h('h2', null, 'Čeká na vás'), listSel, h('div', { class: 'grow' }),
+      stat('inbox', 'Otevřené', open.length, h('small', null, open.filter(isLate).length + ' po termínu'), pick('open')),
+      stat('shield', 'Čeká na vás', open.filter(FILTERS.approve.test).length, h('small', null, 'k uzavření'), pick('approve')),
+      stat('chart', 'Nahlášeno (8 týdnů)', spark.total, spark.el),
+      stat('clock', '③ do ' + hours3() + ' h', pct === null ? '–' : pct + ' %',
+        h('div', { class: 'meter', title: s3in + ' z ' + withS3.length + ' včas' }, h('i', { style: 'width:' + (pct || 0) + '%' })))),
+    h('div', { class: 'tbl-wrap' },
+      h('div', { class: 'p-head', style: 'padding:var(--s4) var(--s4) var(--s3);margin:0' }, h('h2', null, 'Otevřené QRAP'), listSel, h('div', { class: 'grow' }),
         h('label', { class: 'search' }, icon('search'), h('input', { type: 'search', placeholder: 'Hledat…', oninput: e => { words = e.target.value.trim().toLowerCase(); drawRows(); } }))),
       h('div', { class: 'tbl-scroll' }, h('table', { class: 'list' },
         h('thead', null, h('tr', { class: 'head' }, COLUMNS.map(c => h('th', null, c[1])))), tbody))),
-    h('div', { class: 'cols3 dash' },
-      barList('Podle zóny (90 dní)', count(recent, 'zone'), label => { S.area = label; S.filter = 'open'; go('board'); }),
-      barList('Jak byl objeven (90 dní)', count(recent, 'how'), label => { S.search = label; go('board'); }),
-      h('div', { class: 'card' }, h('h2', null, 'Konečné akce po termínu'),
-        lateActs.length ? h('table', { class: 'people' }, h('tr', null, h('th', null, 'Pilot'), h('th', null, 'Počet'), h('th', null, 'Nejstarší plán')),
-          Object.entries(byOwner).sort((a, b) => b[1].length - a[1].length).map(([o, list]) => h('tr', null, h('td', null, o), h('td', null, list.length),
-            h('td', null, fmtD(list.map(a => a.due).sort()[0]))))) : note('Žádné akce po termínu.'))));
+    h('details', { class: 'more-stats', style: 'margin-top:var(--s4)' },
+      h('summary', null, icon('right'), 'Další statistiky'),
+      h('div', { class: 'cols3' },
+        barList('Podle zóny (90 dní)', count(recent, 'zone'), label => { S.area = label; S.filter = 'open'; go('board'); }),
+        barList('Jak byl objeven (90 dní)', count(recent, 'how'), label => { S.search = label; go('board'); }),
+        h('div', { class: 'card' }, h('h2', null, 'Konečné akce po termínu'),
+          lateActs.length ? h('table', { class: 'people' }, h('tr', null, h('th', null, 'Pilot'), h('th', null, 'Počet'), h('th', null, 'Nejstarší plán')),
+            Object.entries(byOwner).sort((a, b) => b[1].length - a[1].length).map(([o, list]) => h('tr', null, h('td', null, o), h('td', null, list.length),
+              h('td', null, fmtD(list.map(a => a.due).sort()[0]))))) : note('Žádné akce po termínu.'),
+          h('p', { class: 'sub', style: 'margin-top:var(--s3)' }, 'Průměrná doba do uzavření: ' +
+            (avgDays === null ? '–' : avgDays.toFixed(1).replace('.', ',') + ' dne (' + closed.length + ' QRAP)'))))));
 }
 
 // ------------------------------------------------------------------ 9b. SPRÁVA (admin only)
