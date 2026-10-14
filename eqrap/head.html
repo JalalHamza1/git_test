@@ -1,4 +1,4 @@
-<!-- eQRAP · "Paper QRAP form" stylesheet, Valeo colours.
+<!-- eQRAP · "Paper QRAP form" stylesheet, green palette.
      In <head>, replace the old <style>…</style> block with everything below.
      Nothing else in the page changes. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -6,40 +6,41 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400..800;1,400..600&display=swap">
 <style>
 /* =====================================================================
-   eQRAP – "Paper QRAP form", Valeo colours
+   eQRAP – "Paper QRAP form", green palette
    The screen reads like the printed QRAP V3.0 sheet: ruled lines and
-   boxed fields in Valeo navy, light-blue bands, Valeo green as the accent
-   (active tab, primary button, current step). Red only for errors,
+   boxed fields in dark olive ink on off-white, sage bands, deep green as
+   the accent (active tab, primary button, current step). Red only for errors,
    SAFETY and late items.
    Square corners, no shadows, no gradients. Font: Public Sans.
    Change colours only here (:root).
    ===================================================================== */
 :root {
-  /* Valeo palette */
-  --paper:        #FFFFFF;  /* page background */
-  --band:         #E9F4FB;  /* Valeo light blue: header bands, table heads, sub-forms */
+  /* palette: #F1F2ED · #A2AC82 · #5B6D49 · #0C3C01 · #2E2D1D */
+  --paper:        #F1F2ED;  /* off-white: page background */
+  --band:         #E3E6D8;  /* light sage: header bands, table heads, sub-forms */
   --field:        #FFFFFF;  /* fill-in boxes */
-  --ink:          #003A70;  /* Valeo navy: text, frames, headings */
-  --ink-2:        #3D4D5C;  /* secondary text */
-  --ink-3:        #5F6B76;  /* muted text (5.4:1 on white) */
-  --rule:         #D9E2EA;  /* hairline ruling inside boxes */
-  --edge:         #8593A0;  /* field borders (3.2:1 on white) */
-  --placeholder:  #6B7682;
-  --blue:         #0067A3;  /* Valeo blue: charts, "in analysis" status */
-  /* interaction: blue tints */
-  --hover:        #EEF6FB;
-  --select:       #D5EAF6;
-  /* Valeo green: the accent (bars, active tab, primary button, current step) */
-  --accent:       #82E600;
-  --accent-hover: #74D100;
-  --accent-ink:   #3D7A00;  /* green dark enough for text on white */
+  --ink:          #2E2D1D;  /* dark olive-black: text, frames, headings */
+  --ink-2:        #47473A;  /* secondary text */
+  --ink-3:        #5F604E;  /* muted text (5.7:1 on paper) */
+  --rule:         #D3D6C6;  /* hairline ruling inside boxes */
+  --edge:         #8C9278;  /* field borders (3.2:1 on white) */
+  --placeholder:  #6A6C58;
+  --sage:         #A2AC82;  /* sage: primary button bar, decorative fills */
+  --blue:         #5B6D49;  /* olive: charts (name kept for the rules that use it) */
+  /* interaction: sage tints */
+  --hover:        #E8EADF;
+  --select:       #DCE2CC;
+  /* deep green: the accent (active tab, primary button, current step) */
+  --accent:       #0C3C01;
+  --accent-hover: #1A5209;
+  --accent-ink:   #0C3C01;  /* deep green as text */
   /* signals */
-  --red:          #C8102E;  /* errors, late, SAFETY only */
-  --red-soft:     #FBE7EA;
-  --ok:           #2E7A00;  /* success, done */
-  --ok-soft:      #EAF7DC;
-  --warn:         #8F5B00;  /* waiting, warning */
-  --warn-soft:    #FBF0D9;
+  --red:          #B3261E;  /* errors, late, SAFETY only */
+  --red-soft:     #F6E2DF;
+  --ok:           #2F6A1A;  /* success, done */
+  --ok-soft:      #E1EBD3;
+  --warn:         #8A5A00;  /* waiting, warning */
+  --warn-soft:    #F5ECD3;
 
   /* type scale (kiosk mode enlarges all of it) */
   --font: "Public Sans", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
@@ -86,9 +87,9 @@ p.muted { font-style: italic; }
   margin: 0 auto; padding: 0 var(--gutter); }
 .brand { display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: none; color: var(--ink);
   font-size: 18px; font-weight: 800; letter-spacing: -.01em; white-space: nowrap; }
-.logo { display: grid; place-items: center; width: 32px; height: 32px; border: 2.5px solid var(--accent); color: var(--ink);
+.logo { display: grid; place-items: center; width: 32px; height: 32px; border: 2.5px solid var(--accent); color: var(--accent);
   font-size: 17px; font-weight: 800; line-height: 1; }
-.brand:hover .logo { background: var(--accent); color: var(--ink); }
+.brand:hover .logo { background: var(--accent); color: var(--paper); }
 .top nav { display: flex; align-self: stretch; gap: var(--s1); }
 .nav { position: relative; display: flex; align-items: center; padding: 0 14px; border: 0; background: none; color: var(--ink-2);
   font-size: var(--t-micro); font-weight: 800; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
@@ -127,14 +128,14 @@ main.w-form { max-width: calc(var(--w-form) + 2 * var(--gutter)); }
 .btn:hover { background: var(--hover); }
 .btn:active { transform: translateY(1px); }
 /* primary: solid ink with the red underline bar */
-.btn.primary { padding-bottom: 4px; border-color: var(--accent); background: var(--accent); color: var(--ink); box-shadow: inset 0 -4px 0 var(--ink);
+.btn.primary { padding-bottom: 4px; border-color: var(--accent); background: var(--accent); color: var(--paper); box-shadow: inset 0 -4px 0 var(--sage);
   font-size: var(--t-small); letter-spacing: .07em; text-transform: uppercase; }
-.btn.primary:hover { border-color: var(--accent-hover); background: var(--accent-hover); box-shadow: inset 0 -6px 0 var(--ink); }
-.btn.primary:active { box-shadow: inset 0 -2px 0 var(--ink); }
+.btn.primary:hover { border-color: var(--accent-hover); background: var(--accent-hover); box-shadow: inset 0 -6px 0 var(--sage); }
+.btn.primary:active { box-shadow: inset 0 -2px 0 var(--sage); }
 .btn.ghost { padding-left: 12px; padding-right: 12px; border-color: transparent; background: transparent; color: var(--ink-2); }
 .btn.ghost:hover { background: var(--hover); color: var(--ink); }
 .btn.small { gap: 6px; min-height: var(--tap-s); padding-left: 12px; padding-right: 12px; font-size: var(--t-small); }
-.btn.small.primary { padding-bottom: 3px; box-shadow: inset 0 -3px 0 var(--ink); font-size: var(--t-micro); }
+.btn.small.primary { padding-bottom: 3px; box-shadow: inset 0 -3px 0 var(--sage); font-size: var(--t-micro); }
 .btn.small .ico { width: 16px; height: 16px; }
 .btn.danger { border-color: var(--red); color: var(--red); }
 .btn.danger:hover { background: var(--red-soft); }
@@ -174,7 +175,7 @@ input, select, textarea { width: 100%; height: var(--tap); margin: 0; padding: 0
   background-color: var(--field); color: var(--ink); font: inherit; font-size: var(--t-body); }
 input:not([type]), input[type=text], input[type=search], input[type=email], textarea, select { -webkit-appearance: none; appearance: none; }
 select { padding-right: 40px; text-overflow: ellipsis; cursor: pointer; background-repeat: no-repeat; background-position: right 12px center; background-size: 15px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23003A70' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); }
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232E2D1D' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); }
 textarea { height: auto; padding: 10px 12px; line-height: 1.5; resize: vertical; }
 input[type=file] { height: auto; padding: 0; border: 0; background: none; }
 ::placeholder { color: var(--placeholder); font-style: italic; opacity: 1; }
@@ -289,7 +290,7 @@ button.stat:hover { background: var(--hover); }
 .stat.on .stat-top { color: var(--ink); }
 .ibox { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border: 1px solid var(--ink); color: var(--ink); }
 .ibox .ico { width: 16px; height: 16px; }
-.stat.on .ibox { border-color: var(--accent); background: var(--accent); color: var(--ink); }
+.stat.on .ibox { border-color: var(--accent); background: var(--accent); color: var(--paper); }
 .stat b { font-size: var(--t-stat); font-weight: 800; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
 .stat small { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 18px; color: var(--ink-3); font-size: calc(var(--t-small) - 1px); }
 
@@ -347,7 +348,7 @@ table.list { width: 100%; border-collapse: collapse; font-size: calc(var(--t-bod
 .badge.ok { background: var(--ok-soft); color: var(--ok); }
 .badge.bad { background: var(--red-soft); color: var(--red); }
 .badge.warn { background: var(--warn-soft); color: var(--warn); }
-.badge.info { background: var(--select); color: var(--blue); }
+.badge.info { background: var(--select); color: var(--accent-ink); }
 .badge.muted { border-style: dashed; color: var(--ink-3); }
 .tag { display: inline-block; padding: 3px 6px 2px; background: var(--ink); color: var(--paper); font-size: calc(var(--t-micro) - 1.5px);
   font-weight: 800; line-height: 1.3; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; vertical-align: middle; }
@@ -391,7 +392,7 @@ table.list { width: 100%; border-collapse: collapse; font-size: calc(var(--t-bod
   font-size: calc(var(--t-body) - 1px); font-weight: 800; font-variant-numeric: tabular-nums; }
 .sec.now { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .sec.now .sec-head { border-bottom-color: var(--accent); }
-.sec.now .num { border-color: var(--accent); background: var(--accent); color: var(--ink); }
+.sec.now .num { border-color: var(--accent); background: var(--accent); color: var(--paper); }
 .sec.wait, .sec.skip { border-color: var(--edge); }
 .sec.wait .sec-head, .sec.skip .sec-head { border-bottom-color: var(--rule); background: transparent; }
 .sec.wait .num, .sec.skip .num { border-style: dashed; border-color: var(--edge); color: var(--ink-3); }
@@ -456,7 +457,7 @@ table.list { width: 100%; border-collapse: collapse; font-size: calc(var(--t-bod
 .pslot.wrong .ph:has(img) { border: 3px solid var(--red); }
 .pslot.right .ph:has(img) { border: 3px solid var(--ok); }
 .ph img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.lightbox { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(0, 58, 112, .92); cursor: zoom-out; }
+.lightbox { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(46, 45, 29, .92); cursor: zoom-out; }
 .lightbox img { max-width: 94vw; max-height: 94vh; border: 6px solid var(--paper); }
 /* change history */
 .timeline { margin: 0; padding: 0 0 0 5px; list-style: none; }
