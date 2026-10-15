@@ -88,7 +88,7 @@ The app is two files: **`Code.gs`** (server) and **`Index.html`** (everything yo
 - **Search** looks in the QRAP number, CO, the descriptions of the wrong and good part, part / HU / delivery note numbers, supplier and zone.
 - **Filters:** Stav (including Čeká na rozhodnutí, Čeká na manažera and, for managers, Zrušené), Zóna, Období (24 h, 7 or 30 days).
 - **Zobrazení: "Formulář QRAP" (default) or "Tabulka".** The choice is remembered on each device.
-  - **Formulář QRAP:** one clean header row at the top (who fills what and the block titles ①–⑦), then one paper strip per QRAP. Above each strip is the number, the status, who it waits for, and "po termínu!" when late. The block that is next (for example ③ or ④) has a **red** frame. Long texts are shortened; click the strip to open the full form.
+  - **Formulář QRAP:** a small bordered header at the top (who fills what, and the block titles ①–⑦ each above its column), then one paper strip per QRAP. Above each strip is the number, the status, who it waits for, and "po termínu!" when late. The block that is next (for example ③ or ④) has a **red** frame. Long texts are shortened; click the strip to open the full form.
   - **Tabulka:** the compact table (Číslo · Problém · Kde · Kdy · Nahlásil · Stav · Krok ①–⑦), sortable by clicking a column header.
   - Both views have page buttons and a "rows per page" setting at the bottom.
 - **"Moje konečné akce"** appears above the list when you are the pilot of an open action.
