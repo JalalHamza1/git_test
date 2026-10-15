@@ -666,6 +666,25 @@ body.kiosk .toolbar select, body.kiosk .toolbar .btn, body.kiosk .toolbar .layou
 .paper.big .pp-ctt .c2 { font-size: 12.5px; }
 @media print { .paper .pp-ctt > div { font-size: 10px; } .paper .pp-cwho > div { font-size: 8px; } }
 
+/* ---------- the paper header as on the paper (arrows + grey titles), a little tidier ---------- */
+.pp-bands { margin-bottom: 6px; align-items: stretch; }
+.pp-band { display: flex; align-items: center; justify-content: center; background: #eceeef; border: 0; color: var(--ink-2);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
+  padding: 5px 20px 5px 10px; font-size: 11px; line-height: 1.3; text-align: center; white-space: normal; overflow: visible; }
+.pp-band b { text-transform: none; letter-spacing: 0; color: var(--ink); font-weight: 700; }
+.pp-band.dark { background: var(--pp-dark); color: #fff; border: 0; }
+.pp-band.dark b { color: #fff; }
+.paper.compact .pp-band { font-size: 10px; padding: 3px 15px 3px 6px; }
+.pp-heads { margin-bottom: 8px; align-items: stretch; }
+.pp-h { padding: 8px 10px; line-height: 1.08; }
+.pp-h .big { font-size: 22px; text-wrap: balance; }
+.pp-h .mid { font-size: 14px; text-wrap: balance; }
+.paper.compact .pp-h { padding: 6px 6px; }
+.paper.compact .pp-h .big { font-size: 15px; }
+.paper.compact .pp-h .mid, .paper.compact .pp-h.g4 { font-size: 11.5px; }
+.paper.compact .pp-h.g2 small { font-size: 11.5px; }
+.paper.compact .pp-h.g4 small { font-size: 9.5px; }
+
 /* ---------- toast ---------- */
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 8px;
   font-size: 14px; font-weight: 500; z-index: 60; max-width: 92vw; }
@@ -1326,14 +1345,21 @@ const ppBox = (label, value, cls) => h('div', { class: 'pp-box' + (cls ? ' ' + c
   h('div', { class: 'pp-v' }, value === '' || value === null || value === undefined ? h('span', { class: 'pp-empty' }, '……') : value));
 const ppText = t => (t ? h('div', { class: 'pp-txt' }, t) : h('span', { class: 'pp-empty' }, '……'));
 
-/** The header above the paper form (board and QRAP page): who fills what (top row) and the block titles ①–⑦, each above its column. */
-function paperHeadCompact() {
-  const titles = ['① Popis problému', '② Upozornění', '③ Okamžitá opatření <24h', '④ Rozhodnutí OJT', '⑤ Příčina 5 Proč?',
-    '⑥ Konečné akce', '⑦ Hodnocení QRQC'].map(t => t.replace(' ', '\u00a0')); // the number stays with its first word
-  return h('div', { class: 'pp-chead' },
-    h('div', { class: 'pp-row pp-cwho' }, h('div', { class: 'g1' }, 'Vyplňuje operátor'), h('div', { class: 'g2' }, 'Supervizor'),
-      h('div', { class: 'g3' }, 'Pověření pracovníci'), h('div', { class: 'g4' }, 'Supervizor / manažer')),
-    h('div', { class: 'pp-row pp-ctt' }, titles.map((t, i) => h('div', { class: 'c' + (i + 1), title: i === 1 ? 'Kdo byl upozorněn?' : t.replace('\u00a0', ' ') }, t))));
+/** The two header rows of the paper form (who fills what + the big titles), as on the paper – board and QRAP page. */
+function paperHead() {
+  return [
+    h('div', { class: 'pp-row pp-bands' },
+      h('div', { class: 'pp-band g1' }, h('span', null, 'QR vyplňuje ', h('b', null, 'OPERÁTOR'), ', který nalezl problém')),
+      h('div', { class: 'pp-band g2 dark' }, h('span', null, 'Vyplňuje ', h('b', null, 'Supervizor'))),
+      h('div', { class: 'pp-band g3' }, h('span', null, 'Vyplňují ', h('b', null, 'pověření pracovníci'), ', na základě rozhodnutí Supervizora')),
+      h('div', { class: 'pp-band g4 dark' }, h('span', null, h('b', null, 'Supervizor / Manažer')))),
+    h('div', { class: 'pp-row pp-heads' },
+      h('div', { class: 'pp-h g1' }, h('div', { class: 'big' }, 'Popis problému'), h('div', { class: 'mid' }, 'Kdo byl upozorněn?'),
+        h('div', { class: 'big' }, 'Okamžitá opatření <24h')),
+      h('div', { class: 'pp-h g2' }, h('div', null, h('small', null, 'Rozhodnutí'), h('div', { class: 'big' }, 'OJT'))),
+      h('div', { class: 'pp-h g3' }, h('div', { class: 'big' }, 'Příčina 5 Proč ?'), h('div', { class: 'big' }, 'Konečné akce')),
+      h('div', { class: 'pp-h g4' }, h('div', null, 'Hodnocení QRQC', h('small', null, 'alespoň na jednom problému denně'))))
+  ];
 }
 
 /**
@@ -1470,7 +1496,7 @@ const whyLabel = k => (k === 'STD' ? 'standard' : /^O\d$/.test(k) ? k[1] + '. Pr
 
 /** The board: the paper header once, then one paper strip per QRAP. */
 function paperList(rows) {
-  return h('div', { class: 'pp-wrap' }, h('div', { class: 'paper compact' }, paperHeadCompact(),
+  return h('div', { class: 'pp-wrap' }, h('div', { class: 'paper compact' }, paperHead(),
     rows.map(q => {
       const st = STATUS[q.status] || {};
       const open = () => go('detail', q.id);
@@ -1497,7 +1523,7 @@ function detailPage() {
           .filter(x => x[1]).map(x => h('span', null, h('i', null, x[0]), x[1])))),
       h('button', { class: 'btn no-print', onclick: () => window.print() }, icon('print'), 'Tisk / PDF')),
     nextBar(q),
-    h('div', { class: 'pp-wrap' }, h('div', { class: 'paper big' + (inline ? ' edit-c' + inline.cell : '') }, paperHeadCompact(), paperBody(q, true, inline))),
+    h('div', { class: 'pp-wrap' }, h('div', { class: 'paper big' + (inline ? ' edit-c' + inline.cell : '') }, paperHead(), paperBody(q, true, inline))),
     editorPanel(q),
     actionsPanel(q),
     q.status === 'OVĚŘENÍ' ? h('div', { class: 'card no-print' }, effectBox(q)) : null,

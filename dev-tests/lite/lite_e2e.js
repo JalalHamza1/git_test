@@ -148,7 +148,7 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await p.goBack();
   await p.waitForSelector('.stats');
   check(true, 'browser back → board');
-  check((await p.$$('.strip')).length >= 4 && !!(await p.$('.pp-chead')), 'board = paper strips under one clean header row');
+  check((await p.$$('.strip')).length >= 4 && !!(await p.$('.pp-heads')), 'board = paper strips under the paper header');
   await p.screenshot({ path: SHOTS + '/01-board-paper.png', fullPage: true });
   await p.setViewportSize({ width: 1920, height: 1000 });
   await p.screenshot({ path: SHOTS + '/01c-board-1920.png' });

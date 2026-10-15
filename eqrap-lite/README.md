@@ -88,7 +88,7 @@ The app is two files: **`Code.gs`** (server) and **`Index.html`** (everything yo
 - **Search** looks in the QRAP number, CO, the descriptions of the wrong and good part, part / HU / delivery note numbers, supplier and zone.
 - **Filters:** Stav (including Čeká na rozhodnutí, Čeká na manažera and, for managers, Zrušené), Zóna, Období (24 h, 7 or 30 days).
 - **Zobrazení: "Formulář QRAP" (default) or "Tabulka".** The choice is remembered on each device.
-  - **Formulář QRAP:** a small bordered header at the top (who fills what, and the block titles ①–⑦ each above its column), then one paper strip per QRAP. Above each strip is the number, the status, who it waits for, and "po termínu!" when late. The block that is next (for example ③ or ④) has a **red** frame. Long texts are shortened; click the strip to open the full form.
+  - **Formulář QRAP:** the paper's header once at the top (arrow bands with who fills what, and the grey titles ①–⑦), then one paper strip per QRAP. Above each strip is the number, the status, who it waits for, and "po termínu!" when late. The block that is next (for example ③ or ④) has a **red** frame. Long texts are shortened; click the strip to open the full form.
   - **Tabulka:** the compact table (Číslo · Problém · Kde · Kdy · Nahlásil · Stav · Krok ①–⑦), sortable by clicking a column header.
   - Both views have page buttons and a "rows per page" setting at the bottom.
 - **"Moje konečné akce"** appears above the list when you are the pilot of an open action.
@@ -130,7 +130,7 @@ The app is two files: **`Code.gs`** (server) and **`Index.html`** (everything yo
 - **At the top:** the breadcrumb (Tabule / Q-…), the number, the status, SAFETY / ESKALACE marks, and the **Tisk / PDF** button.
 - **Další krok** bar: what has to happen next, who does it, what is missing, the deadline, and the main button for you (for example **Doplnit ③**, **Rozhodnout ④**, **Vyplnit 5 Proč ⑤**, **+ Přidat konečnou akci ⑥**).
 - **The paper form**, exactly in the paper's layout:
-  - a clean header: who fills what (operátor · supervizor · pověření pracovníci · supervizor / manažer) and the titles ①–⑦ above their blocks
+  - the paper's header: arrow bands with who fills what ("QR vyplňuje OPERÁTOR…", "Vyplňuje Supervizor", "Vyplňují pověření pracovníci…", "Supervizor / Manažer") and the grey title blocks ①–⑦
   - ① Popis problému (N°, SAFETY, CO a JAK, KDY, KDE, KOLIK, Stejný problém, JMÉNO, ŠPATNÝ / DOBRÝ díl with photos), ② Kdo byl upozorněn?, ③ Okamžitá opatření <24h
   - ④ Rozhodnutí OJT (shifts, decision, piloti, komentář, podpis)
   - ⑤ Příčina 5 Proč ? (the arrow with 1–5 PROČ; the root cause is green; the optional "Proč nebylo zachyceno" chain is written under it)
@@ -368,7 +368,7 @@ Google Sheet  ←→  Code.gs (server, runs as the owner)  ←→  Index.html (s
 | 3. Header and routing | `ICONS` / `icon()`, `go()` (switch page), `render()`, `header()`, `pageHead()`, `viewAsSelect()` |
 | 4. Board | `FILTERS`, `COLUMNS`, `boardPage()`, `rowEl()` (one table row), `myActions()`, `layoutSwitch()` (Formulář QRAP / Tabulka) |
 | 5. New problem | `newPage()`: the step tabs and the `steps` list |
-| 6. The paper form | `paperHeadCompact()` (the header: who fills what + titles ①–⑦), `paperBody(q, big)` (one QRAP filled into blocks ①–⑦), `paperList()` (board strips); the QRAP page: `detailPage()`, `nextBar()`, `editorPanel()` (form of the block being filled), `actionsPanel()`, `effectBox()`, `closureBox()`, `historyBox()`, `adminBox()` |
+| 6. The paper form | `paperHead()` (the paper's arrow bands and grey titles), `paperBody(q, big)` (one QRAP filled into blocks ①–⑦), `paperList()` (board strips); the QRAP page: `detailPage()`, `nextBar()`, `editorPanel()` (form of the block being filled), `actionsPanel()`, `effectBox()`, `closureBox()`, `historyBox()`, `adminBox()` |
 | 7. Forms | `makeForm()` (form builder), `popisForm`, `opatreniForm`, `decisionForm`, `pricinaForm`, `actionForm`, `assessForm`, `signerField` |
 | 8. Photos | `photoSlot` (photo on the paper + camera button), `photoPicker` (new QRAP), `shrink` (resizes before upload) |
 | 9. Pages and start | `sparkline()`, `barList()`, `dashPage()`, `adminPage()`, `helpPage()`, `refresh()`, `startKiosk()`, `start()` |
