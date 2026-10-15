@@ -1077,8 +1077,8 @@ function popisFrom_(f) {
   if (!list_(q.notified).some(isOther_)) q.notifiedOther = '';
   const miss = [];
   if (!q.safety) miss.push('SAFETY');
-  if (!q.how) miss.push('JAK byl objeven?'); else if (isOther_(q.how) && !q.howOther) miss.push('JAK – jiné');
   if (!q.what) miss.push('CO je za problém?'); else if (isOther_(q.what) && !q.whatOther) miss.push('CO – jiné');
+  if (!q.how) miss.push('JAK byl objeven?'); else if (isOther_(q.how) && !q.howOther) miss.push('JAK – jiné');
   if (!q.when) miss.push('KDY?');
   if (!q.zone) miss.push('KDE?');
   if (q.qty === '') miss.push('KOLIK špatných dílů?');

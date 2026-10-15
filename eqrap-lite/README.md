@@ -64,9 +64,9 @@ The app is two files: **`Code.gs`** (server) and **`Index.html`** (everything yo
 
 | Item | Who sees it | What it does |
 |---|---|---|
-| **eQRAP Expedice** (logo) | everyone | back to the board |
+| **QRQC** (text logo) | everyone | back to the board |
 | **Tabule** | everyone | the home page with all QRAPs |
-| **Jak to funguje** | everyone | short help: the flow and who can do what |
+| **Jak to funguje** | everyone | visual guide: how to fill in a QRAP, what happens next, who can do what |
 | **Správa** | ADMIN only | people, lists and settings |
 | **Přehled manažera** (button) | MANAŽER, ADMIN | the manager overview |
 | **+ Nahlásit problém** | everyone | new QRAP (hidden on the board, which has its own big button) |
@@ -104,10 +104,10 @@ The app is two files: **`Code.gs`** (server) and **`Index.html`** (everything yo
 
   | Step | Questions |
   |---|---|
-  | **Problém** | SAFETY · JAK byl objeven? · CO je za problém? (both dropdowns; "jiné" asks for a text) |
+  | **Problém** | SAFETY · CO je za problém? · JAK byl objeven? (both dropdowns; "jiné" opens a text field right under the question) |
   | **Kdy a kde** | KDY ? (date and time, "Teď" button) · KDE ? (one zone) |
-  | **Kolik a kdo** | KOLIK špatných dílů? + unit · Stejný problém v posledních 7 dnech? (ANO → N° QRAP) · JMÉNO |
-  | **Popis** | ŠPATNÝ díl – popis · DOBRÝ díl – popis (both required) · optional photo of each · číslo dílu, HU / dodací list, dodavatel (optional) |
+  | **Kolik a kdo** | KOLIK špatných dílů? + unit · Stejný problém v posledních 7 dnech? (ANO → N° QRAP, right under the question) · JMÉNO |
+  | **Popis** | ŠPATNÝ díl – popis · DOBRÝ díl – popis (both required) · optional photo of each · číslo dílu (on the paper, optional) · HU / dodací list and dodavatel (not on the paper, marked "nepovinné") |
   | **Upozornění** | Kdo byl upozorněn? (roles + jiné) |
   | **Opatření** | Ochranná opatření: riziko na již naskladněném / expedovaném zboží? (required; ANO → Přetříděno / Špatné kusy) · Okamžitá opatření (Co, Kdo, Čas) · Čas re-startu procesu/stanice |
   | **Kontrola** | everything on one page for a last check |
@@ -117,7 +117,8 @@ The app is two files: **`Code.gs`** (server) and **`Index.html`** (everything yo
 - **Hints:**
   - In text fields the hint is the grey placeholder; it disappears when you type.
   - Other fields have a small **ⓘ** next to the label. Tap it to show a one-line hint.
-- **Required fields** have a red ✱. If something is missing, the field turns red and a message appears at the bottom.
+- **Layout:** every question is on the left in bold, the answer on the right in normal weight, one question per row. The same layout is used in the block forms on the QRAP page.
+- **Required fields** have a red ✱. Fields that are not on the paper form are marked "nepovinné" and never block sending. If something is missing, the field turns red and a message appears at the bottom.
 - **Photos are optional.** "📷 Přidat foto" opens the camera directly on the kiosk tablet or a phone, and the file picker on a PC. Photos are made smaller in the browser before they are sent. A photo can also be added later on the QRAP page, until ④ is signed.
 - **③ for the operator:** only the risk question is required. Whatever the operator doesn't know (for example the re-start time) stays empty; the QRAP then waits in "③ Opatření" and the TL completes it within 24 h. If the operator fills ③ completely, the QRAP goes straight to "④ Rozhodnutí".
 - **Kontrola** shows everything on one page for a last check. **Odeslat ✓** saves the QRAP, sends the e-mails and returns to the board with a green confirmation.
@@ -169,7 +170,12 @@ Changes apply immediately for you. Other users see them after reloading the page
 
 ### Jak to funguje
 
-- A short help page: the five steps of the flow and a table of who can do what.
+![Jak to funguje](../dev-tests/lite/shots/05-help.png)
+
+- **A short visual guide for operators:** the 7 steps of the form (Problém → Kdy a kde → Kolik a kdo → Popis → Upozornění → Opatření → Kontrola), each with an icon and one sentence, and a "+ Nahlásit problém" button.
+- **Co se děje potom:** ④ Supervizor → ⑤ ⑥ Piloti → ⑥ Ověření → Manažer uzavře · ⑦.
+- **Na kiosku:** signing by name, and the automatic return to the board.
+- **Kdo co může:** the roles table, folded away until someone clicks it.
 - The admin role is deliberately not shown there; it lists only Kdokoli, Vedoucí and Manažer.
 
 ---

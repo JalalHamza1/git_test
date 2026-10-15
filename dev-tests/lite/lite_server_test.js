@@ -47,7 +47,7 @@ const base = {
 };
 const mk = o => Object.assign({}, base, o);
 let r0;
-throws(() => call('apiCreate', { s3: { risk: 'NE' } }), /SAFETY, JAK byl objeven\?, CO je za problém\?, KDY\?, KDE\?, KOLIK špatných dílů\?, Stejný problém v posledních 7 dnech\?, JMÉNO, Popis – ŠPATNÝ díl, Popis – DOBRÝ díl, ② Kdo byl upozorněn\?/, 'all required ① ② fields in paper order');
+throws(() => call('apiCreate', { s3: { risk: 'NE' } }), /SAFETY, CO je za problém\?, JAK byl objeven\?, KDY\?, KDE\?, KOLIK špatných dílů\?, Stejný problém v posledních 7 dnech\?, JMÉNO, Popis – ŠPATNÝ díl, Popis – DOBRÝ díl, ② Kdo byl upozorněn\?/, 'all required ① ② fields in paper order');
 throws(() => call('apiCreate', mk({ what: 'jiné' })), /CO – jiné/, 'CO jiné needs text');
 eq(call('apiCreate', mk({ what: 'jiné', whatOther: 'Chybí plomba na kamionu' })).qrap.whatOther, 'Chybí plomba na kamionu', 'CO jiné with text');
 throws(() => call('apiCreate', mk({ descRight: ' ' })), /Popis – DOBRÝ díl/, 'description of the good part required');

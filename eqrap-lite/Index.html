@@ -374,9 +374,10 @@ table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
    Same blocks and order as the paper: ① ② ③ (operator) · ④ (supervisor) · ⑤ ⑥ (pilots) · ⑦ (supervisor / manager).
    Column widths are the paper's proportions (--pp-cols). */
 .pp-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
-.paper { --pp-cols: 4.3fr 1.15fr 3.15fr 1.8fr 1.75fr 3.75fr 1.9fr; --pp-gap: 8px; --pp-panel: #e8eaeb; --pp-line: #c2c7cb;
+.paper { --pp-cols: 4.3fr 1.15fr 3.15fr 1.8fr 1.75fr 3.75fr 1.9fr; --pp-c1: 4.3fr 1.15fr 3.15fr; --pp-c3: 1.75fr 3.75fr; --pp-gap: 8px; --pp-panel: #e8eaeb; --pp-line: #c2c7cb;
   --pp-dark: #7c8387; --pp-mid: #b8bdc0; --pp-ink: #23292d; font-size: 12.5px; line-height: 1.35; color: var(--ink); min-width: 1240px; }
-.paper.compact { font-size: 11.5px; min-width: 1100px; }
+.paper.compact { font-size: 11.5px; min-width: 1100px; --pp-cols: 4.8fr 1fr 3.1fr 1.7fr 1.6fr 3.5fr 1.95fr; --pp-c1: 4.8fr 1fr 3.1fr; --pp-c3: 1.6fr 3.5fr; }
+.paper.compact .p7-c .cb { font-size: .92em; }
 .pp-row { display: grid; grid-template-columns: var(--pp-cols); column-gap: var(--pp-gap); }
 .g1 { grid-column: 1 / 4; } .g2 { grid-column: 4 / 5; } .g3 { grid-column: 5 / 7; } .g4 { grid-column: 7 / 8; }
 .pp-bands { margin-bottom: 6px; }
@@ -387,10 +388,10 @@ table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
 .pp-h { border-radius: 10px; display: grid; place-items: center; text-align: center; padding: 6px 8px; font-weight: 800; line-height: 1.02; color: #111; }
 .pp-h .big { font-size: 26px; text-transform: uppercase; }
 .pp-h .mid { font-size: 15px; font-weight: 500; }
-.pp-h.g1 { background: var(--pp-panel); grid-template-columns: 4.3fr 1.15fr 3.15fr; column-gap: var(--pp-gap); }
+.pp-h.g1 { background: var(--pp-panel); grid-template-columns: var(--pp-c1); column-gap: var(--pp-gap); }
 .pp-h.g2 { background: var(--pp-dark); color: #fff; box-shadow: inset 0 0 0 3px #4a5054; }
 .pp-h.g2 small { display: block; font-size: 15px; font-weight: 700; margin-bottom: 2px; }
-.pp-h.g3 { background: var(--pp-mid); grid-template-columns: 1.75fr 3.75fr; column-gap: var(--pp-gap); }
+.pp-h.g3 { background: var(--pp-mid); grid-template-columns: var(--pp-c3); column-gap: var(--pp-gap); }
 .pp-h.g4 { background: #fff; font-size: 15px; }
 .pp-h.g4 small { display: block; font-size: 10.5px; font-weight: 400; margin-top: 2px; }
 .paper.compact .pp-h .big { font-size: 17px; }
@@ -398,9 +399,9 @@ table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
 .paper.compact .pp-h .mid, .paper.compact .pp-h.g4, .paper.compact .pp-h.g2 small { font-size: 12px; }
 .pp-body { align-items: stretch; }
 .pp-g { padding: 6px; border-radius: 10px; min-width: 0; }
-.pp-g.g1 { background: var(--pp-panel); display: grid; grid-template-columns: 4.3fr 1.15fr 3.15fr; column-gap: var(--pp-gap); }
+.pp-g.g1 { background: var(--pp-panel); display: grid; grid-template-columns: var(--pp-c1); column-gap: var(--pp-gap); }
 .pp-g.g2 { background: var(--pp-panel); border: 3px solid var(--pp-ink); display: flex; }
-.pp-g.g3 { background: var(--pp-panel); border: 2px dashed #6f767a; display: grid; grid-template-columns: 1.75fr 3.75fr; column-gap: var(--pp-gap); }
+.pp-g.g3 { background: var(--pp-panel); border: 2px dashed #6f767a; display: grid; grid-template-columns: var(--pp-c3); column-gap: var(--pp-gap); }
 .pp-g.g4 { background: #fff; border: 1.5px solid var(--pp-ink); border-radius: 14px; display: flex; }
 .pp-cell { position: relative; min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 5px; border-radius: 6px; }
 .pp-cell.now { outline: 2px solid var(--accent); outline-offset: 2px; background: var(--accent-soft); }
@@ -430,7 +431,7 @@ table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
 .p1-rep { grid-column: 1 / 3; }
 .p1-popis { grid-column: 1 / 4; border-radius: 10px; }
 .p1-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 3px; }
-.pp-part em { display: block; font-style: italic; color: var(--ink-3); text-align: center; margin-bottom: 2px; }
+.pp-part em { display: block; font-style: normal; font-weight: 700; font-size: .9em; color: var(--ink); margin-bottom: 2px; }
 .pp-ph { display: block; width: 100%; height: 120px; border: 1px solid var(--pp-line); border-radius: 6px; overflow: hidden; margin-top: 4px; padding: 0;
   background: var(--soft); color: var(--ink-3); font-size: 12px; cursor: zoom-in; }
 .pp-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -441,6 +442,9 @@ table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
 .pp-t th, .pp-t td { border: 1px solid var(--pp-line); padding: 3px 5px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
 .pp-t th { font-weight: 700; font-size: .92em; }
 .paper.compact .pp-t th, .paper.compact .pp-t td { padding: 2px 3px; }
+.paper.compact .pp-t th { font-size: .82em; white-space: nowrap; overflow: hidden; }
+.paper.compact .pp-box { padding: 5px 6px; }
+.pp-v, .pp-txt { overflow-wrap: break-word; }
 .pp-grow { flex: 1; background: #fff; border: 1px solid var(--pp-line); }
 .pp-grow .pp-t { border: 0; }
 /* ④ */
@@ -486,6 +490,94 @@ main.w-paper { max-width: calc(var(--w-paper) + 2 * var(--gutter)); }
 .shell .step > .grid + .grid, .shell .step > .grid + div { margin-top: 26px; }
 .pair-f { display: flex; flex-direction: column; gap: 10px; }
 
+/* ---------- header logo, compact status cards and filters ---------- */
+.brand { font-size: 21px; font-weight: 800; letter-spacing: .1em; color: var(--ink); gap: 0; }
+.stats { gap: 10px; margin-bottom: 14px; }
+.stat { flex-direction: row; align-items: center; gap: 12px; padding: 10px 14px; }
+.stat-top { flex: 1; min-width: 0; margin: 0; font-size: 13.5px; align-items: center; }
+.stat-t { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.stat-t small { font-size: 12px; color: var(--ink-3); font-weight: 400; }
+.ibox { width: 28px; height: 28px; border-radius: 7px; }
+.ibox .ico { width: 16px; height: 16px; }
+.stat b { font-size: 22px; font-weight: 700; }
+.stat .spark { height: 18px; margin-top: 4px; width: 110px; }
+.stat .meter { margin-top: 6px; width: 110px; }
+.toolbar { gap: 8px; margin-bottom: 10px; }
+.toolbar select, .toolbar .btn { min-height: var(--tap-s); height: var(--tap-s); font-size: 13px; }
+.toolbar select { min-width: 128px; padding: 0 8px; }
+.search { width: 260px; }
+.search input { height: var(--tap-s); min-height: 0; font-size: 13px; padding-left: 32px; }
+.search .ico { width: 16px; height: 16px; left: 10px; margin-top: -8px; }
+
+/* ---------- forms: question on the left (bold), answer on the right (normal) ---------- */
+.form-rows .grid { grid-template-columns: minmax(0, 1fr); gap: 0; }
+.form-rows .fld { display: grid; grid-template-columns: minmax(170px, 32%) minmax(0, 1fr); column-gap: 24px; row-gap: 4px;
+  align-items: start; padding: 12px 0; border-top: 1px solid var(--line); }
+.form-rows .fld-l { margin: 0; padding-top: 11px; font-size: 15px; font-weight: 700; line-height: 1.35; }
+.form-rows .fld > :not(.fld-l) { grid-column: 2; }
+.form-rows .fld small { margin-top: 2px; }
+.form-rows .sub-h { font-size: 12.5px; color: var(--accent-ink); border: 0; padding: 22px 0 6px; margin: 0; }
+.form-rows .grid > .sub-h:first-child { padding-top: 0; }
+.form-rows .grid + .grid { margin-top: 18px; }
+.form-rows .q-group > .fld + .fld { border-top: 0; padding-top: 0; }
+.form-rows .pair-f { gap: 0; }
+.form-rows .pair-f .pslot, .form-rows .note.wide { margin-left: calc(max(170px, 32%) + 24px); }
+.form-rows .pair-f .pslot { padding-bottom: 12px; }
+.form-rows .pslot .ph { max-width: 340px; height: 200px; }
+.form-rows .ia-row { margin-top: 10px; }
+.form-rows .ia-row .fld:first-child { border-top: 0; }
+.form-rows .why-row { margin: 0; align-items: center; }
+.form-rows .why-root { padding-bottom: 0; }
+.form-rows .checks, .form-rows .choices.inline { padding-top: 2px; }
+.choice b, .choices.inline .choice b { font-weight: 400; }
+.choice:has(input:checked) b { font-weight: 600; }
+.opt { font-weight: 400; color: var(--ink-3); font-size: .85em; margin-left: 6px; }
+.shell-body { padding: 26px 32px 6px; }
+.shell-sub { font-size: 19px; margin-bottom: 16px; }
+.intro { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; font-size: 13px; color: var(--ink-3); margin-top: 6px; line-height: 1.4; }
+.intro .chip { border: 1px solid var(--line-2); border-radius: 999px; padding: 2px 10px; color: var(--ink-2); background: #fff; }
+
+/* ---------- the paper form: calmer labels, normal-weight answers ---------- */
+.pp-bands { margin-bottom: 10px; }
+.pp-band { background: none; clip-path: none; border-top: 2px solid #a5abaf; padding: 5px 6px 0; font-size: 10.5px; line-height: 1.35;
+  color: var(--ink-3); text-align: center; white-space: normal; overflow: visible; }
+.pp-band b { color: var(--ink); text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
+.pp-band.dark { background: none; color: var(--ink-3); border-top-color: var(--pp-ink); }
+.paper.compact .pp-band { font-size: 10px; padding-right: 4px; }
+.paper { font-size: 13px; line-height: 1.42; }
+.paper.compact { font-size: 12px; }
+.pp-g { padding: 8px; }
+.pp-cell { gap: 6px; }
+.pp-box { padding: 6px 8px; }
+.pp-l { font-weight: 700; font-size: .9em; color: var(--ink); margin-bottom: 2px; }
+.pp-v, .pp-txt { font-weight: 400; }
+.pp-empty { color: #b9c0c4; }
+.cb { color: var(--ink-3); font-weight: 400; }
+.cb.on { color: var(--ink); }
+.p4-dec .cb { font-weight: 400; }
+.p1-no .cb, .p7-c .cb { font-weight: 700; color: var(--ink); }
+.paper.compact .p7-sub, .paper.compact .pp-hint { display: none; }
+
+/* ---------- Jak to funguje: a short visual guide ---------- */
+.howto-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 22px; }
+.howto-step { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+.howto-step .hs-top { display: flex; align-items: center; gap: 10px; }
+.howto-step .hs-n { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 800; display: grid; place-items: center; font-size: 14px; flex: none; }
+.howto-step .hs-ico { color: var(--accent-ink); margin-left: auto; }
+.howto-step .hs-ico .ico { width: 22px; height: 22px; }
+.howto-step b { font-size: 15px; }
+.howto-step p { margin: 0; color: var(--ink-2); font-size: 14px; }
+.howto-step.send { background: var(--accent-soft); border-color: #cfe8bf; }
+.howto-h { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); margin: 0 0 10px; }
+.flow2 { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-bottom: 22px; }
+.flow2 > div { flex: 1 1 170px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }
+.flow2 > div b { display: block; margin-bottom: 2px; }
+.flow2 > div span { font-size: 13px; color: var(--ink-2); }
+.flow2 .arrow { flex: 0 0 auto; border: 0; background: none; padding: 0; display: grid; place-items: center; color: var(--ink-3); }
+details.roles-more > summary { cursor: pointer; font-weight: 600; color: var(--ink-2); min-height: var(--tap); display: flex; align-items: center; gap: 8px; list-style: none; }
+details.roles-more > summary::-webkit-details-marker { display: none; }
+details.roles-more[open] > summary .ico { transform: rotate(90deg); }
+
 /* ---------- toast ---------- */
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 8px;
   font-size: 14px; font-weight: 500; z-index: 60; max-width: 92vw; }
@@ -498,6 +590,7 @@ body.kiosk { --tap: 52px; --tap-s: 44px; }
 
 /* ---------- tablet ---------- */
 @media (max-width: 1180px) {
+  .howto-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .d-grid { grid-template-columns: 1fr; }
   .d-side { order: 0; position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -509,6 +602,13 @@ body.kiosk { --tap: 52px; --tap-s: 44px; }
 }
 /* ---------- phone ---------- */
 @media (max-width: 760px) {
+  .form-rows .fld { grid-template-columns: minmax(0, 1fr); }
+  .form-rows .fld-l { padding-top: 0; margin-bottom: 4px; }
+  .form-rows .fld > :not(.fld-l) { grid-column: 1; }
+  .form-rows .pair-f .pslot, .form-rows .note.wide { margin-left: 0; }
+  .howto-steps { grid-template-columns: minmax(0, 1fr); }
+  .flow2 .arrow { display: none; }
+  .stat-top { margin-bottom: 0; }
   .top-in { padding: 0 16px; gap: 12px; height: auto; min-height: 56px; flex-wrap: wrap; }
   nav { order: 3; width: 100%; height: 42px; overflow-x: auto; }
   .who, .top-right .btn-dash span { display: none; }
@@ -771,7 +871,8 @@ const ICONS = {
   inbox: ['M4 13h4.5l1.5 2.5h4l1.5-2.5H20', 'M6.5 5h11L20 13v6H4v-6z'], user: ['c:12,8,4', 'M4.5 20.5c1.4-3.8 4.3-5.5 7.5-5.5s6.1 1.7 7.5 5.5'],
   clock: ['c:12,12,9', 'M12 7.5V12l3 2'], done: ['M5 12.5l4.5 4.5L19 7.5'], alert: ['M12 3.5l9 16H3z', 'M12 10v4.5', 'M12 17.3v.2'],
   search: ['c:11,11,7', 'M20.5 20.5L16 16'], chart: ['M4 20h16', 'M7 16v-5', 'M12 16V6', 'M17 16v-8'], print: ['M7 9V3.5h10V9', 'M7 17H4.5V10.5a1.5 1.5 0 0 1 1.5-1.5h12a1.5 1.5 0 0 1 1.5 1.5V17H17', 'M7 14h10v6.5H7z'],
-  plus: ['M12 5v14', 'M5 12h14'], info: ['c:12,12,9', 'M12 11v5.5', 'M12 7.6v.2'], sort: ['M8 9.5l4-4 4 4', 'M8 14.5l4 4 4-4'], up: ['M12 19V5', 'M6 11l6-6 6 6'], down: ['M12 5v14', 'M6 13l6 6 6-6'],
+  plus: ['M12 5v14', 'M5 12h14'], camera: ['M4 8h3.5l2-2.5h5l2 2.5H20v11H4z', 'c:12,13,3.5'],
+  bell: ['M6.5 16v-5a5.5 5.5 0 0 1 11 0v5l1.5 2h-14z', 'M10 20.5a2 2 0 0 0 4 0'], pin: ['M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z', 'c:12,10,2.3'], info: ['c:12,12,9', 'M12 11v5.5', 'M12 7.6v.2'], sort: ['M8 9.5l4-4 4 4', 'M8 14.5l4 4 4-4'], up: ['M12 19V5', 'M6 11l6-6 6 6'], down: ['M12 5v14', 'M6 13l6 6 6-6'],
   refresh: ['M19.5 12a7.5 7.5 0 1 1-2.2-5.3', 'M19.5 4v4.5H15'], left: ['M15 6l-6 6 6 6'], right: ['M9 6l6 6-6 6'], shield: ['M12 3l7.5 3v5.5c0 4.5-3.2 8-7.5 9.5-4.3-1.5-7.5-5-7.5-9.5V6z']
 };
 function icon(name) {
@@ -821,7 +922,7 @@ function header() {
   const who = S.kiosk ? h('span', { class: 'who' }, 'Kiosk', h('small', null, 'sdílený terminál'))
     : h('span', { class: 'who', title: S.me.email }, S.me.name || S.me.email || '', h('small', null, roleName(S.me.role) || 'uživatel'));
   return h('header', { class: 'top' }, h('div', { class: 'top-in' },
-    h('button', { class: 'brand', onclick: () => go('board') }, h('span', { class: 'logo' }, 'Q'), S.cfg.NAZEV || 'eQRAP'),
+    h('button', { class: 'brand', onclick: () => go('board'), title: S.cfg.NAZEV || '' }, 'QRQC'),
     h('nav', null, nav('Tabule', 'board'), nav('Jak to funguje', 'help'), isAdmin() ? nav('Správa', 'admin') : null),
     h('div', { class: 'grow' }),
     h('div', { class: 'top-right' },
@@ -953,7 +1054,8 @@ function boardPage() {
     const n = S.qraps.filter(q => inArea(q) && FILTERS[k].test(q)).length;
     return h('button', { class: 'stat' + (S.filter === k && !S.search ? ' on' : ''),
       onclick: () => { S.filter = k; S.search = ''; S.page = 0; search.value = ''; stSel.value = k; draw(); } },
-      h('div', { class: 'stat-top' }, ibox(icons[k]), FILTERS[k].label), h('b', null, n), h('small', null, notes[k]()));
+      h('div', { class: 'stat-top' }, ibox(icons[k]), h('div', { class: 'stat-t' }, h('span', null, FILTERS[k].label),
+        notes[k]() ? h('small', null, notes[k]()) : null)), h('b', null, n));
   }));
   const draw = () => { drawStats(); drawList(); };
   redrawBoard = draw;
@@ -1094,10 +1196,12 @@ function newPage() {
     if (f && !last && at !== 0) f.focus({ preventScroll: true });
   }
   const page = h('div', null,
-    pageHead('Nový QRAP', 'Vyplňuje operátor, který nalezl problém: ① popis problému, ② kdo byl upozorněn, ③ okamžitá opatření. Povinné údaje jsou označené *.', null, 'Nový QRAP'),
+    pageHead('Nový QRAP', h('div', { class: 'intro' }, h('span', null, 'Vyplňuje operátor, který nalezl problém:'),
+      h('span', { class: 'chip' }, '① Popis problému'), h('span', { class: 'chip' }, '② Kdo byl upozorněn?'),
+      h('span', { class: 'chip' }, '③ Okamžitá opatření'), h('span', null, '* povinné')), null, 'Nový QRAP'),
     h('div', { class: 'shell' },
       h('nav', { class: 'wiz-steps', 'aria-label': 'Kroky' }, bar),
-      h('div', { class: 'shell-body' }, h('div', { class: 'shell-inner' }, titleEl, body)),
+      h('div', { class: 'shell-body' }, h('div', { class: 'shell-inner form-rows' }, titleEl, body)),
       h('div', { class: 'shell-foot' }, back, h('div', { class: 'grow' }),
         h('button', { class: 'btn btn-muted', onclick: () => go('board') }, 'Zrušit'), next, send)));
   show(0);
@@ -1137,10 +1241,10 @@ const ppText = t => (t ? h('div', { class: 'pp-txt' }, t) : h('span', { class: '
 function paperHead() {
   return [
     h('div', { class: 'pp-row pp-bands' },
-      h('div', { class: 'pp-band g1' }, 'QR vyplňuje ', h('b', null, 'OPERÁTOR'), ', který nalezl problém'),
-      h('div', { class: 'pp-band g2 dark' }, 'Vyplňuje ', h('b', null, 'Supervizor')),
-      h('div', { class: 'pp-band g3' }, 'Vyplňují ', h('b', null, 'pověření pracovníci'), ', na základě rozhodnutí Supervizora'),
-      h('div', { class: 'pp-band g4 dark' }, h('b', null, 'Supervizor / Manažer'))),
+      h('div', { class: 'pp-band g1' }, 'Vyplňuje ', h('b', null, 'operátor'), ', který nalezl problém'),
+      h('div', { class: 'pp-band g2 dark' }, 'Vyplňuje ', h('b', null, 'supervizor')),
+      h('div', { class: 'pp-band g3' }, 'Vyplňují ', h('b', null, 'pověření pracovníci'), ' · podle rozhodnutí supervizora'),
+      h('div', { class: 'pp-band g4 dark' }, h('b', null, 'Supervizor / manažer'))),
     h('div', { class: 'pp-row pp-heads' },
       h('div', { class: 'pp-h g1' }, h('div', { class: 'big' }, 'Popis problému'), h('div', { class: 'mid' }, 'Kdo byl upozorněn?'),
         h('div', { class: 'big' }, 'Okamžitá opatření<24h')),
@@ -1180,7 +1284,7 @@ function paperBody(q, big) {
   const c1 = cell(1, h('div', { class: 'p1' },
     h('div', { class: 'p1-no' }, h('div', { class: 'no' }, h('span', null, 'N°'), h('b', null, q.id)), cb(q.safety === 'ANO', 'SAFETY')),
     h('div', { class: 'pp-box p1-co' }, h('span', { class: 'pp-l' }, 'CO je za problém a JAK byl objeven?'),
-      h('div', { class: 'pp-v' }, h('b', null, coText(q)), jakText(q) ? h('div', null, 'JAK: ' + jakText(q)) : null)),
+      h('div', { class: 'pp-v' }, h('div', null, coText(q)), jakText(q) ? h('div', null, 'JAK: ' + jakText(q)) : null)),
     ppBox('KDY ?', h('div', null, h('div', null, 'Čas: ' + timeOf(q.when)), h('div', null, 'Datum: ' + dateOf(q.when)))),
     ppBox('KDE ?', h('div', null, q.zone, q.location ? h('div', { class: 'sub' }, q.location) : null)),
     ppBox('KOLIK špatných dílů?', q.qty === '' ? '' : q.qty + ' ' + (q.unit || '') + (q.nokSituation ? ' (NOK situace)' : '')),
@@ -1203,11 +1307,10 @@ function paperBody(q, big) {
   const ia = actsOf(q.id, '③');
   const quality = got.some(x => /kvalit/i.test(x));
   const c3 = cell(3,
-    h('div', { class: 'pp-box' }, h('span', { class: 'pp-l' }, 'Ochranná opatření'),
-      h('div', null, 'Je zde riziko na již naskladněném / expedovaném zboží?'),
+    h('div', { class: 'pp-box' }, h('span', { class: 'pp-l' }, 'Ochranná opatření – je zde riziko na již naskladněném / expedovaném zboží?'),
       h('div', null, cb(q.risk === 'ANO', 'ANO'), cb(q.risk === 'ANO' && quality, 'upozorni oddělení KVALITY')), cb(q.risk === 'NE', 'NE')),
     h('div', { class: 'pp-box' }, h('span', { class: 'pp-l' }, 'Třídění – data'),
-      h('div', null, 'Přetříděno: ', h('b', null, q.checked === '' ? '……' : q.checked), ' ks · Špatné kusy: ', h('b', null, q.wrong === '' ? '……' : q.wrong), ' ks',
+      h('div', null, 'Přetříděno: ' + (q.checked === '' ? '……' : q.checked) + ' ks · Špatné kusy: ' + (q.wrong === '' ? '……' : q.wrong) + ' ks',
         q.checkRunning ? ' (třídění probíhá)' : '')),
     h('div', { class: 'pp-grow' }, h('table', { class: 'pp-t' },
       h('colgroup', null, h('col'), h('col', { style: 'width:28%' }), h('col', { style: 'width:22%' })),
@@ -1251,7 +1354,7 @@ function paperBody(q, big) {
         h('div', { class: 'p6-eff', title: 'Efektivní na ' + q.eff.ok + ' z 5 směn' }, [1, 2, 3, 4, 5].map(i => h('span', { class: i <= q.eff.ok ? 'on' : '' }, i))))),
     h('div', { class: 'pp-box' }, h('span', { class: 'pp-l' }, 'Příležitost k aktualizaci STANDARDU?'),
       h('div', null, cb(q.std === 'NE', 'NE'), cb(q.std === 'ANO', 'ANO ' + (q.std === 'ANO' ? q.stdRef : '……………'))),
-      h('small', { class: 'sub' }, '(Např: Pracovní instrukce, …)')));
+      h('small', { class: 'sub pp-hint' }, '(Např: Pracovní instrukce, …)')));
 
   // ⑦ HODNOCENÍ QRQC
   const list = S.assess.filter(a => a.qrapId === q.id).sort((a, b) => String(b.at).localeCompare(String(a.at)));
@@ -1381,7 +1484,7 @@ function editorPanel(q) {
     body = assessForm(q);
   }
   if (!body) return null;
-  return h('div', { class: 'card editing no-print', id: 'editor', style: 'margin-top:16px' },
+  return h('div', { class: 'card editing form-rows no-print', id: 'editor', style: 'margin-top:16px' },
     h('div', { class: 'p-head' }, h('h2', null, title), h('div', { class: 'grow' }), h('button', { class: 'btn small ghost', onclick: () => edit(null) }, 'Zavřít')),
     body);
 }
@@ -1554,7 +1657,8 @@ function makeForm(values) {
         onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') info.click(); } }, icon('info'));
     }
     const el = h(o.group ? 'div' : 'label', { class: 'fld' + (o.wide ? ' wide' : '') },
-      label ? h('span', { class: 'fld-l' }, label, o.req ? h('span', { class: 'req' }, ' *') : null, info) : null,
+      label ? h('span', { class: 'fld-l' }, label, o.req ? h('span', { class: 'req' }, ' *') : null,
+        o.opt ? h('span', { class: 'opt' }, 'nepovinné') : null, info) : null,
       control, tip);
     items[key].box = el;
     const ok = () => el.classList.remove('invalid');
@@ -1661,20 +1765,21 @@ function showIf(el, on) { el.hidden = !on; return el; }
 function popisForm(v, isNew) {
   const F = makeForm(v);
   const L = S.lists;
-  const howOther = showIf(h('div', { class: 'wide' }, F.input('howOther', 'JAK – jiné (napište)', { req: true })), isOther(v.how));
-  const whatOther = showIf(h('div', { class: 'wide' }, F.input('whatOther', 'CO – jiné (napište)', { req: true })), isOther(v.what));
+  const howOther = showIf(F.input('howOther', 'JAK – jiné (napište)', { req: true }), isOther(v.how));
+  const whatOther = showIf(F.input('whatOther', 'CO – jiné (napište)', { req: true }), isOther(v.what));
   const recent = S.qraps.filter(q => q.id !== v.id && Date.now() - new Date(q.when).getTime() < 7 * 864e5)
     .map(q => ({ value: q.id, label: q.id + ' – ' + titleOf(q).slice(0, 60) }));
-  const repeat = showIf(h('div', null, F.select('repeatRef', 'N° QRAP', recent,
-    { req: true, ph: recent.length ? '— vyberte —' : 'Žádný QRAP za posledních 7 dnů' })), v.repeat7 === 'ANO');
+  const repeat = showIf(F.select('repeatRef', 'N° QRAP', recent,
+    { req: true, ph: recent.length ? '— vyberte —' : 'Žádný QRAP za posledních 7 dnů' }), v.repeat7 === 'ANO');
   const photos = isNew ? photoPicker() : null;
   const groups = [
     h('div', { class: 'grid' },
       h('div', { class: 'sub-h wide' }, 'Problém'),
       F.yesno('safety', 'SAFETY', { req: true, wide: true, hint: 'Jde o bezpečnost lidí (úraz, pád zboží, VZV…)? Vyberte vědomě.' }),
-      F.select('how', 'JAK byl objeven?', L.how || [], { req: true, onchange: x => showIf(howOther, isOther(x)) }),
-      F.select('what', 'CO je za problém?', L.problems || [], { req: true, onchange: x => showIf(whatOther, isOther(x)) }),
-      howOther, whatOther),
+      h('div', { class: 'q-group wide' },
+        F.select('what', 'CO je za problém?', L.problems || [], { req: true, onchange: x => showIf(whatOther, isOther(x)) }), whatOther),
+      h('div', { class: 'q-group wide' },
+        F.select('how', 'JAK byl objeven?', L.how || [], { req: true, onchange: x => showIf(howOther, isOther(x)) }), howOther)),
     h('div', { class: 'grid' },
       h('div', { class: 'sub-h wide' }, 'Kdy a kde'),
       F.input('when', 'KDY ?', { req: true, type: 'datetime-local', now: true, hint: 'Čas a datum, kdy byl problém nalezen (ne čas zápisu).' }),
@@ -1683,8 +1788,8 @@ function popisForm(v, isNew) {
       h('div', { class: 'sub-h wide' }, 'Kolik a kdo'),
       F.input('qty', 'KOLIK špatných dílů?', { req: true, type: 'number', min: 0 }),
       F.select('unit', 'Jednotka', L.units || []),
-      F.yesno('repeat7', 'Stejný problém v posledních 7 dnech?', { req: true, onchange: x => showIf(repeat, x === 'ANO') }),
-      repeat,
+      h('div', { class: 'q-group wide' },
+        F.yesno('repeat7', 'Stejný problém v posledních 7 dnech?', { req: true, onchange: x => showIf(repeat, x === 'ANO') }), repeat),
       F.input('finder', 'JMÉNO', { req: true, list: 'people-list', hint: 'Vaše jméno' })),
     h('div', { class: 'grid' },
       h('div', { class: 'sub-h wide' }, 'Popis problému'),
@@ -1693,8 +1798,8 @@ function popisForm(v, isNew) {
       h('div', { class: 'pair-f' }, F.input('descRight', 'DOBRÝ díl – popis', { req: true, rows: 4, hint: 'Jak to má být správně?' }),
         photos ? photos.slot('RIGHT', 'DOBRÝ díl') : null),
       F.input('materialNo', 'Číslo dílu (materiálu)'),
-      F.input('huNo', 'Číslo HU / dodacího listu'),
-      F.input('supplier', 'Dodavatel'))
+      F.input('huNo', 'Číslo HU / dodacího listu', { opt: true }),
+      F.input('supplier', 'Dodavatel', { opt: true }))
   ];
   const otherBox = showIf(F.input('notifiedOther', 'Jiné – kdo', { req: true }), split(v.notified).some(isOther));
   const two = h('div', null,
@@ -1968,7 +2073,8 @@ function photoPicker() {
     const draw = () => fill(box,
       urls[kind] ? h('button', { class: 'ph', type: 'button', onclick: () => input.click() }, h('img', { src: urls[kind], alt: title })) : null,
       h('div', { class: 'inline-form' },
-        h('button', { class: 'btn small', type: 'button', onclick: () => input.click() }, urls[kind] ? '📷 Vyfotit znovu' : '📷 Přidat foto (nepovinné)'),
+        h('button', { class: 'btn small', type: 'button', onclick: () => input.click() }, urls[kind] ? '📷 Vyfotit znovu' : '📷 Přidat foto'),
+        urls[kind] ? null : h('span', { class: 'opt' }, 'nepovinné'),
         urls[kind] ? h('button', { class: 'btn small ghost', type: 'button', onclick: () => { urls[kind] = ''; draw(); } }, 'Odebrat') : null),
       input);
     draw();
@@ -2065,7 +2171,7 @@ function dashPage() {
   S.dashList = LISTS[S.dashList] ? S.dashList : 'open';
   const pick = k => () => { S.dashList = k; listSel.value = k; drawRows(); };
   const stat = (ic, label, n, extra, onClick) => h(onClick ? 'button' : 'div', { class: 'stat', onclick: onClick || null },
-    h('div', { class: 'stat-top' }, ibox(ic), label), h('b', null, n), extra);
+    h('div', { class: 'stat-top' }, ibox(ic), h('div', { class: 'stat-t' }, h('span', null, label), extra)), h('b', null, n));
 
   const listBox = h('div');
   const switchBox = h('span');
@@ -2202,6 +2308,7 @@ function adminPage() {
     box);
 }
 
+/** "Jak to funguje": how to fill in a QRAP, in the same 7 steps as the form, then what happens next. */
 function helpPage() {
   const yes = '✓', no = '–';
   const rows = [
@@ -2214,24 +2321,40 @@ function helpPage() {
     ['Uzavřít QRAP (i „vyřešeno bez 5 Proč“)', no, no, yes],
     ['Zrušit / znovu otevřít / odemknout ①–④, Přehled', no, no, yes]
   ];
-  const flow = [
-    ['Operátor', '① popis problému (CO, JAK, KDY, KDE, KOLIK, ŠPATNÝ a DOBRÝ díl), ② kdo byl upozorněn, ③ okamžitá opatření → Odeslat. Vedoucí zóny dostane e-mail.'],
-    ['TL / vedoucí', '③ doplní, co chybí, do ' + hours3() + ' h. ④ informuje směny a podepíše rozhodnutí.'],
-    ['Piloti', '⑤ 5 Proč a kořenová příčina, ⑥ konečné akce s termínem.'],
-    ['Ověření', '⑥ efektivní na 5 různých směnách (zapisuje TL u tabule).'],
-    ['Manažer', 'uzavře QRAP. ⑦ hodnocení QRQC.']
+  const steps = [
+    ['alert', 'Problém', 'Vyberte, CO je za problém a JAK byl objeven. SAFETY = jde o bezpečnost lidí.'],
+    ['clock', 'Kdy a kde', 'Kdy jste problém našli (tlačítko „Teď“) a ve které zóně.'],
+    ['user', 'Kolik a kdo', 'Kolik dílů je špatně, zda se to stalo v posledních 7 dnech, a vaše jméno.'],
+    ['camera', 'Popis', 'Popište ŠPATNÝ a DOBRÝ díl. Fotka pomůže, ale není povinná.'],
+    ['bell', 'Upozornění', 'Zaškrtněte, koho jste o problému informovali.'],
+    ['shield', 'Opatření', 'Je riziko u zboží na skladě? Co jste hned udělali, kdo a kdy.'],
+    ['done', 'Kontrola a odeslání', 'Zkontrolujte údaje a stiskněte „Odeslat ✓“. Obrazovka se vrátí na tabuli.']
   ];
-  return h('div', null,
-    pageHead('Jak to funguje', 'Elektronická verze papírového formuláře QRAP V3.0 pro sklad a expedici – stejné bloky a otázky ① až ⑦.', null, 'Jak to funguje'),
-    h('div', { class: 'flow' }, flow.map((f, i) => h('div', null, h('span', { class: 'num' }, i + 1), h('b', null, f[0]), h('span', { class: 'sub' }, f[1])))),
-    h('div', { class: 'cols2' }, h('div', { class: 'card' }, h('h2', null, 'Kdo co může'),
-      h('div', { class: 'slots-wrap' }, h('table', { class: 'roles' },
-        h('tr', null, h('th', null, ''), h('th', null, 'Kdokoli'), h('th', null, 'Vedoucí'), h('th', null, 'Manažer')),
-        rows.map(r => h('tr', null, r.map(c => h('td', null, c)))))),
-      h('p', { class: 'sub', style: 'margin-top:10px' }, 'Vaše role: ' + (S.me.role === 'ADMIN' ? 'manažer' : (roleName(S.me.role) || 'běžný uživatel')).toLowerCase() + '.')),
-    h('div', { class: 'card' }, h('h2', null, 'Kiosk'),
-      h('p', null, 'Na kiosku se dá udělat všechno. Kde je potřeba podpis (④, uzavření, ⑤ ⑥, ⑦), aplikace se zeptá „Kdo podepisuje?“ – napište své jméno a vyberte ho z nabídky. Aplikace ověří vaši roli a do historie zapíše vaše jméno a čas.'),
-      h('p', null, 'Po chvíli bez dotyku se kiosk sám vrátí na tabuli.'))));
+  const next = [
+    ['④ Supervizor', 'informuje směny a rozhodne: 5 Proč, vyřešeno, nebo eskalace'],
+    ['⑤ ⑥ Piloti', 'najdou příčinu (5 Proč) a zadají konečné akce'],
+    ['⑥ Ověření', 'akce je efektivní na 5 různých směnách'],
+    ['Manažer', 'uzavře QRAP · ⑦ hodnocení QRQC']
+  ];
+  return h('div', { class: 'howto' },
+    pageHead('Jak vyplnit QRAP', h('div', { class: 'intro' }, h('span', null, 'Hlášení vyplňuje operátor, který problém našel – 7 krátkých kroků.'),
+      h('span', null, '* povinné')), h('button', { class: 'btn primary', onclick: () => go('new') }, '+ Nahlásit problém'), 'Jak to funguje'),
+    h('div', { class: 'howto-steps' }, steps.map((x, i) => h('div', { class: 'howto-step' + (i === steps.length - 1 ? ' send' : '') },
+      h('div', { class: 'hs-top' }, h('span', { class: 'hs-n' }, i + 1), h('b', null, x[1]), h('span', { class: 'hs-ico' }, icon(x[0]))),
+      h('p', null, x[2])))),
+    h('h2', { class: 'howto-h' }, 'Co se děje potom'),
+    h('div', { class: 'flow2' }, next.map((x, i) => [i ? h('div', { class: 'arrow' }, icon('right')) : null,
+      h('div', null, h('b', null, x[0]), h('span', null, x[1]))])),
+    h('div', { class: 'cols2' },
+      h('div', { class: 'card' }, h('h2', null, 'Na kiosku'),
+        h('p', null, 'Kde je potřeba podpis (④, ⑤ ⑥, uzavření, ⑦), aplikace se zeptá „Kdo podepisuje?“. Napište své jméno a vyberte ho z nabídky.'),
+        h('p', { class: 'sub' }, 'Po chvíli bez dotyku se kiosk sám vrátí na tabuli.')),
+      h('div', { class: 'card' },
+        h('details', { class: 'roles-more' }, h('summary', null, icon('right'), 'Kdo co může'),
+          h('div', { class: 'slots-wrap' }, h('table', { class: 'roles' },
+            h('tr', null, h('th', null, ''), h('th', null, 'Kdokoli'), h('th', null, 'Vedoucí'), h('th', null, 'Manažer')),
+            rows.map(r => h('tr', null, r.map(c => h('td', null, c)))))),
+          h('p', { class: 'sub', style: 'margin-top:10px' }, 'Vaše role: ' + (S.me.role === 'ADMIN' ? 'manažer' : (roleName(S.me.role) || 'běžný uživatel')).toLowerCase() + '.')))));
 }
 
 async function refresh(quiet, btn, all) {

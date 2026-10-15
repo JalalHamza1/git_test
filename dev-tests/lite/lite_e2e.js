@@ -51,7 +51,8 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await nextStep();
   await p.waitForSelector('.toast.bad');
   const msg = await p.textContent('#toast');
-  check(/SAFETY, JAK byl objeven, CO je za problém$/.test(msg), 'step 1 = SAFETY, JAK, CO (paper order): ' + msg);
+  check(/SAFETY, CO je za problém, JAK byl objeven$/.test(msg), 'step 1 = SAFETY, CO, JAK: ' + msg);
+  check(await p.evaluate(() => [...document.querySelectorAll('.shell .fld-l')].map(e => e.textContent).join('|')).then(t => t.indexOf('CO je') < t.indexOf('JAK byl')), 'CO comes before JAK');
   check(await onStep(1), 'stays on step 1');
   await pick(p, 'SAFETY', 'NE');
   await p.selectOption(fld('JAK byl objeven') + ' select', 'jiné');
@@ -59,6 +60,7 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await p.selectOption(fld('JAK byl objeven') + ' select', 'vychystávání');
   await p.selectOption(fld('CO je za problém') + ' select', 'jiné');
   check(await p.isVisible(fld('CO – jiné')), 'CO „jiné“ asks for text');
+  await p.screenshot({ path: SHOTS + '/02a-problem.png' });
   await p.selectOption(fld('CO je za problém') + ' select', 'špatný materiál');
   await nextStep();
   check(await onStep(2), 'step 2 Kdy a kde');
@@ -69,8 +71,13 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   check(await p.inputValue(fld('JMÉNO') + ' input') === 'Tomáš Černý', 'JMÉNO prefilled');
   check(!(await p.$('text=NOK situace')), 'no NOK checkbox (not on the paper)');
   await p.fill(fld('KOLIK špatných dílů') + ' input', '6');
+  const yJmeno = async () => (await p.locator(fld('JMÉNO')).boundingBox()).y;
+  const y0 = await yJmeno();
   await pick(p, 'Stejný problém', 'ANO');
   check(await p.isVisible(fld('N° QRAP')), 'repeat → N° QRAP');
+  const yRep = (await p.locator(fld('N° QRAP')).boundingBox()).y, yQ = (await p.locator(fld('Stejný problém')).first().boundingBox()).y;
+  check(yRep > yQ && yRep < await yJmeno() && await yJmeno() > y0, 'N° QRAP appears directly under its question, JMÉNO stays after it');
+  await p.screenshot({ path: SHOTS + '/02a-kolik.png' });
   await pick(p, 'Stejný problém', 'NE');
   await nextStep();
   check(/jednotku/.test(await p.textContent('#toast')), 'unit required');
@@ -82,6 +89,7 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await p.fill(fld('ŠPATNÝ díl – popis') + ' textarea', 'Na paletě pro zákazníka je jiný materiál, než je na etiketě');
   await p.fill(fld('DOBRÝ díl – popis') + ' textarea', 'Materiál na paletě odpovídá etiketě');
   await p.fill(fld('Číslo dílu') + ' input', '0012345');
+  check(/nepovinné/.test(await p.textContent(fld('Dodavatel'))) && /nepovinné/.test(await p.textContent(fld('Číslo HU'))), 'fields not on the paper are marked „nepovinné“');
   check(await p.getAttribute('.pslot.wrong input[type=file]', 'capture') === 'environment', 'photo button opens the camera on a tablet');
   await p.setInputFiles('.pslot.wrong input[type=file]', { name: 'spatne.png', mimeType: 'image/png', buffer: PNG });
   await p.setInputFiles('.pslot.right input[type=file]', { name: 'spravne.png', mimeType: 'image/png', buffer: PNG2 });
@@ -245,7 +253,8 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await M.screenshot({ path: SHOTS + '/10-dashboard.png', fullPage: true });
   check(!(await M.$('nav >> text=Správa')), 'manager has no Správa');
   await M.click('text=Jak to funguje');
-  await M.waitForSelector('table.roles');
+  await M.waitForSelector('.howto-steps');
+  check((await M.$$('.howto-step')).length === 7, 'Jak to funguje: the 7 steps of the form');
   await M.screenshot({ path: SHOTS + '/05-help.png', fullPage: true });
 
   // ---------------- Správa (admin)
