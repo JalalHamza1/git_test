@@ -685,6 +685,14 @@ body.kiosk .toolbar select, body.kiosk .toolbar .btn, body.kiosk .toolbar .layou
 .paper.compact .pp-h.g2 small { font-size: 11.5px; }
 .paper.compact .pp-h.g4 small { font-size: 9.5px; }
 
+/* ---------- filter row: smaller, with space before the paper header ---------- */
+.toolbar { margin-bottom: 18px; gap: 6px; }
+.toolbar select, .toolbar .btn, .toolbar .layout-sw button, .toolbar .search input { height: 26px; min-height: 26px; font-size: 11.5px; }
+.toolbar select { min-width: 100px; }
+.toolbar .search { width: 200px; }
+body.kiosk .toolbar select, body.kiosk .toolbar .btn, body.kiosk .toolbar .layout-sw button, body.kiosk .toolbar .search input { height: 30px; min-height: 30px; font-size: 12px; }
+.brand { letter-spacing: .04em; }
+
 /* ---------- toast ---------- */
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 8px;
   font-size: 14px; font-weight: 500; z-index: 60; max-width: 92vw; }
@@ -1030,7 +1038,7 @@ function header() {
   const who = S.kiosk ? h('span', { class: 'who' }, 'Kiosk', h('small', null, 'sdílený terminál'))
     : h('span', { class: 'who', title: S.me.email }, S.me.name || S.me.email || '', h('small', null, roleName(S.me.role) || 'uživatel'));
   return h('header', { class: 'top' }, h('div', { class: 'top-in' },
-    h('button', { class: 'brand', onclick: () => go('board'), title: S.cfg.NAZEV || '' }, 'QRQC'),
+    h('button', { class: 'brand', onclick: () => go('board'), title: S.cfg.NAZEV || '' }, 'e-QRAP'),
     h('nav', null, nav('Tabule', 'board'), nav('Jak to funguje', 'help'), isAdmin() ? nav('Správa', 'admin') : null),
     h('div', { class: 'grow' }),
     h('div', { class: 'top-right' },

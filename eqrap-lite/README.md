@@ -64,7 +64,7 @@ The app is two files: **`Code.gs`** (server) and **`Index.html`** (everything yo
 
 | Item | Who sees it | What it does |
 |---|---|---|
-| **QRQC** (text logo) | everyone | back to the board |
+| **e-QRAP** (text logo) | everyone | back to the board |
 | **Tabule** | everyone | the home page with all QRAPs |
 | **Jak to funguje** | everyone | visual guide: how to fill in a QRAP, what happens next, who can do what |
 | **Správa** | ADMIN only | people, lists and settings |
