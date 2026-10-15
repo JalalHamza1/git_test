@@ -238,6 +238,8 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   check((await L.$$('.timeline li')).length >= 12, 'history entries');
   await L.setViewportSize({ width: 1600, height: 900 });
   await L.screenshot({ path: SHOTS + '/03-closed.png', fullPage: true });
+  await L.evaluate(() => window.scrollTo(0, 0));
+  await L.screenshot({ path: SHOTS + '/03c-top.png' });
   await L.emulateMedia({ media: 'print' });
   await L.screenshot({ path: SHOTS + '/04-print.png', fullPage: true });
   await L.emulateMedia({ media: 'screen' });
