@@ -81,7 +81,9 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await pick(p, 'Stejný problém', 'NE');
   await nextStep();
   check(/jednotku/.test(await p.textContent('#toast')), 'unit required');
-  await p.selectOption(fld('Jednotka') + ' select', 'ks');
+  const qb = await p.locator(fld('KOLIK špatných dílů') + ' input').boundingBox(), ub = await p.locator('.qty-pair select').boundingBox();
+  check(Math.abs(qb.y - ub.y) < 4 && ub.x > qb.x, 'Jednotka right next to KOLIK');
+  await p.selectOption('.qty-pair select', 'ks');
   await nextStep();
   check(await onStep(4), 'step 4 Popis ŠPATNÝ / DOBRÝ díl');
   await nextStep();
@@ -90,6 +92,7 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await p.fill(fld('DOBRÝ díl – popis') + ' textarea', 'Materiál na paletě odpovídá etiketě');
   await p.fill(fld('Číslo dílu') + ' input', '0012345');
   check(/nepovinné/.test(await p.textContent(fld('Dodavatel'))) && /nepovinné/.test(await p.textContent(fld('Číslo HU'))), 'fields not on the paper are marked „nepovinné“');
+  check(/nepovinné/.test(await p.textContent(fld('Číslo dílu'))), 'Číslo dílu marked „nepovinné“');
   check(await p.getAttribute('.pslot.wrong input[type=file]', 'capture') === 'environment', 'photo button opens the camera on a tablet');
   await p.setInputFiles('.pslot.wrong input[type=file]', { name: 'spatne.png', mimeType: 'image/png', buffer: PNG });
   await p.setInputFiles('.pslot.right input[type=file]', { name: 'spravne.png', mimeType: 'image/png', buffer: PNG2 });
@@ -128,20 +131,24 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await p.waitForSelector('#sec1 .pp-ph img');
   check(!(await p.$('button:has-text("Rozhodnout")')), 'normal user has no decide button');
 
-  // ③ finished later (anyone on the shift)
-  await p.click('button:has-text("Doplnit ③")');
-  check(await p.isVisible(fld('Přetříděno (ks)')), 'risk ANO → sorting data');
-  await p.fill(fld('Přetříděno (ks)') + ' input', '24');
-  await p.fill(fld('Špatné kusy (ks)') + ' input', '6');
-  await p.fill('.ia-row ' + fld('Co bylo uděláno') + ' input', 'Paleta zablokována');
-  await p.click('.ia-row ' + fld('Čas') + ' button:has-text("Teď")');
-  await p.click('button:has-text("Uložit ③")');
+  // ③ finished later (anyone on the shift) – straight in the paper form
+  check(await p.$eval('#sec3', e => getComputedStyle(e).outlineColor) === 'rgb(184, 50, 42)', 'the next block has a red frame');
+  await p.click('#sec3', { position: { x: 60, y: 150 } });
+  await p.waitForSelector('#sec3 .pp-form');
+  check(!(await p.$('#editor')), 'filled in the paper itself, not in the panel');
+  check(await p.isVisible('#sec3 ' + fld('Přetříděno (ks)')), 'risk ANO → sorting data');
+  await p.screenshot({ path: SHOTS + '/03b-inline.png' });
+  await p.fill('#sec3 ' + fld('Přetříděno (ks)') + ' input', '24');
+  await p.fill('#sec3 ' + fld('Špatné kusy (ks)') + ' input', '6');
+  await p.fill('#sec3 .ia-row ' + fld('Co bylo uděláno') + ' input', 'Paleta zablokována');
+  await p.click('#sec3 .ia-row ' + fld('Čas') + ' button:has-text("Teď")');
+  await p.click('#sec3 button:has-text("Uložit ③")');
   await badgeIs(p, /Rozhodnutí/);
   check(/Paleta zablokována/.test(await p.textContent('#sec3')) && /24/.test(await p.textContent('#sec3')), '③ complete → ④ Rozhodnutí, shown on the paper');
   await p.goBack();
   await p.waitForSelector('.stats');
   check(true, 'browser back → board');
-  check((await p.$$('.strip')).length >= 4 && !!(await p.$('.pp-heads')), 'board = paper strips under one paper header');
+  check((await p.$$('.strip')).length >= 4 && !!(await p.$('.pp-chead')), 'board = paper strips under one clean header row');
   await p.screenshot({ path: SHOTS + '/01-board-paper.png', fullPage: true });
   await p.click('.layout-sw button:has-text("Tabulka")');
   check(!!(await p.$('table.list')), 'switch to the table view');
@@ -215,6 +222,7 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await L.reload();
   await L.waitForSelector('button:has-text("+ Hodnotit")');
   await L.click('button:has-text("+ Hodnotit")');
+  await L.waitForSelector('#sec7 .pp-form');
   for (const g of await L.$$('.editing .choices.inline')) await (await g.$('.choice:has(input[value="OK"])')).click();
   await L.fill(fld('OJT s kým') + ' input', 'Tomáš Černý');
   await L.selectOption(fld('Typ zpětné vazby') + ' select', 'pochvala');
@@ -234,11 +242,14 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
 
   // ---------------- manager: reopen and cancel
   await M.reload();
-  await M.waitForSelector('text=SPRÁVA QRAP (MANAŽER)');
-  await M.fill('.card:has-text("SPRÁVA QRAP") input', 'Kontrola');
+  await M.waitForSelector('.admin-box summary');
+  check(!(await M.isVisible('.admin-box input')), 'Správa QRAP is folded away');
+  await M.click('.admin-box summary');
+  await M.fill('.admin-box input', 'Kontrola');
   await M.click('button:has-text("Znovu otevřít")');
   await badgeIs(M, /Ověření/);
-  await M.fill('.card:has-text("SPRÁVA QRAP") input', 'Duplicita');
+  await M.click('.admin-box summary');
+  await M.fill('.admin-box input', 'Duplicita');
   await M.click('button:has-text("Zrušit QRAP")');
   await badgeIs(M, /Zrušeno/);
   check(true, 'manager reopen + cancel');
@@ -285,7 +296,7 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await kn();
   check(await K.inputValue(fld('JMÉNO') + ' input') === '', 'kiosk: JMÉNO empty');
   await K.fill(fld('KOLIK špatných dílů') + ' input', '2');
-  await K.selectOption(fld('Jednotka') + ' select', 'ks');
+  await K.selectOption('.qty-pair select', 'ks');
   await pick(K, 'Stejný problém', 'NE');
   await K.fill(fld('JMÉNO') + ' input', 'Operátor Novák');
   await kn();

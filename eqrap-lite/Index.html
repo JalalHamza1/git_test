@@ -578,6 +578,56 @@ details.roles-more > summary { cursor: pointer; font-weight: 600; color: var(--i
 details.roles-more > summary::-webkit-details-marker { display: none; }
 details.roles-more[open] > summary .ico { transform: rotate(90deg); }
 
+/* ---------- KOLIK + jednotka, smaller board filters, clean board header, red "next", filling in the paper ---------- */
+.qty-pair { display: flex; gap: 8px; }
+.qty-pair > input { flex: 1 1 55%; min-width: 0; }
+.qty-pair > .fld, .form-rows .qty-pair > .fld { flex: 1 1 45%; display: block; padding: 0; border: 0; min-width: 0; }
+.toolbar select, .toolbar .btn, .toolbar .layout-sw button, .toolbar .search input { height: 32px; min-height: 32px; font-size: 12.5px; }
+.toolbar select { min-width: 118px; }
+.toolbar .search { width: 240px; }
+body.kiosk .toolbar select, body.kiosk .toolbar .btn, body.kiosk .toolbar .layout-sw button, body.kiosk .toolbar .search input { height: 40px; min-height: 40px; }
+.pp-chead { background: #fff; border: 1px solid var(--line-2); border-radius: 10px; padding: 8px 0 9px; margin-bottom: 4px; align-items: end; }
+.pp-ch { text-align: center; padding: 0 6px; min-width: 0; }
+.pp-ch + .pp-ch { border-left: 1px solid var(--line); }
+.pp-ch .who { font-size: 10.5px; color: var(--ink-3); margin-bottom: 3px; }
+.pp-ch .who b { text-transform: uppercase; letter-spacing: .05em; color: var(--ink-2); }
+.pp-ch .tt { font-weight: 700; font-size: 13px; line-height: 1.25; }
+.pp-ch .tt3 { display: grid; grid-template-columns: var(--pp-c1); column-gap: var(--pp-gap); }
+.pp-ch .tt2 { display: grid; grid-template-columns: var(--pp-c3); column-gap: var(--pp-gap); }
+.pp-cell.now { outline: 2px solid var(--bad); outline-offset: 2px; background: #fdf2f1; }
+.pp-cell.can-edit { cursor: pointer; }
+.pp-cell.can-edit:hover { outline: 2px dashed var(--accent); outline-offset: 2px; }
+.pp-cell.now.can-edit:hover { outline: 2px solid var(--bad); }
+.paper.big.edit-c1 { --pp-cols: 8fr 1.15fr 3.15fr 1.8fr 1.75fr 3.75fr 1.9fr; --pp-c1: 8fr 1.15fr 3.15fr; }
+.paper.big.edit-c3 { --pp-cols: 4.3fr 1.15fr 7fr 1.8fr 1.75fr 3.75fr 1.9fr; --pp-c1: 4.3fr 1.15fr 7fr; }
+.paper.big.edit-c4 { --pp-cols: 4.3fr 1.15fr 3.15fr 5fr 1.75fr 3.75fr 1.9fr; }
+.paper.big.edit-c5 { --pp-cols: 4.3fr 1.15fr 3.15fr 1.8fr 5fr 3.75fr 1.9fr; --pp-c3: 5fr 3.75fr; }
+.paper.big.edit-c6 { --pp-cols: 4.3fr 1.15fr 3.15fr 1.8fr 1.75fr 7fr 1.9fr; --pp-c3: 1.75fr 7fr; }
+.paper.big.edit-c7 { --pp-cols: 4.3fr 1.15fr 3.15fr 1.8fr 1.75fr 3.75fr 5fr; }
+.pp-form { background: #fff; border: 2px solid var(--accent); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;
+  font-size: 13px; cursor: auto; flex: 1; }
+.pp-form-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--accent-ink); }
+.pp-form .grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.pp-form .grid + .grid { margin-top: 12px; }
+.pp-form .fld-l { font-size: 12.5px; margin-bottom: 4px; }
+.pp-form input, .pp-form select { height: 36px; font-size: 13px; padding: 0 8px; }
+.pp-form textarea { font-size: 13px; padding: 6px 8px; }
+body.kiosk .pp-form input, body.kiosk .pp-form select { height: 44px; }
+.pp-form .checks { gap: 6px; }
+.pp-form .checks .check { padding: 5px 9px; font-size: 13px; }
+.pp-form .choice { padding: 6px 10px; font-size: 13px; }
+.pp-form .choices.inline .choice { padding: 5px 10px; }
+.pp-form .ia-row, .pp-form .act-form { padding: 8px; margin-top: 8px; }
+.pp-form .sub-h { padding-top: 8px; margin-top: 2px; }
+.pp-form .note { padding: 4px 0; }
+.pp-form .form-btns { margin-top: 10px; }
+.pp-form .why-row { gap: 6px; margin-bottom: 8px; }
+.pp-form .why-root { font-size: 12px; padding-bottom: 10px; }
+details.admin-box > summary { cursor: pointer; font-weight: 650; color: var(--ink-2); min-height: var(--tap-s); display: flex; align-items: center; gap: 8px; list-style: none; }
+details.admin-box > summary::-webkit-details-marker { display: none; }
+details.admin-box[open] > summary { margin-bottom: 8px; }
+details.admin-box[open] > summary .ico { transform: rotate(90deg); }
+
 /* ---------- toast ---------- */
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 8px;
   font-size: 14px; font-weight: 500; z-index: 60; max-width: 92vw; }
@@ -899,8 +949,9 @@ function go(view, id, replace) {
   if (view === 'detail') refreshOne(id);
 }
 
-function edit(key) {
+function edit(key, at) {
   S.edit = key;
+  S.editAt = key && at === 'paper' ? 'paper' : 'panel';
   render();
   const form = document.querySelector('.editing');
   if (form) {
@@ -1254,26 +1305,50 @@ function paperHead() {
   ];
 }
 
+/** The board's header: who fills what and the block titles, in one clean row aligned with the strips. */
+function paperHeadCompact() {
+  const t = text => h('div', { class: 'tt' }, text);
+  return h('div', { class: 'pp-row pp-chead' },
+    h('div', { class: 'pp-ch g1' }, h('div', { class: 'who' }, 'Vyplňuje ', h('b', null, 'operátor')),
+      h('div', { class: 'tt3' }, t('① Popis problému'), t('② Kdo byl upozorněn?'), t('③ Okamžitá opatření <24h'))),
+    h('div', { class: 'pp-ch g2' }, h('div', { class: 'who' }, 'Vyplňuje ', h('b', null, 'supervizor')), t('④ Rozhodnutí OJT')),
+    h('div', { class: 'pp-ch g3' }, h('div', { class: 'who' }, 'Vyplňují ', h('b', null, 'pověření pracovníci')),
+      h('div', { class: 'tt2' }, t('⑤ Příčina 5 Proč?'), t('⑥ Konečné akce'))),
+    h('div', { class: 'pp-ch g4' }, h('div', { class: 'who' }, h('b', null, 'Supervizor / manažer')), t('⑦ Hodnocení QRQC')));
+}
+
 /**
  * One QRAP filled into the paper form. big = the QRAP page (full texts, photos, buttons to fill each block);
  * otherwise the board (shortened texts, at most 3 table rows).
  */
-function paperBody(q, big) {
+function paperBody(q, big, ed) {
   const now = NOW_CELL[q.status] || 0;
   const rowsMax = list => (big ? list : list.slice(0, 3));
   const more = list => (!big && list.length > 3 ? h('div', { class: 'pp-more' }, '+ ' + (list.length - 3) + ' další') : null);
-  const edits = {};
+  const edits = {}, keys = {};
   if (big) {
-    if (q.can.popis) edits[1] = editBtn('popis', 'Upravit ① ②');
-    if (q.can.opatreni) edits[3] = q.status === 'OPATŘENÍ' ? startBtn('opatreni', 'Doplnit ③') : editBtn('opatreni', 'Upravit ③');
-    if (q.can.decide) edits[4] = startBtn('rozhodnuti', 'Rozhodnout ④');
-    else if (q.can.shifts) edits[4] = editBtn('smeny', 'Směny ④');
-    if (q.can.analyze) edits[5] = hasWhy(q) ? editBtn('pricina', 'Upravit ⑤') : startBtn('pricina', 'Vyplnit 5 Proč');
-    if (q.can.analyze && hasWhy(q)) edits[6] = startBtn('akce:new', '+ Konečná akce');
-    if (q.can.assess) edits[7] = editBtn('hodnoceni', '+ Hodnotit');
+    const pbtn = (key, label, primary) => h('button', { class: 'btn small no-print ' + (primary ? 'primary' : 'ghost'),
+      onclick: e => { e.stopPropagation(); edit(key, 'paper'); } }, label);
+    if (q.can.popis) { keys[1] = keys[2] = 'popis'; edits[1] = pbtn('popis', 'Upravit ① ②'); }
+    if (q.can.opatreni) { keys[3] = 'opatreni'; edits[3] = pbtn('opatreni', q.status === 'OPATŘENÍ' ? 'Doplnit ③' : 'Upravit ③', q.status === 'OPATŘENÍ'); }
+    if (q.can.decide) { keys[4] = 'rozhodnuti'; edits[4] = pbtn('rozhodnuti', 'Rozhodnout ④', true); }
+    else if (q.can.shifts) { keys[4] = 'smeny'; edits[4] = pbtn('smeny', 'Směny ④'); }
+    if (q.can.analyze) { keys[5] = 'pricina'; edits[5] = pbtn('pricina', hasWhy(q) ? 'Upravit ⑤' : 'Vyplnit 5 Proč', !hasWhy(q)); }
+    if (q.can.analyze && hasWhy(q)) { keys[6] = 'akce:new'; edits[6] = pbtn('akce:new', '+ Konečná akce', true); }
+    if (q.can.assess) { keys[7] = 'hodnoceni'; edits[7] = pbtn('hodnoceni', '+ Hodnotit'); }
   }
-  const cell = (n, ...kids) => h('div', { class: 'pp-cell c' + n + (now === n ? ' now' : ''), id: big ? 'sec' + n : null },
-    edits[n] ? h('div', { class: 'pp-ed' }, edits[n]) : null, kids);
+  const cell = (n, ...kids) => {
+    const id = big ? 'sec' + n : null;
+    if (ed && ed.cell === n) {
+      return h('div', { class: 'pp-cell c' + n + ' editing-cell', id }, h('div', { class: 'pp-form editing' },
+        h('div', { class: 'pp-form-h' }, h('b', null, ed.title), h('button', { class: 'btn small ghost', type: 'button', onclick: () => edit(null) }, 'Zavřít')),
+        ed.body));
+    }
+    const click = keys[n] && !(ed && ed.cell === n);
+    return h('div', { class: 'pp-cell c' + n + (now === n ? ' now' : '') + (click ? ' can-edit' : ''), id,
+      title: click ? 'Klikněte a vyplňte přímo ve formuláři' : null, onclick: click ? () => edit(keys[n], 'paper') : null },
+      edits[n] ? h('div', { class: 'pp-ed' }, edits[n]) : null, kids);
+  };
   const dShort = v => (big ? fmtD(v) : v ? fmtD(v).replace(/ \d{4}$/, '') : '');
 
   // ① POPIS PROBLÉMU
@@ -1376,7 +1451,7 @@ const whyLabel = k => (k === 'STD' ? 'standard' : /^O\d$/.test(k) ? k[1] + '. Pr
 
 /** The board: the paper header once, then one paper strip per QRAP. */
 function paperList(rows) {
-  return h('div', { class: 'pp-wrap' }, h('div', { class: 'paper compact' }, paperHead(),
+  return h('div', { class: 'pp-wrap' }, h('div', { class: 'paper compact' }, paperHeadCompact(),
     rows.map(q => {
       const st = STATUS[q.status] || {};
       const open = () => go('detail', q.id);
@@ -1393,6 +1468,7 @@ function paperList(rows) {
 function detailPage() {
   const q = byId(S.id);
   if (!q) return h('div', { class: 'card' }, 'Načítám ' + (S.id || '') + '…');
+  const inline = S.edit && S.editAt === 'paper' ? editorFor(q, S.edit) : null;
   return h('div', null,
     h('div', { class: 'crumbs no-print' }, h('button', { onclick: () => go('board') }, 'Tabule'), h('span', null, '/'), h('b', null, q.id)),
     h('div', { class: 'd-head' },
@@ -1401,7 +1477,7 @@ function detailPage() {
         h('div', { class: 'sub' }, [titleOf(q), q.zone, 'KDY ' + fmtDT(q.when)].filter(Boolean).join(' · '))),
       h('button', { class: 'btn no-print', onclick: () => window.print() }, icon('print'), 'Tisk / PDF')),
     nextBar(q),
-    h('div', { class: 'pp-wrap' }, h('div', { class: 'paper big' }, paperHead(), paperBody(q, true))),
+    h('div', { class: 'pp-wrap' }, h('div', { class: 'paper big' + (inline ? ' edit-c' + inline.cell : '') }, paperHead(), paperBody(q, true, inline))),
     editorPanel(q),
     actionsPanel(q),
     q.status === 'OVĚŘENÍ' ? h('div', { class: 'card no-print' }, effectBox(q)) : null,
@@ -1442,8 +1518,7 @@ function nextBox(q) {
 }
 
 /** The form for the block being filled in (opened from the buttons on the paper or in "Další krok"). */
-function editorPanel(q) {
-  const key = S.edit || '';
+function editorFor(q, key) {
   let title = '', body = null;
   if (key === 'popis' && q.can.popis) {
     const pf = popisForm(q, false);
@@ -1484,9 +1559,17 @@ function editorPanel(q) {
     body = assessForm(q);
   }
   if (!body) return null;
+  const cell = { popis: 1, opatreni: 3, smeny: 4, rozhodnuti: 4, pricina: 5, piloti: 5, hodnoceni: 7 }[key] || (/^akce:/.test(key) ? 6 : 0);
+  return { title, body, cell };
+}
+
+/** The form of the block being filled, under the paper (opened from the buttons in "Další krok"). */
+function editorPanel(q) {
+  const ed = S.edit && S.editAt !== 'paper' ? editorFor(q, S.edit) : null;
+  if (!ed) return null;
   return h('div', { class: 'card editing form-rows no-print', id: 'editor', style: 'margin-top:16px' },
-    h('div', { class: 'p-head' }, h('h2', null, title), h('div', { class: 'grow' }), h('button', { class: 'btn small ghost', onclick: () => edit(null) }, 'Zavřít')),
-    body);
+    h('div', { class: 'p-head' }, h('h2', null, ed.title), h('div', { class: 'grow' }), h('button', { class: 'btn small ghost', onclick: () => edit(null) }, 'Zavřít')),
+    ed.body);
 }
 
 /** ⑥ final actions with their buttons (✓ Hotovo, Upravit) – shown while the analysis runs. */
@@ -1616,7 +1699,10 @@ function adminBox(q) {
     const b = h('button', { class: 'btn ' + (cls || ''), onclick: () => { const d = F.read(); if (d) submit(b, 'apiAdmin', [q.id, code, d.reason, d.signer || ''], 1); } }, label);
     return b;
   };
-  return h('div', { class: 'card no-print' }, h('h2', null, 'Správa QRAP (manažer)'),
+  return h('details', { class: 'card no-print admin-box' },
+    h('summary', null, icon('right'), 'Správa QRAP – jen pro manažera'),
+    h('p', { class: 'sub' }, 'Zrušit duplicitní nebo omylem založený QRAP, znovu otevřít uzavřený, nebo odemknout ①–④ po podpisu rozhodnutí. ' +
+      'Vždy s důvodem' + (onKiosk() ? ' a jménem manažera (ověří se jeho role).' : '.')),
     h('div', { class: 'grid' }, reason, signer),
     h('div', { class: 'form-btns' },
       open && q.decision ? op('Odemknout ①–④ (zrušit rozhodnutí)', 'unlock') : null,
@@ -1758,6 +1844,17 @@ function makeForm(values) {
 /** Shows or hides a block when a value changes. */
 function showIf(el, on) { el.hidden = !on; return el; }
 
+/** KOLIK špatných dílů? with its unit right next to the number (one row). */
+function qtyRow(F, L) {
+  const qty = F.input('qty', 'KOLIK špatných dílů?', { req: true, type: 'number', min: 0 });
+  const unit = F.select('unit', '', L.units || [], { group: true, ph: '— jednotka —' });
+  const input = qty.querySelector('input');
+  const pair = h('div', { class: 'qty-pair' });
+  input.replaceWith(pair);
+  pair.append(input, unit);
+  return qty;
+}
+
 /**
  * ① POPIS PROBLÉMU and ② KDO BYL UPOZORNĚN? – the questions of the paper form QRAP V3.0, in its order.
  * groups = the steps of the new-QRAP form: Problém | Kdy a kde | Kolik a kdo | Popis problému.
@@ -1786,8 +1883,7 @@ function popisForm(v, isNew) {
       F.select('zone', 'KDE ?', L.zones || [], { req: true })),
     h('div', { class: 'grid' },
       h('div', { class: 'sub-h wide' }, 'Kolik a kdo'),
-      F.input('qty', 'KOLIK špatných dílů?', { req: true, type: 'number', min: 0 }),
-      F.select('unit', 'Jednotka', L.units || []),
+      qtyRow(F, L),
       h('div', { class: 'q-group wide' },
         F.yesno('repeat7', 'Stejný problém v posledních 7 dnech?', { req: true, onchange: x => showIf(repeat, x === 'ANO') }), repeat),
       F.input('finder', 'JMÉNO', { req: true, list: 'people-list', hint: 'Vaše jméno' })),
@@ -1797,7 +1893,7 @@ function popisForm(v, isNew) {
         photos ? photos.slot('WRONG', 'ŠPATNÝ díl') : null),
       h('div', { class: 'pair-f' }, F.input('descRight', 'DOBRÝ díl – popis', { req: true, rows: 4, hint: 'Jak to má být správně?' }),
         photos ? photos.slot('RIGHT', 'DOBRÝ díl') : null),
-      F.input('materialNo', 'Číslo dílu (materiálu)'),
+      F.input('materialNo', 'Číslo dílu (materiálu)', { opt: true }),
       F.input('huNo', 'Číslo HU / dodacího listu', { opt: true }),
       F.input('supplier', 'Dodavatel', { opt: true }))
   ];

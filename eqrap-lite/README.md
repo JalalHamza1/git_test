@@ -88,7 +88,7 @@ The app is two files: **`Code.gs`** (server) and **`Index.html`** (everything yo
 - **Search** looks in the QRAP number, CO, the descriptions of the wrong and good part, part / HU / delivery note numbers, supplier and zone.
 - **Filters:** Stav (including Čeká na rozhodnutí, Čeká na manažera and, for managers, Zrušené), Zóna, Období (24 h, 7 or 30 days).
 - **Zobrazení: "Formulář QRAP" (default) or "Tabulka".** The choice is remembered on each device.
-  - **Formulář QRAP:** the paper header once at the top, then one paper strip per QRAP. Above each strip is the number, the status, who it waits for, and "po termínu!" when late. The block that is next (for example ③ or ④) has a green frame. Long texts are shortened; click the strip to open the full form.
+  - **Formulář QRAP:** one clean header row at the top (who fills what and the block titles ①–⑦), then one paper strip per QRAP. Above each strip is the number, the status, who it waits for, and "po termínu!" when late. The block that is next (for example ③ or ④) has a **red** frame. Long texts are shortened; click the strip to open the full form.
   - **Tabulka:** the compact table (Číslo · Problém · Kde · Kdy · Nahlásil · Stav · Krok ①–⑦), sortable by clicking a column header.
   - Both views have page buttons and a "rows per page" setting at the bottom.
 - **"Moje konečné akce"** appears above the list when you are the pilot of an open action.
@@ -106,8 +106,8 @@ The app is two files: **`Code.gs`** (server) and **`Index.html`** (everything yo
   |---|---|
   | **Problém** | SAFETY · CO je za problém? · JAK byl objeven? (both dropdowns; "jiné" opens a text field right under the question) |
   | **Kdy a kde** | KDY ? (date and time, "Teď" button) · KDE ? (one zone) |
-  | **Kolik a kdo** | KOLIK špatných dílů? + unit · Stejný problém v posledních 7 dnech? (ANO → N° QRAP, right under the question) · JMÉNO |
-  | **Popis** | ŠPATNÝ díl – popis · DOBRÝ díl – popis (both required) · optional photo of each · číslo dílu (on the paper, optional) · HU / dodací list and dodavatel (not on the paper, marked "nepovinné") |
+  | **Kolik a kdo** | KOLIK špatných dílů? with the unit on the same row · Stejný problém v posledních 7 dnech? (ANO → N° QRAP, right under the question) · JMÉNO |
+  | **Popis** | ŠPATNÝ díl – popis · DOBRÝ díl – popis (both required) · optional photo of each · číslo dílu, HU / dodací list and dodavatel (all marked "nepovinné") |
   | **Upozornění** | Kdo byl upozorněn? (roles + jiné) |
   | **Opatření** | Ochranná opatření: riziko na již naskladněném / expedovaném zboží? (required; ANO → Přetříděno / Špatné kusy) · Okamžitá opatření (Co, Kdo, Čas) · Čas re-startu procesu/stanice |
   | **Kontrola** | everything on one page for a last check |
@@ -136,11 +136,14 @@ The app is two files: **`Code.gs`** (server) and **`Index.html`** (everything yo
   - ⑤ Příčina 5 Proč ? (the arrow with 1–5 PROČ; the root cause is green; the optional "Proč nebylo zachyceno" chain is written under it)
   - ⑥ Konečné akce (Co jsme se naučili, actions with Kdo / plán / hotovo, Uzavření QRAP schváleno, Efektivita ①–⑤, Příležitost k aktualizaci STANDARDU)
   - ⑦ Hodnocení QRQC (the latest assessment; older ones are listed under the form)
-  - the block that is next has a green frame.
-- **Filling a block:** each block has a small button (**Upravit ① ②**, **Doplnit ③**, **Rozhodnout ④**, **Vyplnit 5 Proč**, **+ Konečná akce**, **+ Hodnotit**). The form for that block opens under the paper; **Zavřít** closes it. Buttons appear **only for people who are allowed to use them**.
+  - the block that is next has a **red** frame.
+- **Filling a block – two ways:**
+  - **Straight in the paper:** click a block you may fill (it gets a dashed green frame on hover), or its small button in the block (**Upravit ① ②**, **Doplnit ③**, **Rozhodnout ④**, **Vyplnit 5 Proč**, **+ Konečná akce**, **+ Hodnotit**). The block widens and its questions appear right inside the paper.
+  - **Under the paper:** the buttons in the "Další krok" bar open the same form in a panel under the paper.
+  - Either way **Uložit** saves and **Zavřít** / **Zrušit** closes. Blocks and buttons react **only for people who are allowed to fill them**.
 - **Under the paper**, when needed: ⑥ Konečné akce with **✓ Hotovo** / **Upravit**, the 5-shift table (Ověření 5 směn), the closing checklist with **Podepsat uzavření** / **Schválit a uzavřít**.
 - **Historie změn:** click **Zobrazit** to load who changed what and when.
-- **Správa QRAP (manažer)**, managers only, each with a required reason: **Odemknout ①–④**, **Zrušit QRAP**, **Znovu otevřít**.
+- **Správa QRAP – jen pro manažera** (folded away; click to open): **Zrušit QRAP** (duplicate or mistake), **Znovu otevřít**, **Odemknout ①–④** (cancels the signed decision). A reason is always required; on the kiosk also the manager's name, which is checked against Lidé. On personal accounts only managers see it; on the kiosk it is shown to everyone because the name is checked when saving.
 - **Tisk / PDF** prints just the paper form on one landscape A4, or saves it as a PDF.
 
 ### Přehled manažera (managers and admin)
