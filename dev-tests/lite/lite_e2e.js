@@ -43,7 +43,7 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   check((await p.$$('.row:not(.head)')).length === 1, 'search by material number');
   await p.fill('input[type=search]', '');
 
-  // ---------------- new QRAP: ① ② ③ with the original questions
+  // ---------------- new QRAP: ① ② ③ in the order of the paper form
   await p.click('text=+ Nahlásit problém');
   await p.waitForSelector('.wiz-steps');
   const nextStep = () => p.click('button:has-text("Pokračovat →")');
@@ -51,43 +51,55 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await nextStep();
   await p.waitForSelector('.toast.bad');
   const msg = await p.textContent('#toast');
-  check(/SAFETY, JAK byl objeven, CO je za problém, Stejný problém v posledních 7 dnech/.test(msg), 'step 1 checks only its questions: ' + msg);
+  check(/SAFETY, JAK byl objeven, CO je za problém$/.test(msg), 'step 1 = SAFETY, JAK, CO (paper order): ' + msg);
   check(await onStep(1), 'stays on step 1');
   await pick(p, 'SAFETY', 'NE');
   await p.selectOption(fld('JAK byl objeven') + ' select', 'jiné');
-  check(await p.isVisible(fld('JAK – jiné')), '„jiné“ asks for text');
+  check(await p.isVisible(fld('JAK – jiné')), 'JAK „jiné“ asks for text');
   await p.selectOption(fld('JAK byl objeven') + ' select', 'vychystávání');
-  await p.fill(fld('CO je za problém') + ' textarea', 'Na paletě pro zákazníka je jiný materiál, než je na etiketě');
-  await pick(p, 'Stejný problém', 'ANO');
-  check(await p.isVisible(fld('Vyberte QRAP z posledních 7 dnů')), 'repeat → choose QRAP');
-  await pick(p, 'Stejný problém', 'NE');
+  await p.selectOption(fld('CO je za problém') + ' select', 'jiné');
+  check(await p.isVisible(fld('CO – jiné')), 'CO „jiné“ asks for text');
+  await p.selectOption(fld('CO je za problém') + ' select', 'špatný materiál');
   await nextStep();
   check(await onStep(2), 'step 2 Kdy a kde');
-  check(await p.inputValue(fld('KDE? – zóna') + ' select') === 'Expedice', 'zóna prefilled from Lidé');
-  await p.fill(fld('KDE? – lokace') + ' input', 'Rampa 2');
+  check(await p.inputValue(fld('KDE ?') + ' select') === 'Expedice', 'one KDE, prefilled from Lidé');
+  check(!(await p.$(fld('lokace'))) && !(await p.$(fld('Kde vzniklo'))), 'no second / third KDE');
   await nextStep();
-  check(await onStep(3), 'step 3 Množství');
+  check(await onStep(3), 'step 3 Kolik a kdo');
   check(await p.inputValue(fld('JMÉNO') + ' input') === 'Tomáš Černý', 'JMÉNO prefilled');
-  await p.fill(fld('KOLIK?') + ' input', '6');
+  check(!(await p.$('text=NOK situace')), 'no NOK checkbox (not on the paper)');
+  await p.fill(fld('KOLIK špatných dílů') + ' input', '6');
+  await pick(p, 'Stejný problém', 'ANO');
+  check(await p.isVisible(fld('N° QRAP')), 'repeat → N° QRAP');
+  await pick(p, 'Stejný problém', 'NE');
   await nextStep();
   check(/jednotku/.test(await p.textContent('#toast')), 'unit required');
   await p.selectOption(fld('Jednotka') + ' select', 'ks');
-  await p.fill(fld('Číslo materiálu') + ' input', '0012345');
   await nextStep();
+  check(await onStep(4), 'step 4 Popis ŠPATNÝ / DOBRÝ díl');
   await nextStep();
-  check(/ŠPATNĚ i SPRÁVNĚ/.test(await p.textContent('#toast')), 'photos required');
+  check(/ŠPATNÝ díl – popis, DOBRÝ díl – popis/.test(await p.textContent('#toast')), 'both descriptions required');
+  await p.fill(fld('ŠPATNÝ díl – popis') + ' textarea', 'Na paletě pro zákazníka je jiný materiál, než je na etiketě');
+  await p.fill(fld('DOBRÝ díl – popis') + ' textarea', 'Materiál na paletě odpovídá etiketě');
+  await p.fill(fld('Číslo dílu') + ' input', '0012345');
+  check(await p.getAttribute('.pslot.wrong input[type=file]', 'capture') === 'environment', 'photo button opens the camera on a tablet');
   await p.setInputFiles('.pslot.wrong input[type=file]', { name: 'spatne.png', mimeType: 'image/png', buffer: PNG });
   await p.setInputFiles('.pslot.right input[type=file]', { name: 'spravne.png', mimeType: 'image/png', buffer: PNG2 });
   await p.waitForSelector('.pslot.right .ph img');
   await p.screenshot({ path: SHOTS + '/02-new.png' });
   await nextStep();
-  check(await onStep(5), 'step 5 ②');
+  check(await onStep(5), 'step 5 ② Kdo byl upozorněn');
+  check(!(await p.$('text=Poslat e-mail také')), 'no extra e-mail list');
   await p.click('.check:has-text("Team Leader")');
   await nextStep();
-  check(await onStep(6) && !(await p.$('.ia-row')), 'operator: ③ is only the risk question');
-  await pick(p, 'Je riziko', 'ANO');
+  check(await onStep(6) && !!(await p.$('.ia-row')), 'step 6 ③ okamžitá opatření for the operator');
   await nextStep();
-  check(await onStep(7) && await p.isVisible(fld('CO je za problém')), 'step 7 shows everything for a check');
+  check(/riziko/.test(await p.textContent('#toast')), 'risk answer required');
+  await pick(p, 'riziko na již', 'ANO');
+  check(await p.isVisible(fld('Přetříděno')), 'ANO → třídění – data');
+  await p.screenshot({ path: SHOTS + '/02c-opatreni.png' });
+  await nextStep();
+  check(await onStep(7) && await p.isVisible(fld('ŠPATNÝ díl – popis')), 'step 7 shows everything for a check');
   await p.screenshot({ path: SHOTS + '/02b-check.png', fullPage: true });
   c0 = await calls();
   await p.click('button:has-text("Odeslat")');
@@ -99,61 +111,64 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   check(env.state.sent.some(m => m.to.includes(LEAD) && m.subject.includes(id)), 'zone leader e-mailed');
   check(env.state.sent.some(m => m.to === 'kvalita@example.com'), 'Quality e-mailed');
   await p.click('.flash button');
-  await p.waitForSelector('.d-head');
+  await p.waitForSelector('.paper.big');
   check(/Opatření/.test(await p.textContent('.d-head h1 .badge')), '③ waits for the TL: ' + id);
-  check(/Kvalita/.test(await p.textContent('#sec2')), 'Kvalita added to ② automatically');
-  check(env.sheetRows('Problémy').find(r => r.ID === id)['① Číslo materiálu'] === '0012345', 'material number with zeros in the Sheet');
-  await p.waitForSelector('.pslot.right .ph img');
-  check(!(await p.$('text=Rozhodnout')), 'normal user has no decide button');
+  check(!!(await p.$('#sec2 .cb.on:has-text("Kvalita")')), 'Kvalita ticked in ② automatically');
+  check(!!(await p.$('#sec3.now')), 'the next block (③) is highlighted on the paper');
+  check(/Na paletě pro zákazníka/.test(await p.textContent('#sec1')) && /špatný materiál/.test(await p.textContent('#sec1')), '① on the paper');
+  check(env.sheetRows('Problémy').find(r => r.ID === id)['① Číslo materiálu'] === '0012345', 'part number with zeros in the Sheet');
+  await p.waitForSelector('#sec1 .pp-ph img');
+  check(!(await p.$('button:has-text("Rozhodnout")')), 'normal user has no decide button');
 
-  // ③ finished later (TL)
+  // ③ finished later (anyone on the shift)
   await p.click('button:has-text("Doplnit ③")');
-  check(await p.isVisible(fld('Zkontrolováno (ks)')), 'risk ANO → check quantities');
-  await p.fill(fld('Zkontrolováno (ks)') + ' input', '24');
-  await p.fill(fld('Nalezeno špatně (ks)') + ' input', '6');
-  await p.selectOption('.ia-row ' + fld('Typ') + ' select', 'blokace / karanténa zásob');
+  check(await p.isVisible(fld('Přetříděno (ks)')), 'risk ANO → sorting data');
+  await p.fill(fld('Přetříděno (ks)') + ' input', '24');
+  await p.fill(fld('Špatné kusy (ks)') + ' input', '6');
   await p.fill('.ia-row ' + fld('Co bylo uděláno') + ' input', 'Paleta zablokována');
-  await p.click('.ia-row ' + fld('Hotovo v') + ' button:has-text("Teď")');
-  await pick(p, 'Proces zastaven?', 'NE');
+  await p.click('.ia-row ' + fld('Čas') + ' button:has-text("Teď")');
   await p.click('button:has-text("Uložit ③")');
   await badgeIs(p, /Rozhodnutí/);
-  check(true, '③ complete → ④ Rozhodnutí');
+  check(/Paleta zablokována/.test(await p.textContent('#sec3')) && /24/.test(await p.textContent('#sec3')), '③ complete → ④ Rozhodnutí, shown on the paper');
   await p.goBack();
   await p.waitForSelector('.stats');
   check(true, 'browser back → board');
+  check((await p.$$('.strip')).length >= 4 && !!(await p.$('.pp-heads')), 'board = paper strips under one paper header');
+  await p.screenshot({ path: SHOTS + '/01-board-paper.png', fullPage: true });
+  await p.click('.layout-sw button:has-text("Tabulka")');
+  check(!!(await p.$('table.list')), 'switch to the table view');
+  await p.click('.layout-sw button:has-text("Formulář")');
 
   // ---------------- leader: shifts and signature
   const L = await open(LEAD, 'id=' + id);
-  await L.waitForSelector('.d-head');
-  await L.click('#sec4 .check:has-text("Ranní")');
-  await L.click('button:has-text("Uložit směny")');
-  await L.waitForFunction(() => /Uloženo/.test(document.getElementById('toast').textContent));
+  await L.waitForSelector('.paper.big');
   await L.click('button:has-text("Rozhodnout")');
+  await L.click('.editing .check:has-text("Ranní")');
   await L.click('.choice:has-text("Pokračovat s analýzou")');
   await L.click('.editing .check:has-text("Tomáš Černý")');
   await L.click('.editing .check:has-text("Odpolední")');
   await L.click('.editing .check:has-text("Noční")');
   await L.click('button:has-text("Podepsat")');
   await badgeIs(L, /5 Proč/);
-  check(/Podepsal\(a\) Jana Nováková/.test(await L.textContent('#sec4')), '④ signed and locked');
+  check(/Jana Nováková/.test(await L.textContent('#sec4')) && !!(await L.$('#sec4 .cb.on:has-text("Pokračovat")')), '④ signed on the paper');
   check(!(await L.$('#sec1 button:has-text("Upravit")')), '① locked after ④');
 
   // ---------------- pilot: ⑤ and ⑥
   await p.goto('http://localhost:8124/?as=' + encodeURIComponent(USER) + '&id=' + id);
   await p.waitForSelector('button:has-text("Vyplnit 5 Proč")');
   await p.click('button:has-text("Vyplnit 5 Proč")');
-  await p.fill(fld('O1 – Proč?') + ' input', 'Etiketa z jiné zakázky');
-  await p.fill(fld('O2 – Proč?') + ' input', 'Tiskárna tiskla starou frontu');
-  await p.fill(fld('O3 – Proč?') + ' input', 'Fronta se na konci směny nemaže');
-  await p.click('.why-row:has(' + fld('O3 – Proč?') + ') .why-root input');
+  await p.fill(fld('1 PROČ ?') + ' input', 'Etiketa z jiné zakázky');
+  await p.fill(fld('2 PROČ ?') + ' input', 'Tiskárna tiskla starou frontu');
+  await p.fill(fld('3 PROČ ?') + ' input', 'Fronta se na konci směny nemaže');
+  await p.click('.why-row:has(' + fld('3 PROČ ?') + ') .why-root input');
   await p.click('text=+ Přidat řetězec');
-  await p.fill(fld('N1 – Proč?') + ' input', 'Etiketa se při nakládce nekontroluje');
-  await p.click('.why-row:has(' + fld('N1 – Proč?') + ') .why-root input');
+  await p.fill(fld('N1 – PROČ') + ' input', 'Etiketa se při nakládce nekontroluje');
+  await p.click('.why-row:has(' + fld('N1 – PROČ') + ') .why-root input');
   await p.fill(fld('Co jsme se naučili') + ' textarea', 'Frontu tiskárny mazat při předávce směny');
   await pick(p, 'STANDARDU', 'NE');
   await p.click('button:has-text("Uložit analýzu")');
-  await p.waitForSelector('.root-step');
-  check((await p.$$('.root-step')).length === 2, 'two root causes marked');
+  await p.waitForSelector('#sec5 .p5-w.root');
+  check((await p.$$('#sec5 .p5-w.root')).length === 1 && /★/.test(await p.textContent('#sec5')), 'root causes marked on the paper');
   await p.click('button:has-text("+ Přidat konečnou akci")');
   await p.fill('.act-form ' + fld('Konečná akce') + ' textarea', 'Mazat tiskovou frontu při předávce směny');
   await p.selectOption('.act-form ' + fld('Odstraňuje krok') + ' select', 'O3');
@@ -161,8 +176,8 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await p.fill('.act-form input[type=date]', day(3));
   await p.click('button:has-text("Přidat akci")');
   await badgeIs(p, /Akce/);
-  check(true, 'root + action → ⑥ Akce');
-  await p.click('#sec6 button:has-text("✓ Hotovo")');
+  check(/Mazat tiskovou frontu/.test(await p.textContent('#sec6')), 'root + action → ⑥ Akce, on the paper');
+  await p.click('.acts-panel button:has-text("✓ Hotovo")');
   await badgeIs(p, /Ověření/);
   check(true, 'action done → Ověření 5 směn');
 
@@ -176,7 +191,7 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
     await row.locator('button').click();
     await p.waitForFunction(n => document.querySelectorAll('table.slots .badge.ok').length === n, i + 1);
   }
-  check(/efektivní na 5 z 5/.test(await p.textContent('#sec6')), '5 effective shifts');
+  check((await p.$$('#sec6 .p6-eff span.on')).length === 5, '5 effective shifts ①②③④⑤ on the paper');
   check(!(await p.$('button:has-text("Podepsat uzavření")')), 'pilot cannot sign the closure');
 
   // ---------------- only a manager closes; leader does ⑦
@@ -188,7 +203,7 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   check((await M.$$('.checklist .ok')).length === 6, 'closure checklist all ✓');
   await M.click('button:has-text("Podepsat uzavření")');
   await badgeIs(M, /Uzavřeno/);
-  check(true, 'manager closes → Uzavřeno');
+  check(/Eva Dvořáková/.test(await M.textContent('#sec6')), 'manager closes → Uzavřeno, signed on the paper');
   await L.reload();
   await L.waitForSelector('button:has-text("+ Hodnotit")');
   await L.click('button:has-text("+ Hodnotit")');
@@ -197,15 +212,17 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await L.selectOption(fld('Typ zpětné vazby') + ' select', 'pochvala');
   await L.fill(fld('Zpětná vazba') + ' textarea', 'Rychlá reakce');
   await L.click('button:has-text("Uložit hodnocení")');
-  await L.waitForSelector('.assess-item');
-  check(/Celkem hodnocení: 1/.test(await L.textContent('#sec7')), '⑦ assessment saved');
-  await L.click('.card:has-text("HISTORIE") button:has-text("Zobrazit")');
+  await L.waitForFunction(() => /Rychlá reakce/.test(document.getElementById('sec7').textContent));
+  check((await L.$$('#sec7 .cb.on')).length === 5, '⑦ assessment on the paper');
+  await L.click('.card:has-text("Historie") button:has-text("Zobrazit")');
   await L.waitForSelector('.timeline li');
   check((await L.$$('.timeline li')).length >= 12, 'history entries');
+  await L.setViewportSize({ width: 1600, height: 900 });
   await L.screenshot({ path: SHOTS + '/03-closed.png', fullPage: true });
   await L.emulateMedia({ media: 'print' });
   await L.screenshot({ path: SHOTS + '/04-print.png', fullPage: true });
   await L.emulateMedia({ media: 'screen' });
+  await L.setViewportSize({ width: 1280, height: 900 });
 
   // ---------------- manager: reopen and cancel
   await M.reload();
@@ -221,7 +238,7 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await M.click('header >> text=Přehled manažera');
   await M.waitForSelector('.stats .stat');
   check((await M.$$('.stats .stat')).length === 4 && !!(await M.$('svg.spark')), 'dashboard: four compact cards with a mini chart');
-  check((await M.$$('.tbl-wrap .row')).length >= 1, 'dashboard: open QRAP table is the main block');
+  check((await M.$$('.tbl-wrap .strip')).length >= 1, 'dashboard: open QRAPs as paper strips');
   check(!(await M.isVisible('.hbar')), 'more statistics are collapsed');
   await M.click('summary:has-text("Další statistiky")');
   check((await M.$$('.hbar')).length > 0, 'more statistics open on click');
@@ -235,6 +252,7 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   const O = await open(OWNER);
   await O.click('nav >> text=Správa');
   await O.waitForSelector('text=LIDÉ A ROLE');
+  check(await O.isVisible('.fld:has-text("CO je za problém") textarea'), 'CO list editable in Správa → Seznamy');
   await O.click('button:has-text("+ Přidat osobu")');
   await O.fill('.act-form ' + fld('Jméno') + ' input', 'Karel Nový');
   await O.fill('.act-form ' + fld('E-mail') + ' input', 'karel.novy@example.com');
@@ -244,7 +262,7 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   check(env.sheetRows('Lidé').some(r => r['E-mail'] === 'karel.novy@example.com' && r['Role'] === 'MANAŽER'), 'admin added a manager from the web');
   await O.screenshot({ path: SHOTS + '/11-admin.png', fullPage: true });
 
-  // ---------------- kiosk: operator minimum, then leader and manager sign by name on the same kiosk
+  // ---------------- kiosk: the operator fills ① ② ③, then leader and manager sign by name on the same kiosk
   const K = await open(KIOSK, '', null, true);
   await K.waitForSelector('.row:not(.head)');
   check(/^Kiosk/.test(await K.textContent('.who')), 'kiosk account → kiosk mode');
@@ -252,38 +270,33 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   const kn = () => K.click('button:has-text("Pokračovat →")');
   await pick(K, 'SAFETY', 'NE');
   await K.selectOption(fld('JAK byl objeven') + ' select', 'inventura');
-  await K.fill(fld('CO je za problém') + ' textarea', 'V krabici 48 ks místo 50');
-  await pick(K, 'Stejný problém', 'NE');
+  await K.selectOption(fld('CO je za problém') + ' select', 'špatné množství');
   await kn();
-  await K.selectOption(fld('KDE? – zóna') + ' select', 'Sklad');
-  await K.fill(fld('KDE? – lokace') + ' input', 'C-04-01');
+  await K.selectOption(fld('KDE ?') + ' select', 'Sklad');
   await kn();
   check(await K.inputValue(fld('JMÉNO') + ' input') === '', 'kiosk: JMÉNO empty');
-  await K.fill(fld('KOLIK?') + ' input', '2');
+  await K.fill(fld('KOLIK špatných dílů') + ' input', '2');
   await K.selectOption(fld('Jednotka') + ' select', 'ks');
+  await pick(K, 'Stejný problém', 'NE');
   await K.fill(fld('JMÉNO') + ' input', 'Operátor Novák');
   await kn();
-  await K.click('text=Fotku nelze pořídit');
-  await K.fill(fld('Důvod výjimky') + ' textarea', 'Kiosk bez fotoaparátu');
+  await K.fill(fld('ŠPATNÝ díl – popis') + ' textarea', 'V krabici 48 ks místo 50');
+  await K.fill(fld('DOBRÝ díl – popis') + ' textarea', 'V krabici je 50 ks');
   await kn();
   await K.click('.check:has-text("Supervizor")');
   await kn();
-  await pick(K, 'Je riziko', 'NE');
+  await pick(K, 'riziko na již', 'NE');
+  await K.fill('.ia-row ' + fld('Co bylo uděláno') + ' input', 'Krabice doplněna');
+  await K.fill('.ia-row ' + fld('Kdo') + ' input', 'Operátor Novák');
+  await K.click('.ia-row ' + fld('Čas') + ' button:has-text("Teď")');
   await kn();
   await K.click('button:has-text("Odeslat")');
   await K.waitForSelector('.flash');
   check(!(await K.$('.flash button')), 'kiosk: back home, no detail link');
   const kr = env.sheetRows('Problémy').find(r => r['① JMÉNO'] === 'Operátor Novák');
-  check(kr && kr['Stav'] === 'OPATŘENÍ' && kr['Účet'] === KIOSK && /bez fotoaparátu/.test(kr['① Výjimka – proč nejsou fotky']), 'kiosk QRAP stored');
+  check(kr && kr['Stav'] === 'ROZHODNUTÍ' && kr['Účet'] === KIOSK && /48 ks/.test(kr['① Popis – ŠPATNÝ díl']),
+    'operator filled ③ on the kiosk → straight to ④ Rozhodnutí');
   await K.click('.row:has-text("V krabici 48 ks")');
-  await K.click('button:has-text("Doplnit ③")');
-  await K.selectOption('.ia-row ' + fld('Typ') + ' select', 'přebalení');
-  await K.fill('.ia-row ' + fld('Kdo') + ' input', 'TL Dvořák');
-  await K.fill('.ia-row ' + fld('Co bylo uděláno') + ' input', 'Krabice doplněna');
-  await K.click('.ia-row ' + fld('Hotovo v') + ' button:has-text("Teď")');
-  await pick(K, 'Proces zastaven?', 'NE');
-  await K.click('button:has-text("Uložit ③")');
-  await badgeIs(K, /Rozhodnutí/);
   await K.click('button:has-text("Rozhodnout")');
   await K.click('.choice:has-text("Problém vyřešen")');
   await K.fill(fld('Komentář') + ' textarea', 'Jednorázová chyba, OJT provedeno');
@@ -292,7 +305,7 @@ const day = d => { const t = new Date(Date.now() + d * 864e5); return t.getFullY
   await K.fill(fld('Kdo podepisuje') + ' input', 'Jana Nováková');
   await K.click('button:has-text("Podepsat")');
   await badgeIs(K, /Ke schválení/);
-  check(/Podepsal\(a\) Jana Nováková/.test(await K.textContent('#sec4')), 'signed with the typed name');
+  check(/Jana Nováková/.test(await K.textContent('#sec4')), 'signed with the typed name');
   await K.fill(fld('Kdo uzavírá') + ' input', 'Jana Nováková');
   await K.click('button:has-text("Schválit a uzavřít")');
   await K.waitForSelector('.toast.bad');

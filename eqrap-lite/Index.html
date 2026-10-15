@@ -17,7 +17,7 @@
   --viz: #4f9a2a; --viz-track: #e3e8e4;  /* chart: one green series, validated >= 3:1 on white */
   --r: 10px;
   /* layout: flexible caps, side margins grow with the screen */
-  --gutter: clamp(16px, 4vw, 72px); --w-wide: 84rem; --w-mid: 72rem; --w-form: 56rem;
+  --gutter: clamp(16px, 4vw, 72px); --w-wide: 84rem; --w-mid: 72rem; --w-form: 56rem; --w-paper: 120rem;
   /* one spacing scale */
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 64px;
   --tap: 44px; --tap-s: 36px;
@@ -125,6 +125,7 @@ input[type=checkbox]:focus-visible, input[type=radio]:focus-visible { outline: 2
 .sub-h { grid-column: 1 / -1; font-size: 12px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em;
   padding-top: 16px; border-top: 1px solid var(--line); margin-top: 4px; }
 .grid > .sub-h:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+.grid + .grid { margin-top: 22px; }
 .checks { display: flex; flex-wrap: wrap; gap: 10px; }
 .check, .check-line { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; cursor: pointer; font-weight: 400; }
 .checks .check { border: 1px solid var(--line-2); border-radius: 8px; padding: 9px 14px; background: #fff; }
@@ -369,6 +370,122 @@ table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
 .flow .num { margin-bottom: 10px; background: var(--accent-soft); color: var(--accent-ink); border-color: #cfe8bf; }
 .flow b { display: block; margin-bottom: 4px; }
 
+/* ---------- the paper form QRAP V3.0: board strips and the QRAP page ----------
+   Same blocks and order as the paper: ① ② ③ (operator) · ④ (supervisor) · ⑤ ⑥ (pilots) · ⑦ (supervisor / manager).
+   Column widths are the paper's proportions (--pp-cols). */
+.pp-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+.paper { --pp-cols: 4.3fr 1.15fr 3.15fr 1.8fr 1.75fr 3.75fr 1.9fr; --pp-gap: 8px; --pp-panel: #e8eaeb; --pp-line: #c2c7cb;
+  --pp-dark: #7c8387; --pp-mid: #b8bdc0; --pp-ink: #23292d; font-size: 12.5px; line-height: 1.35; color: var(--ink); min-width: 1240px; }
+.paper.compact { font-size: 11.5px; min-width: 1100px; }
+.pp-row { display: grid; grid-template-columns: var(--pp-cols); column-gap: var(--pp-gap); }
+.g1 { grid-column: 1 / 4; } .g2 { grid-column: 4 / 5; } .g3 { grid-column: 5 / 7; } .g4 { grid-column: 7 / 8; }
+.pp-bands { margin-bottom: 6px; }
+.pp-band { background: #eef0f1; text-align: center; font-size: 11px; padding: 4px 20px 4px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%); }
+.pp-band.dark { background: var(--pp-dark); color: #fff; }
+.pp-heads { margin-bottom: 6px; }
+.pp-h { border-radius: 10px; display: grid; place-items: center; text-align: center; padding: 6px 8px; font-weight: 800; line-height: 1.02; color: #111; }
+.pp-h .big { font-size: 26px; text-transform: uppercase; }
+.pp-h .mid { font-size: 15px; font-weight: 500; }
+.pp-h.g1 { background: var(--pp-panel); grid-template-columns: 4.3fr 1.15fr 3.15fr; column-gap: var(--pp-gap); }
+.pp-h.g2 { background: var(--pp-dark); color: #fff; box-shadow: inset 0 0 0 3px #4a5054; }
+.pp-h.g2 small { display: block; font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+.pp-h.g3 { background: var(--pp-mid); grid-template-columns: 1.75fr 3.75fr; column-gap: var(--pp-gap); }
+.pp-h.g4 { background: #fff; font-size: 15px; }
+.pp-h.g4 small { display: block; font-size: 10.5px; font-weight: 400; margin-top: 2px; }
+.paper.compact .pp-h .big { font-size: 17px; }
+.paper.compact .pp-band { font-size: 10px; padding-right: 14px; }
+.paper.compact .pp-h .mid, .paper.compact .pp-h.g4, .paper.compact .pp-h.g2 small { font-size: 12px; }
+.pp-body { align-items: stretch; }
+.pp-g { padding: 6px; border-radius: 10px; min-width: 0; }
+.pp-g.g1 { background: var(--pp-panel); display: grid; grid-template-columns: 4.3fr 1.15fr 3.15fr; column-gap: var(--pp-gap); }
+.pp-g.g2 { background: var(--pp-panel); border: 3px solid var(--pp-ink); display: flex; }
+.pp-g.g3 { background: var(--pp-panel); border: 2px dashed #6f767a; display: grid; grid-template-columns: 1.75fr 3.75fr; column-gap: var(--pp-gap); }
+.pp-g.g4 { background: #fff; border: 1.5px solid var(--pp-ink); border-radius: 14px; display: flex; }
+.pp-cell { position: relative; min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 5px; border-radius: 6px; }
+.pp-cell.now { outline: 2px solid var(--accent); outline-offset: 2px; background: var(--accent-soft); }
+.pp-ed { align-self: flex-end; display: flex; }
+.pp-box { background: #fff; border: 1px solid var(--pp-line); padding: 4px 6px; min-width: 0; }
+.pp-l { display: block; font-weight: 700; font-size: .92em; }
+.pp-l.light { font-weight: 400; color: var(--ink-3); font-style: italic; }
+.pp-v, .pp-txt { overflow-wrap: anywhere; }
+.pp-txt { white-space: pre-wrap; }
+.paper.compact .pp-txt { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
+.pp-empty { color: #a3aaaf; }
+.paper .sub { font-size: .9em; }
+.pp-more { font-size: .9em; color: var(--ink-3); }
+.cb { display: inline-flex; align-items: baseline; gap: 5px; margin-right: 8px; }
+.cb i { width: 11px; height: 11px; border: 1.5px solid var(--pp-ink); flex: none; position: relative; top: 1px; box-shadow: 1.5px 1.5px 0 var(--pp-ink); background: #fff; }
+.cb.on i { background: var(--pp-ink); }
+.cb.on i::after { content: '✓'; color: #fff; font-size: 10px; line-height: 10px; position: absolute; left: 1px; top: -1px; font-style: normal; }
+.cb-list .cb { display: flex; margin: 0 0 4px; }
+/* ① */
+.p1 { display: grid; grid-template-columns: 1fr 1fr 1.25fr; gap: 5px; flex: 1; }
+.p1-no { display: flex; flex-direction: column; gap: 6px; justify-content: center; }
+.p1-no .no { display: flex; }
+.p1-no .no span { background: #151b1f; color: #fff; font-weight: 800; padding: 3px 6px; }
+.p1-no .no b { background: #fff; border: 1px solid var(--pp-line); padding: 2px 6px; flex: 1; white-space: nowrap; }
+.p1-no .cb { font-weight: 800; font-size: 1.15em; }
+.p1-co { grid-column: 2 / 4; }
+.p1-rep { grid-column: 1 / 3; }
+.p1-popis { grid-column: 1 / 4; border-radius: 10px; }
+.p1-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 3px; }
+.pp-part em { display: block; font-style: italic; color: var(--ink-3); text-align: center; margin-bottom: 2px; }
+.pp-ph { display: block; width: 100%; height: 120px; border: 1px solid var(--pp-line); border-radius: 6px; overflow: hidden; margin-top: 4px; padding: 0;
+  background: var(--soft); color: var(--ink-3); font-size: 12px; cursor: zoom-in; }
+.pp-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pp-cam { margin-top: 4px; }
+.pp-flag { font-size: .9em; color: var(--ink-2); }
+/* ③ ⑥ tables */
+.pp-t { width: 100%; border-collapse: collapse; background: #fff; table-layout: fixed; }
+.pp-t th, .pp-t td { border: 1px solid var(--pp-line); padding: 3px 5px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.pp-t th { font-weight: 700; font-size: .92em; }
+.paper.compact .pp-t th, .paper.compact .pp-t td { padding: 2px 3px; }
+.pp-grow { flex: 1; background: #fff; border: 1px solid var(--pp-line); }
+.pp-grow .pp-t { border: 0; }
+/* ④ */
+.p4-dec { border-style: dashed; border-color: #6f767a; }
+.p4-dec .cb { display: flex; margin: 0 0 4px; font-weight: 700; }
+.p4-sh { display: flex; flex-wrap: wrap; gap: 2px 0; }
+.p4-sh .cb { margin-right: 10px; }
+/* ⑤ chevron */
+.p5 { background: var(--pp-ink); padding: 2px; flex: 1; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 22px), 50% 100%, 0 calc(100% - 22px)); }
+.p5-in { background: #fff; height: 100%; padding: 4px 4px 26px; display: flex; flex-direction: column; gap: 4px;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 21px), 50% 100%, 0 calc(100% - 21px)); }
+.p5-w { border: 1.5px solid var(--pp-ink); padding: 2px 5px; min-height: 3em; flex: 1; }
+.p5-w > b { display: block; text-align: center; font-size: .92em; }
+.p5-w.root { background: var(--accent-soft); }
+.p5-root { display: block; text-align: center; font-size: .85em; font-weight: 700; color: var(--accent-ink); }
+.p5-n { font-size: .9em; border-top: 1px dashed var(--pp-line); padding-top: 3px; }
+/* ⑥ */
+.p6-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.p6-eff { display: flex; gap: 3px; margin-top: 3px; }
+.p6-eff span { width: 19px; height: 19px; border-radius: 50%; border: 1.5px solid var(--pp-ink); display: grid; place-items: center; font-size: 10px; font-weight: 700; }
+.p6-eff span.on { background: var(--pp-ink); color: #fff; }
+.pp-late { font-weight: 800; }
+/* ⑦ */
+.p7 { padding: 4px; display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.p7-c .cb { font-weight: 800; margin: 0; }
+.p7-sub { font-style: italic; font-size: .9em; padding-left: 17px; }
+.p7-res { font-weight: 700; margin-left: 4px; }
+.p7-who { margin-top: auto; }
+/* board: one paper strip per QRAP */
+.strip { margin-top: 14px; cursor: pointer; border-radius: 12px; outline: none; }
+.strip-cap { display: flex; gap: 10px; align-items: baseline; padding: 0 4px 5px; font-size: 13px; flex-wrap: wrap; }
+.strip-cap .open-l { color: var(--accent-ink); font-weight: 650; }
+.strip-cap .badge { margin-right: 6px; }
+.strip:hover .pp-g, .strip:focus-visible .pp-g { box-shadow: 0 0 0 2px var(--accent); }
+.layout-sw { display: inline-flex; border: 1px solid var(--line-2); border-radius: 8px; overflow: hidden; }
+.layout-sw button { border: 0; background: #fff; padding: 0 12px; min-height: var(--tap-s); font-weight: 600; font-size: 13px; color: var(--ink-2); }
+.layout-sw button.on { background: var(--accent-soft); color: var(--accent-ink); }
+.next-bar { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.next-bar .next { flex: 1; min-width: 260px; }
+.next-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+main.w-paper { max-width: calc(var(--w-paper) + 2 * var(--gutter)); }
+.shell .step > .grid:first-child > .sub-h:first-child { display: none; }
+.shell .step > .grid + .grid, .shell .step > .grid + div { margin-top: 26px; }
+.pair-f { display: flex; flex-direction: column; gap: 10px; }
+
 /* ---------- toast ---------- */
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 8px;
   font-size: 14px; font-weight: 500; z-index: 60; max-width: 92vw; }
@@ -431,6 +548,14 @@ body.kiosk { --tap: 52px; --tap-s: 44px; }
   .hbar { grid-template-columns: 110px 1fr 28px; }
 }
 @media print {
+  @page { size: A4 landscape; margin: 7mm; }
+  .pp-wrap { overflow: visible; }
+  .paper, .paper.compact { min-width: 0; font-size: 8px; }
+  .pp-h .big { font-size: 15px; }
+  .pp-h .mid, .pp-h.g4, .pp-h.g2 small { font-size: 10px; }
+  .pp-ph { height: 70px; }
+  .pp-cell.now { outline: 0; background: none; }
+  .pp-band, .pp-h, .pp-g, .p5, .cb i { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { background: #fff; }
   .top, .no-print, .btn, .toast, .d-side { display: none !important; }
   main { padding: 0; }
@@ -462,9 +587,19 @@ const S = {
   me: BOOT.me || {}, cfg: BOOT.cfg || {}, lists: BOOT.lists || {}, people: BOOT.people || [],
   qraps: BOOT.qraps || [], actions: BOOT.actions || [], effects: BOOT.effects || [], assess: BOOT.assess || [], all: false,
   kiosk: !!(BOOT.params && BOOT.params.kiosk === '1') || (BOOT.me && BOOT.me.role === 'KIOSK'),
-  view: 'board', id: null, edit: null, filter: 'open', area: '', range: '', search: '', sort: null, page: 0, per: 25, history: {}, flash: null, adm: null
+  view: 'board', id: null, edit: null, filter: 'open', area: '', range: '', search: '', sort: null, page: 0, per: 10, layout: savedLayout(), history: {}, flash: null, adm: null
 };
 const isManager = () => S.me.role === 'MANAŽER' || S.me.role === 'ADMIN';
+/** Board view: 'paper' (the QRAP V3.0 form, default) or 'table'. Remembered on this device only. */
+function savedLayout() { try { return localStorage.getItem('eqrap-layout') === 'table' ? 'table' : 'paper'; } catch (e) { return 'paper'; } }
+function layoutSwitch(redraw) {
+  const b = (v, label) => h('button', { type: 'button', class: S.layout === v ? 'on' : '', onclick: () => {
+    S.layout = v;
+    try { localStorage.setItem('eqrap-layout', v); } catch (e) { /* private window */ }
+    redraw();
+  } }, label);
+  return h('div', { class: 'layout-sw', role: 'group', 'aria-label': 'Zobrazení' }, b('paper', 'Formulář QRAP'), b('table', 'Tabulka'));
+}
 const isAdmin = () => S.me.role === 'ADMIN';
 const onKiosk = () => S.me.role === 'KIOSK';
 
@@ -677,7 +812,7 @@ function edit(key) {
 function render() {
   const pages = { board: boardPage, new: newPage, detail: detailPage, help: helpPage, dash: dashPage, admin: adminPage };
   if ((S.view === 'dash' && !isManager()) || (S.view === 'admin' && !isAdmin())) S.view = 'board';
-  const width = { new: 'w-form', admin: 'w-mid', help: 'w-mid', detail: 'w-mid' }[S.view] || '';
+  const width = { new: 'w-form', admin: 'w-mid', help: 'w-mid', detail: 'w-paper', board: 'w-paper', dash: 'w-paper' }[S.view] || '';
   fill(document.getElementById('app'), header(), h('main', { class: width || null }, (pages[S.view] || boardPage)()));
 }
 
@@ -758,7 +893,7 @@ function progressEl(q) {
 let redrawBoard = null;
 const RANGES = [['', 'Kdykoli'], ['1', 'Posledních 24 h'], ['7', 'Posledních 7 dní'], ['30', 'Posledních 30 dní']];
 const COLUMNS = [
-  ['id', 'Číslo', q => q.id], ['what', 'Problém', q => q.what], ['where', 'Kde', q => q.zone + ' ' + q.location],
+  ['id', 'Číslo', q => q.id], ['what', 'Problém', q => coText(q)], ['where', 'Kde', q => q.zone + ' ' + q.location],
   ['when', 'Kdy', q => q.when || q.created], ['who', 'Nahlásil', q => q.finder], ['status', 'Stav', q => stage(q) + (isLate(q) ? 10 : 0)],
   ['prog', 'Krok ①–⑦', q => stage(q)]
 ];
@@ -770,9 +905,8 @@ function boardPage() {
   S.per = S.per || 25;
   S.page = S.page || 0;
   const stats = h('div', { class: 'stats' });
-  const tbody = h('tbody');
-  const thead = h('thead');
-  const foot = h('div', { class: 'tbl-foot' });
+  const listBox = h('div');
+  const switchBox = h('span');
   const inArea = q => !S.area || q.zone === S.area;
   const inRange = q => !S.range || Date.now() - new Date(q.when || q.created).getTime() <= Number(S.range) * DAY;
   const notes = {
@@ -797,18 +931,23 @@ function boardPage() {
     S.page = Math.min(S.page, pages - 1);
     const from = S.page * S.per;
     const shown = rows.slice(from, from + S.per);
+    const empty = S.search ? 'Nic nenalezeno.' : 'Žádné QRAP v tomto výběru.';
+    const thead = h('thead'), tbody = h('tbody'), foot = h('div', { class: 'tbl-foot' });
     fill(thead, h('tr', { class: 'head' }, COLUMNS.map(c => h('th', {
       class: 'sortable' + (S.sort.key === c[0] ? ' sorted' : ''), title: 'Seřadit',
       onclick: () => { S.sort = S.sort.key !== c[0] ? { key: c[0], dir: 1 } : S.sort.dir === 1 ? { key: c[0], dir: -1 } : { key: '', dir: 1 }; drawList(); }
     }, c[1], icon(S.sort.key !== c[0] ? 'sort' : S.sort.dir === 1 ? 'up' : 'down')))));
-    fill(tbody, shown.length ? shown.map(rowEl)
-      : h('tr', null, h('td', { colspan: COLUMNS.length, class: 'empty' }, S.search ? 'Nic nenalezeno.' : 'Žádné QRAP v tomto výběru.')));
+    fill(tbody, shown.length ? shown.map(rowEl) : h('tr', null, h('td', { colspan: COLUMNS.length, class: 'empty' }, empty)));
     const per = h('select', { onchange: e => { S.per = Number(e.target.value); S.page = 0; drawList(); } }, [10, 25, 50, 100].map(n => h('option', { value: n }, n)));
     per.value = String(S.per);
     const pg = (ic, to, off) => h('button', { class: 'btn small', disabled: off, title: ic === 'left' ? 'Předchozí' : 'Další', onclick: () => { S.page = to; drawList(); } }, icon(ic));
     fill(foot, h('span', null, rows.length ? 'Zobrazeno ' + (from + 1) + '–' + (from + shown.length) + ' z ' + rows.length : '0 QRAP'),
       h('div', { class: 'grow' }), h('span', null, 'Řádků na stránku'), per,
       h('div', { class: 'pager' }, pg('left', S.page - 1, S.page === 0), pg('right', S.page + 1, S.page >= pages - 1)));
+    fill(switchBox, layoutSwitch(drawList));
+    fill(listBox, S.layout === 'table'
+      ? h('div', { class: 'tbl-wrap' }, h('div', { class: 'tbl-scroll' }, h('table', { class: 'list' }, thead, tbody)), foot)
+      : [shown.length ? paperList(shown) : h('div', { class: 'card empty' }, empty), h('div', { class: 'tbl-wrap', style: 'margin-top:14px' }, foot)]);
   };
   const drawStats = () => fill(stats, keys.map(k => {
     const n = S.qraps.filter(q => inArea(q) && FILTERS[k].test(q)).length;
@@ -843,15 +982,16 @@ function boardPage() {
     stats,
     myActions(),
     h('div', { class: 'toolbar' }, h('label', { class: 'search' }, icon('search'), search), stSel, areaSel, rangeSel, h('div', { class: 'grow' }),
-      h('button', { class: 'btn small', onclick: e => refresh(false, e.currentTarget) }, icon('refresh'), 'Obnovit')),
-    h('div', { class: 'tbl-wrap' }, h('div', { class: 'tbl-scroll' }, h('table', { class: 'list' }, thead, tbody)), foot),
+      switchBox, h('button', { class: 'btn small', onclick: e => refresh(false, e.currentTarget) }, icon('refresh'), 'Obnovit')),
+    listBox,
     h('div', { class: 'more' },
       S.all ? null : h('button', { class: 'link', onclick: e => refresh(false, e.currentTarget, true) }, 'Zobrazit i starší uzavřené'),
       isManager() && cancelled ? [' · ', h('button', { class: 'link', onclick: () => { S.filter = 'cancelled'; S.page = 0; render(); } }, 'Zrušené (' + cancelled + ')')] : null));
 }
 
 function haystack(q) {
-  return [q.id, q.what, q.zone, q.location, q.materialNo, q.huNo, q.supplier, q.finder, q.how].join(' ').toLowerCase();
+  return [q.id, q.what, q.whatOther, q.descWrong, q.descRight, q.zone, q.location, q.materialNo, q.huNo, q.supplier, q.finder, q.how, q.howOther]
+    .join(' ').toLowerCase();
 }
 
 /** Open before closed; late and SAFETY first; newest first. */
@@ -867,8 +1007,8 @@ function rowEl(q) {
     h('td', { class: 'c-id' }, q.id,
       h('div', { class: 'row-tags' }, q.safety === 'ANO' ? h('span', { class: 'tag bad' }, 'SAFETY') : null,
         q.decision === 'ESKALACE' ? h('span', { class: 'tag' }, 'ESKALACE') : null)),
-    h('td', { class: 'c-what' }, h('b', null, q.what), h('div', { class: 'sub' },
-      [q.how, q.qty === '' ? '' : q.qty + ' ' + q.unit, q.materialNo, q.huNo].filter(Boolean).join(' · '))),
+    h('td', { class: 'c-what' }, h('b', null, coText(q)), h('div', { class: 'sub' },
+      [q.descWrong, jakText(q), q.qty === '' ? '' : q.qty + ' ' + q.unit, q.materialNo, q.huNo].filter(Boolean).join(' · '))),
     h('td', { class: 'c-where' }, h('div', null, q.zone), h('div', { class: 'sub' }, q.location)),
     h('td', { class: 'c-when' }, fmtDT(q.when || q.created), h('div', { class: 'sub' }, ago(q.when || q.created))),
     h('td', { class: 'c-who' }, q.finder || '–'),
@@ -891,33 +1031,24 @@ function myActions() {
 }
 
 // ------------------------------------------------------------------ 5. NEW PROBLEM (NAHLÁSIT)
-/** New QRAP as a step-by-step wizard (Zpět / Další). The last step shows everything for a check before sending. */
+/**
+ * New QRAP, step by step in the order of the paper form: the operator fills ① ② ③ (Zpět / Pokračovat).
+ * Only the risk question of ③ is required now – what is missing in ③ the TL completes within 24 h.
+ * The last step shows everything for a check before sending.
+ */
 function newPage() {
   const pf = popisForm({ when: new Date().toISOString(), finder: S.kiosk ? '' : S.me.name, zone: S.me.area || '' }, true);
-  const RF = makeForm({});
-  const riskEl = h('div', { class: 'grid' }, RF.yesno('risk', 'Je riziko u zboží už na skladě nebo už expedovaného?', { req: true, wide: true,
-    hint: 'Může být stejná chyba i u zboží, které je už na skladě nebo už expedované? ANO → Kvalita dostane e-mail.' }));
-  // split ① into its groups (Problém | Kdy a kde | Množství + Kdo + Nepovinné | Fotky)
-  const groups = [];
-  Array.from(pf.one.children).forEach(el => {
-    if (el.classList.contains('sub-h')) groups.push(h('div', { class: 'grid' }));
-    groups[groups.length - 1].append(el);
-  });
-  const g = (...i) => h('div', null, i.map(x => groups[x]));
+  const s3 = opatreniForm({}, []);
+  const step = (...kids) => h('div', { class: 'step' }, kids);
   const steps = [
-    { name: 'Problém', hint: '① Co se stalo a jak to bylo objeveno.', el: section(1, 'now', g(0)) },
-    { name: 'Kdy a kde', hint: '① Kdy a kde byl problém nalezen.', el: section(1, 'now', g(1)) },
-    { name: 'Množství', title: 'Množství a kdo', hint: '① Kolik kusů, kdo problém našel a čísla materiálu / HU.', el: section(1, 'now', g(2, 3, 4)) },
-    { name: 'Fotky', hint: '① Vyfoťte ŠPATNÝ a SPRÁVNÝ stav.', el: section(1, 'now', g(5)), check: () => {
-      const p = pf.photos.get();
-      const d = pf.F.peek();
-      if (!(p.WRONG && p.RIGHT) && !(d.photoExc && d.photoException)) return pf.F.mark('photoExc', 'Vyfoťte ŠPATNĚ i SPRÁVNĚ, nebo zaškrtněte výjimku s důvodem.');
-      return true;
-    } },
-    { name: 'Upozornění', hint: '② Kdo byl o problému upozorněn a kdo má dostat e-mail.', el: section(2, 'now', pf.two) },
-    { name: 'Riziko', hint: '③ Jediná otázka pro operátora – zbytek doplní TL.', el: section(3, 'now', h('div', null, riskEl, h('p', { class: 'sub', style: 'margin-top:12px' },
-      'Zbytek ③ doplní TL do ' + hours3() + ' h.'))) },
-    { name: 'Kontrola', hint: 'Zkontrolujte údaje. Cokoli můžete ještě opravit přímo zde.', el: null }
+    { name: 'Problém', title: 'Popis problému – CO a JAK', el: step(pf.groups[0]) },
+    { name: 'Kdy a kde', el: step(pf.groups[1]) },
+    { name: 'Kolik a kdo', el: step(pf.groups[2]) },
+    { name: 'Popis', title: 'Popis problému – ŠPATNÝ a DOBRÝ díl', el: step(pf.groups[3]) },
+    { name: 'Upozornění', title: 'Kdo byl upozorněn?', el: step(pf.two) },
+    { name: 'Opatření', title: 'Okamžitá opatření <' + hours3() + 'h', el: step(s3.el,
+      h('p', { class: 'sub', style: 'margin-top:12px' }, 'Vyplňte, co víte. Co chybí, doplní TL do ' + hours3() + ' h.')) },
+    { name: 'Kontrola', el: null }
   ];
   let at = 0;
   const bar = h('div', { class: 'wiz-list' });
@@ -927,9 +1058,9 @@ function newPage() {
   const send = h('button', { class: 'btn primary btn-cta', onclick: async () => {
     const data = pf.read();
     if (!data) return;
-    const s3 = RF.read();
-    if (!s3) return;
-    data.s3 = s3;
+    const d3 = s3.read();
+    if (!d3) return;
+    data.s3 = d3;
     const res = await save(send, 'apiCreate', [data]);
     if (!res) return;
     S.flash = { id: res.qrap.id, text: 'QRAP ' + res.qrap.id + ' odeslán. Vedoucí zóny dostal e-mail.' };
@@ -937,18 +1068,14 @@ function newPage() {
     go('board', null, true);
   } }, 'Odeslat ✓');
   const titleEl = h('h2', { class: 'shell-sub' });
-  const hintEl = h('p', { class: 'shell-hint' });
   titleEl.tabIndex = -1;
   function valid(i) {
     const st = steps[i];
-    if (i === 5) return !!RF.read();
+    if (i === 5) return !!s3.read();
     if (!pf.F.read()) return false;
     const d = pf.F.peek();
     if (i === 1 && new Date(d.when).getTime() > Date.now() + 5 * 60000) return !!pf.F.mark('when', 'KDY nemůže být v budoucnosti.');
-    if (i === 2) {
-      if (Number(d.qty) === 0 && !d.nokSituation) return !!pf.F.mark('qty', 'Zadejte KOLIK větší než 0, nebo zaškrtněte „NOK situace bez kusů“.');
-      if (Number(d.qty) > 0 && !d.unit) return !!pf.F.mark('unit', 'Vyberte jednotku.');
-    }
+    if (i === 2 && Number(d.qty) > 0 && !d.unit) return !!pf.F.mark('unit', 'Vyberte jednotku.');
     return st.check ? !!st.check() : true;
   }
   function show(i) {
@@ -956,18 +1083,18 @@ function newPage() {
     at = Math.max(0, Math.min(i, steps.length - 1));
     const last = at === steps.length - 1;
     fill(bar, steps.map((st, k) => h('button', { class: 'wiz-step' + (k < at ? ' done' : k === at ? ' on' : ''), type: 'button',
-      title: (k + 1) + '. ' + st.name, onclick: () => show(k) }, icon(k < at ? 'check' : 'circle'), h('span', null, st.name))));
+      title: (k + 1) + '. ' + (st.title || st.name), onclick: () => show(k) }, icon(k < at ? 'check' : 'circle'), h('span', null, st.name))));
     titleEl.textContent = (at + 1) + '. ' + (last ? 'Kontrola a odeslání' : steps[at].title || steps[at].name);
-    fill(body, last ? steps.slice(0, -1).map(st => h('div', { class: 'review-part' }, h('h3', null, st.name), st.el)) : steps[at].el);
+    fill(body, last ? steps.slice(0, -1).map(st => h('div', { class: 'review-part' }, h('h3', null, st.title || st.name), st.el)) : steps[at].el);
     back.hidden = at === 0;
     next.hidden = last;
     send.hidden = !last;
     window.scrollTo(0, 0);
     const f = body.querySelector('input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select');
-    if (f && !last) f.focus({ preventScroll: true });
+    if (f && !last && at !== 0) f.focus({ preventScroll: true });
   }
   const page = h('div', null,
-    pageHead('Nový QRAP', 'Povinné údaje jsou označené *.', null, 'Nový QRAP'),
+    pageHead('Nový QRAP', 'Vyplňuje operátor, který nalezl problém: ① popis problému, ② kdo byl upozorněn, ③ okamžitá opatření. Povinné údaje jsou označené *.', null, 'Nový QRAP'),
     h('div', { class: 'shell' },
       h('nav', { class: 'wiz-steps', 'aria-label': 'Kroky' }, bar),
       h('div', { class: 'shell-body' }, h('div', { class: 'shell-inner' }, titleEl, body)),
@@ -977,53 +1104,219 @@ function newPage() {
   return page;
 }
 
-// ------------------------------------------------------------------ 6. PROBLEM DETAIL ①–⑦
-/** One numbered block of the QRAP form. state: done | now | wait | skip */
-function section(n, state, body, button) {
-  return h('section', { class: 'card sec ' + state, id: 'sec' + n },
-    h('div', { class: 'sec-head' }, h('span', { class: 'num' }, n),
-      h('h2', null, SECTION_TITLES[n] + (n === 3 ? ' <' + hours3() + 'h' : '')), h('div', { class: 'grow' }), button || null),
-    h('div', { class: 'sec-body' }, body));
-}
-const editBtn = (key, label) => h('button', { class: 'btn small ghost no-print', onclick: () => edit(key) }, label || 'Upravit');
-const startBtn = (key, label) => h('button', { class: 'btn small primary no-print', onclick: () => edit(key) }, label);
+// ------------------------------------------------------------------ 6. THE PAPER FORM QRAP V3.0 (board and QRAP page)
+const editBtn = (key, label) => h('button', { class: 'btn small ghost no-print', onclick: e => { e.stopPropagation(); edit(key); } }, label || 'Upravit');
+const startBtn = (key, label) => h('button', { class: 'btn small primary no-print', onclick: e => { e.stopPropagation(); edit(key); } }, label);
 const note = text => h('p', { class: 'muted' }, text);
 function formButtons(label, onSave) {
   const b = h('button', { class: 'btn primary', onclick: () => onSave(b) }, label);
   return h('div', { class: 'form-btns' }, b, h('button', { class: 'btn ghost', onclick: () => edit(null) }, 'Zrušit'));
 }
 const saveSection = (q, part, read, n) => b => { const d = read(); if (d) submit(b, 'apiSave', [q.id, part, d], n); };
+const needsAnalysis = q => q.decision === 'POKRAČOVAT' || q.decision === 'ESKALACE';
+const hasWhy = q => [1, 2, 3, 4, 5].some(i => q['o' + i] || q['n' + i]);
 
+/** CO je za problém (the "jiné" text when chosen) and a short title (CO + the wrong part). */
+const coText = q => (isOther(q.what) && q.whatOther ? q.whatOther : q.what) || '';
+const jakText = q => (isOther(q.how) && q.howOther ? q.howOther : q.how) || '';
+const titleOf = q => coText(q) + (q.descWrong ? ' – ' + q.descWrong : '');
+const timeOf = iso => { if (!iso) return ''; const d = new Date(iso); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+const dateOf = iso => (iso ? fmtD(iso) : '');
+
+/** Which block of the paper is next (highlighted). */
+const NOW_CELL = { 'OPATŘENÍ': 3, 'ROZHODNUTÍ': 4, 'ANALÝZA': 5, 'AKCE': 6, 'OVĚŘENÍ': 6, 'SCHVÁLENÍ': 6 };
+
+/** A tick box as on the paper. */
+const cb = (on, label) => h('span', { class: 'cb' + (on ? ' on' : '') }, h('i'), label);
+const ppBox = (label, value, cls) => h('div', { class: 'pp-box' + (cls ? ' ' + cls : '') },
+  label ? h('span', { class: 'pp-l' }, label) : null,
+  h('div', { class: 'pp-v' }, value === '' || value === null || value === undefined ? h('span', { class: 'pp-empty' }, '……') : value));
+const ppText = t => (t ? h('div', { class: 'pp-txt' }, t) : h('span', { class: 'pp-empty' }, '……'));
+
+/** The two grey header rows of the paper (who fills what + the big titles). */
+function paperHead() {
+  return [
+    h('div', { class: 'pp-row pp-bands' },
+      h('div', { class: 'pp-band g1' }, 'QR vyplňuje ', h('b', null, 'OPERÁTOR'), ', který nalezl problém'),
+      h('div', { class: 'pp-band g2 dark' }, 'Vyplňuje ', h('b', null, 'Supervizor')),
+      h('div', { class: 'pp-band g3' }, 'Vyplňují ', h('b', null, 'pověření pracovníci'), ', na základě rozhodnutí Supervizora'),
+      h('div', { class: 'pp-band g4 dark' }, h('b', null, 'Supervizor / Manažer'))),
+    h('div', { class: 'pp-row pp-heads' },
+      h('div', { class: 'pp-h g1' }, h('div', { class: 'big' }, 'Popis problému'), h('div', { class: 'mid' }, 'Kdo byl upozorněn?'),
+        h('div', { class: 'big' }, 'Okamžitá opatření<24h')),
+      h('div', { class: 'pp-h g2' }, h('div', null, h('small', null, 'Rozhodnutí'), h('div', { class: 'big' }, 'OJT'))),
+      h('div', { class: 'pp-h g3' }, h('div', { class: 'big' }, 'Příčina 5 Proč ?'), h('div', { class: 'big' }, 'Konečné akce')),
+      h('div', { class: 'pp-h g4' }, h('div', null, 'Hodnocení QRQC', h('small', null, 'alespoň na jednom problému denně'))))
+  ];
+}
+
+/**
+ * One QRAP filled into the paper form. big = the QRAP page (full texts, photos, buttons to fill each block);
+ * otherwise the board (shortened texts, at most 3 table rows).
+ */
+function paperBody(q, big) {
+  const now = NOW_CELL[q.status] || 0;
+  const rowsMax = list => (big ? list : list.slice(0, 3));
+  const more = list => (!big && list.length > 3 ? h('div', { class: 'pp-more' }, '+ ' + (list.length - 3) + ' další') : null);
+  const edits = {};
+  if (big) {
+    if (q.can.popis) edits[1] = editBtn('popis', 'Upravit ① ②');
+    if (q.can.opatreni) edits[3] = q.status === 'OPATŘENÍ' ? startBtn('opatreni', 'Doplnit ③') : editBtn('opatreni', 'Upravit ③');
+    if (q.can.decide) edits[4] = startBtn('rozhodnuti', 'Rozhodnout ④');
+    else if (q.can.shifts) edits[4] = editBtn('smeny', 'Směny ④');
+    if (q.can.analyze) edits[5] = hasWhy(q) ? editBtn('pricina', 'Upravit ⑤') : startBtn('pricina', 'Vyplnit 5 Proč');
+    if (q.can.analyze && hasWhy(q)) edits[6] = startBtn('akce:new', '+ Konečná akce');
+    if (q.can.assess) edits[7] = editBtn('hodnoceni', '+ Hodnotit');
+  }
+  const cell = (n, ...kids) => h('div', { class: 'pp-cell c' + n + (now === n ? ' now' : ''), id: big ? 'sec' + n : null },
+    edits[n] ? h('div', { class: 'pp-ed' }, edits[n]) : null, kids);
+  const dShort = v => (big ? fmtD(v) : v ? fmtD(v).replace(/ \d{4}$/, '') : '');
+
+  // ① POPIS PROBLÉMU
+  const part = (kind, key, desc, title) => h('div', { class: 'pp-part ' + (kind === 'WRONG' ? 'bad' : 'good') }, h('em', null, title),
+    ppText(desc), big ? photoSlot(q, kind, key, title) : (q[key] ? h('div', { class: 'pp-flag' }, '📷 foto') : null));
+  const numbers = [q.materialNo ? 'č. dílu: ' + q.materialNo : '', q.huNo ? 'HU / DL: ' + q.huNo : '', q.supplier ? 'dodavatel: ' + q.supplier : '']
+    .filter(Boolean).join(' · ');
+  const c1 = cell(1, h('div', { class: 'p1' },
+    h('div', { class: 'p1-no' }, h('div', { class: 'no' }, h('span', null, 'N°'), h('b', null, q.id)), cb(q.safety === 'ANO', 'SAFETY')),
+    h('div', { class: 'pp-box p1-co' }, h('span', { class: 'pp-l' }, 'CO je za problém a JAK byl objeven?'),
+      h('div', { class: 'pp-v' }, h('b', null, coText(q)), jakText(q) ? h('div', null, 'JAK: ' + jakText(q)) : null)),
+    ppBox('KDY ?', h('div', null, h('div', null, 'Čas: ' + timeOf(q.when)), h('div', null, 'Datum: ' + dateOf(q.when)))),
+    ppBox('KDE ?', h('div', null, q.zone, q.location ? h('div', { class: 'sub' }, q.location) : null)),
+    ppBox('KOLIK špatných dílů?', q.qty === '' ? '' : q.qty + ' ' + (q.unit || '') + (q.nokSituation ? ' (NOK situace)' : '')),
+    h('div', { class: 'pp-box p1-rep' }, h('span', { class: 'pp-l' }, 'Stejný problém v posledních 7 dnech?'),
+      h('div', null, cb(q.repeat7 === 'ANO', 'ANO'), cb(q.repeat7 === 'ANO', 'N° QRAP: ' + (q.repeatRef || '……')), cb(q.repeat7 === 'NE', 'NE'))),
+    ppBox('JMÉNO :', q.finder),
+    h('div', { class: 'pp-box p1-popis' }, h('span', { class: 'pp-l light' }, 'Popis problému (nakresli nebo nalep obrázek) + číslo dílu'),
+      h('div', { class: 'p1-pair' }, part('WRONG', 'photoWrong', q.descWrong, 'ŠPATNÝ díl'), part('RIGHT', 'photoRight', q.descRight, 'DOBRÝ díl')),
+      numbers ? h('div', { class: 'sub' }, numbers) : null,
+      q.photoException ? h('div', { class: 'sub' }, 'Bez fotek: ' + q.photoException) : null)));
+
+  // ② KDO BYL UPOZORNĚN?
+  const roles = (S.lists.alert || []).filter(r => !isOther(r));
+  const got = split(q.notified);
+  const c2 = cell(2, h('div', { class: 'pp-box cb-list', style: 'flex:1' },
+    roles.map(r => cb(got.includes(r), r)), got.filter(x => !roles.includes(x) && !isOther(x)).map(x => cb(true, x)),
+    cb(got.some(isOther), got.some(isOther) ? (q.notifiedOther || 'jiné') : '……………')));
+
+  // ③ OKAMŽITÁ OPATŘENÍ <24h
+  const ia = actsOf(q.id, '③');
+  const quality = got.some(x => /kvalit/i.test(x));
+  const c3 = cell(3,
+    h('div', { class: 'pp-box' }, h('span', { class: 'pp-l' }, 'Ochranná opatření'),
+      h('div', null, 'Je zde riziko na již naskladněném / expedovaném zboží?'),
+      h('div', null, cb(q.risk === 'ANO', 'ANO'), cb(q.risk === 'ANO' && quality, 'upozorni oddělení KVALITY')), cb(q.risk === 'NE', 'NE')),
+    h('div', { class: 'pp-box' }, h('span', { class: 'pp-l' }, 'Třídění – data'),
+      h('div', null, 'Přetříděno: ', h('b', null, q.checked === '' ? '……' : q.checked), ' ks · Špatné kusy: ', h('b', null, q.wrong === '' ? '……' : q.wrong), ' ks',
+        q.checkRunning ? ' (třídění probíhá)' : '')),
+    h('div', { class: 'pp-grow' }, h('table', { class: 'pp-t' },
+      h('colgroup', null, h('col'), h('col', { style: 'width:28%' }), h('col', { style: 'width:22%' })),
+      h('tr', null, h('th', null, 'Okamžitá opatření:'), h('th', null, 'Kdo'), h('th', null, 'Čas')),
+      rowsMax(ia).map(a => h('tr', null, h('td', null, a.text), h('td', null, a.owner), h('td', null, a.done ? (big ? fmtDT(a.done) : timeOf(a.done)) : 'probíhá')))),
+    more(ia)),
+    h('div', { class: 'pp-box' }, h('b', null, 'Čas re-startu procesu/stanice: '), q.restoredAt ? fmtDT(q.restoredAt) : '…… : ……'));
+
+  // ④ ROZHODNUTÍ OJT
+  const informed = split(q.shifts);
+  const c4 = cell(4,
+    h('div', { class: 'pp-box' }, h('span', { class: 'pp-l' }, big ? 'Informace všem směnám během 5\' meetingu (pětiminutovky):' : 'Informace směnám (5\' meeting):'),
+      h('div', { class: 'p4-sh' }, (S.lists.shifts || []).map(x => cb(informed.includes(x), x)))),
+    h('div', { class: 'pp-box p4-dec' }, DECISIONS.map(d => cb(q.decision === d.value, d.label))),
+    q.pilots ? ppBox('Piloti:', pilotNames(q)) : null,
+    h('div', { class: 'pp-box', style: 'flex:1' }, h('span', { class: 'pp-l' }, 'Komentář :'), ppText(q.decisionNote)),
+    ppBox('Podpis :', q.decisionBy ? q.decisionBy + ' · ' + fmtDT(q.decisionAt) : ''));
+
+  // ⑤ PŘÍČINA 5 Proč ?
+  const nChain = [1, 2, 3, 4, 5].filter(i => q['n' + i]);
+  const c5 = cell(5, h('div', { class: 'p5' }, h('div', { class: 'p5-in' },
+    [1, 2, 3, 4, 5].map(i => h('div', { class: 'p5-w' + (Number(q.rootO) === i ? ' root' : '') }, h('b', null, i + ' PROČ ?'),
+      q['o' + i] ? ppText(q['o' + i]) : null, Number(q.rootO) === i ? h('span', { class: 'p5-root' }, 'kořenová příčina') : null)),
+    nChain.length ? h('div', { class: 'p5-n' }, h('b', null, 'Proč nebylo zachyceno: '),
+      nChain.map(i => (Number(q.rootN) === i ? '★ ' : '') + i + '. ' + q['n' + i]).join(' · ')) : null)));
+
+  // ⑥ KONEČNÉ AKCE
+  const acts = actsOf(q.id, '⑥');
+  const c6 = cell(6,
+    h('div', { class: 'pp-box' }, h('span', { class: 'pp-l' }, 'Co jsme se naučili z QR?'), ppText(q.learned)),
+    h('div', { class: 'pp-grow' }, h('table', { class: 'pp-t' },
+      h('colgroup', null, h('col'), h('col', { style: 'width:19%' }), h('col', { style: 'width:' + (big ? 15 : 17) + '%' }), h('col', { style: 'width:' + (big ? 15 : 17) + '%' })),
+      h('tr', null, h('th', { rowspan: 2 }, 'Konečné akce:'), h('th', { rowspan: 2 }, 'Kdo'), h('th', { colspan: 2, style: 'text-align:center' }, 'Kdy')),
+      h('tr', null, h('th', null, 'plán'), h('th', null, 'hotovo')),
+      rowsMax(acts).map(a => h('tr', null, h('td', null, a.text, h('span', { class: 'sub' }, ' (' + whyLabel(a.kind) + ')')), h('td', null, a.owner),
+        h('td', { class: actLate(a) ? 'pp-late' : '' }, dShort(a.due)), h('td', null, a.done ? dShort(a.done) : '')))),
+    more(acts)),
+    h('div', { class: 'p6-bottom' },
+      ppBox('Uzavření QRAP schváleno:', q.closedBy ? q.closedBy + ' · ' + fmtDT(q.closedAt) : ''),
+      h('div', { class: 'pp-box' }, h('span', { class: 'pp-l' }, 'Efektivita zkontrolována na 5 směnách bez chyb'),
+        h('div', { class: 'p6-eff', title: 'Efektivní na ' + q.eff.ok + ' z 5 směn' }, [1, 2, 3, 4, 5].map(i => h('span', { class: i <= q.eff.ok ? 'on' : '' }, i))))),
+    h('div', { class: 'pp-box' }, h('span', { class: 'pp-l' }, 'Příležitost k aktualizaci STANDARDU?'),
+      h('div', null, cb(q.std === 'NE', 'NE'), cb(q.std === 'ANO', 'ANO ' + (q.std === 'ANO' ? q.stdRef : '……………'))),
+      h('small', { class: 'sub' }, '(Např: Pracovní instrukce, …)')));
+
+  // ⑦ HODNOCENÍ QRQC
+  const list = S.assess.filter(a => a.qrapId === q.id).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  const last = list[0];
+  const c7 = cell(7, h('div', { class: 'p7' },
+    CRITERIA.map(c => h('div', { class: 'p7-c' }, cb(last && last[c[0]] === 'OK', c[1].replace(/^(\d) /, '$1: ')),
+      last && last[c[0]] && last[c[0]] !== 'OK' ? h('span', { class: 'p7-res' }, last[c[0]]) : null, h('div', { class: 'p7-sub' }, c[2]))),
+    h('div', { class: 'p7-who' }, 'Kdo: ', last ? last.by : ''), h('div', null, 'Kdy: ', last ? fmtDT(last.at) : ''),
+    h('div', null, 'Zpětná vazba: ', last ? (last.feedbackType ? last.feedbackType + ': ' : '') + (last.feedback || '') : ''),
+    list.length > 1 ? h('div', { class: 'pp-more' }, '+ ' + (list.length - 1) + ' starší hodnocení') : null));
+
+  return h('div', { class: 'pp-row pp-body' },
+    h('div', { class: 'pp-g g1' }, c1, c2, c3), h('div', { class: 'pp-g g2' }, c4),
+    h('div', { class: 'pp-g g3' }, c5, c6), h('div', { class: 'pp-g g4' }, c7));
+}
+
+/** O3 → "3. Proč", N1 → "N1 nezachyceno", STD → standard. */
+const whyLabel = k => (k === 'STD' ? 'standard' : /^O\d$/.test(k) ? k[1] + '. Proč' : /^N\d$/.test(k) ? k[1] + '. Proč nezachyceno' : k || '');
+
+/** The board: the paper header once, then one paper strip per QRAP. */
+function paperList(rows) {
+  return h('div', { class: 'pp-wrap' }, h('div', { class: 'paper compact' }, paperHead(),
+    rows.map(q => {
+      const st = STATUS[q.status] || {};
+      const open = () => go('detail', q.id);
+      return h('div', { class: 'strip row', tabindex: 0, onclick: open, onkeydown: e => { if (e.key === 'Enter') open(); } },
+        h('div', { class: 'strip-cap' }, h('b', null, q.id), badge(q),
+          isLate(q) ? h('b', null, 'po termínu!') : (st.who ? h('span', { class: 'sub' }, 'čeká: ' + st.who) : null),
+          q.safety === 'ANO' ? h('span', { class: 'tag bad' }, 'SAFETY') : null, q.decision === 'ESKALACE' ? h('span', { class: 'tag' }, 'ESKALACE') : null,
+          h('span', { class: 'grow' }), h('span', { class: 'sub' }, ago(q.when || q.created)), h('span', { class: 'open-l' }, 'Otevřít →')),
+        paperBody(q, false));
+    })));
+}
+
+// ------------------------------------------------------------------ 6b. THE QRAP PAGE: the paper form + what to do next
 function detailPage() {
   const q = byId(S.id);
   if (!q) return h('div', { class: 'card' }, 'Načítám ' + (S.id || '') + '…');
-  const pf = S.edit === 'popis' ? popisForm(q, false) : null;
-  const trk = steps(q);
   return h('div', null,
     h('div', { class: 'crumbs no-print' }, h('button', { onclick: () => go('board') }, 'Tabule'), h('span', null, '/'), h('b', null, q.id)),
     h('div', { class: 'd-head' },
       h('div', null, h('h1', null, q.id, badge(q), q.safety === 'ANO' ? h('span', { class: 'tag bad' }, 'SAFETY') : null,
         q.decision === 'ESKALACE' ? h('span', { class: 'tag' }, 'ESKALACE') : null),
-        h('div', { class: 'sub' }, [q.zone, q.location, 'KDY ' + fmtDT(q.when), q.finder ? 'nahlásil(a) ' + q.finder : ''].filter(Boolean).join(' · '))),
+        h('div', { class: 'sub' }, [titleOf(q), q.zone, 'KDY ' + fmtDT(q.when)].filter(Boolean).join(' · '))),
       h('button', { class: 'btn no-print', onclick: () => window.print() }, icon('print'), 'Tisk / PDF')),
-    h('div', { class: 'd-grid' },
-      h('aside', { class: 'd-side' }, h('div', { class: 'card' }, nextBox(q)),
-        trk ? h('div', { class: 'card' }, h('h2', null, 'Průběh QRAP'), trk) : null),
-      h('div', { class: 'd-main' },
-        sec1(q, pf), sec2(q, pf), sec3(q), sec4(q), sec5(q), sec6(q), sec7(q),
-        historyBox(q), adminBox(q))));
+    nextBar(q),
+    h('div', { class: 'pp-wrap' }, h('div', { class: 'paper big' }, paperHead(), paperBody(q, true))),
+    editorPanel(q),
+    actionsPanel(q),
+    q.status === 'OVĚŘENÍ' ? h('div', { class: 'card no-print' }, effectBox(q)) : null,
+    q.status === 'OVĚŘENÍ' || q.status === 'SCHVÁLENÍ' ? h('div', { class: 'card no-print' }, closureBox(q)) : null,
+    assessList(q),
+    historyBox(q), adminBox(q));
 }
 
-function steps(q) {
-  if (q.status === 'ZRUŠENO') return null;
-  const names = ['Nahlášeno ① ②', 'Okamžitá opatření ③', 'Rozhodnutí ④', '5 Proč ⑤', 'Konečné akce ⑥', 'Ověření 5 směn ⑥', 'Uzavřeno'];
-  const at = { 'OPATŘENÍ': 1, 'ROZHODNUTÍ': 2, 'ANALÝZA': 3, 'AKCE': 4, 'OVĚŘENÍ': 5, 'SCHVÁLENÍ': 6, 'UZAVŘENO': 7 }[q.status] || 0;
-  const skip = q.decision === 'VYŘEŠENO';
-  return h('ul', { class: 'tracker' }, names.map((n, i) => {
-    if (skip && i >= 3 && i <= 5) return null;
-    const done = i < at || q.status === 'UZAVŘENO';
-    return h('li', { class: 'trk ' + (done ? 'done' : i === at ? 'now' : '') }, icon(done ? 'check' : i === at ? 'dot' : 'circle'), h('span', null, n));
-  }));
+/** "Další krok" and the buttons for what this person can do now. */
+function nextBar(q) {
+  const btns = [];
+  if (q.can.opatreni && q.status === 'OPATŘENÍ') btns.push(startBtn('opatreni', 'Doplnit ③ okamžitá opatření'));
+  if (q.can.decide) btns.push(startBtn('rozhodnuti', 'Rozhodnout ④'));
+  else if (q.can.shifts) btns.push(editBtn('smeny', 'Označit informované směny ④'));
+  if (q.can.analyze && !hasWhy(q)) btns.push(startBtn('pricina', 'Vyplnit 5 Proč ⑤'));
+  if (q.can.analyze && hasWhy(q) && q.status === 'ANALÝZA') btns.push(startBtn('akce:new', '+ Přidat konečnou akci ⑥'));
+  if (q.can.pilots) btns.push(editBtn('piloti', '+ přidat pilota'));
+  return h('div', { class: 'card next-bar no-print' }, nextBox(q), btns.length ? h('div', { class: 'next-btns' }, btns) : null);
 }
 
 function nextBox(q) {
@@ -1045,130 +1338,81 @@ function nextBox(q) {
     extra ? h('span', { class: late ? 'late-txt' : 'sub' }, extra + (late ? ' – po termínu!' : '')) : null);
 }
 
-function sec1(q, pf) {
-  if (pf) return h('div', { class: 'editing' }, section(1, 'now', pf.one));
-  return section(1, 'done', h('div', null,
-    h('p', { class: 'big-text' }, q.what),
-    kv([['SAFETY', ynText(q.safety)], ['JAK byl objeven?', isOther(q.how) ? 'jiné: ' + q.howOther : q.how], ['KDY?', fmtDT(q.when)],
-      ['KDE?', [q.zone, q.location].filter(Boolean).join(' / ')], ['Kde vzniklo?', q.originZone || 'nevím / stejné'],
-      ['KOLIK?', q.qty === '' ? '' : q.qty + ' ' + q.unit + (q.nokSituation ? ' · NOK situace bez kusů' : '')],
-      ['Stejný problém v posledních 7 dnech?', q.repeat7 === 'ANO' ? 'ANO → ' + q.repeatRef : ynText(q.repeat7)],
-      ['JMÉNO', q.finder], ['Číslo materiálu', q.materialNo],
-      ['Číslo HU / dodacího listu', q.huNo], ['Dodavatel', q.supplier]]),
-    photosView(q)), q.can.popis ? editBtn('popis', 'Upravit ① ②') : null);
-}
-
-function sec2(q, pf) {
-  if (pf) {
+/** The form for the block being filled in (opened from the buttons on the paper or in "Další krok"). */
+function editorPanel(q) {
+  const key = S.edit || '';
+  let title = '', body = null;
+  if (key === 'popis' && q.can.popis) {
+    const pf = popisForm(q, false);
     const SF = makeForm({});
     const signer = signerField(SF, 'Kdo upravuje? (vedoucí – u vlastního hlášení není potřeba)', true);
-    return section(2, 'now', h('div', null, pf.two, signer ? h('div', { class: 'grid', style: 'margin-top:12px' }, signer) : null,
-      formButtons('Uložit ① a ②', b => { const d = pf.read(); const x = SF.read(); if (d && x) submit(b, 'apiSave', [q.id, 'popis', Object.assign(d, x)], 1); })));
-  }
-  return section(2, 'done', h('div', null,
-    h('div', { class: 'tags' }, split(q.notified).map(x => h('span', { class: 'tag' }, isOther(x) && q.notifiedOther ? 'jiné: ' + q.notifiedOther : x)))));
-}
-
-function sec3(q) {
-  const ia = actsOf(q.id, '③');
-  if (S.edit === 'opatreni') {
-    const f = opatreniForm(q, ia);
-    return h('div', { class: 'editing' }, section(3, 'now', h('div', null, f.el, formButtons('Uložit ③', saveSection(q, 'opatreni', f.read, 3)))));
-  }
-  const state = q.s3Done ? 'done' : isOpen(q) ? 'now' : 'wait';
-  return section(3, state, h('div', null,
-    kv([['Je riziko u zboží už na skladě nebo už expedovaného?', ynText(q.risk)],
-      ['Kontrola (zkontrolováno / špatně)', q.risk !== 'ANO' ? '' : q.checkRunning ? 'kontrola probíhá'
-        : (q.checked === '' ? '?' : q.checked) + ' / ' + (q.wrong === '' ? '?' : q.wrong) + ' ks'],
-      ['Proces zastaven?', ynText(q.processStopped) + (q.restoredAt ? ' → obnoven ' + fmtDT(q.restoredAt) : '')]]),
-    h('div', { class: 'sub-h', style: 'margin-top:14px' }, 'Okamžitá opatření'),
-    ia.length ? ia.map((a, i) => h('div', { class: 'act' },
-      h('div', { class: 'act-no' }, (i + 1) + '.'),
-      h('div', null, h('div', null, a.text), h('div', { class: 'sub' }, a.kind + ' · ' + a.owner)),
-      h('div', { class: 'act-st' }, a.done ? h('span', { class: 'badge ok' }, '✓ ' + fmtDT(a.done)) : h('span', { class: 'badge' }, 'probíhá')),
-      h('div'))) : note('Zatím žádné opatření.'),
-    q.s3Done ? h('div', { class: 'box ok' }, '✓ Okamžitá opatření ③ jsou kompletní (' + fmtDT(q.s3Done) + ').')
-      : h('div', { class: 'box ' + (isLate(q) ? 'bad' : '') }, 'Opatření ③ ještě nejsou kompletní – chybí: ' + q.s3Missing.join(', ') +
-        '. Termín: ' + fmtDT(deadline3(q).toISOString()) + '.')),
-  q.can.opatreni ? (q.s3Done ? editBtn('opatreni') : startBtn('opatreni', 'Doplnit ③')) : null);
-}
-
-function sec4(q) {
-  if (S.edit === 'rozhodnuti') return h('div', { class: 'editing' }, section(4, 'now', decisionForm(q)));
-  const shiftsAll = S.lists.shifts || [];
-  const informed = split(q.shifts);
-  let shiftsEl;
-  if (q.can.shifts) {
+    title = '① Popis problému · ② Kdo byl upozorněn?';
+    body = h('div', null, pf.one, h('div', { class: 'sub-h', style: 'margin-top:20px' }, '② Kdo byl upozorněn?'), pf.two,
+      signer ? h('div', { class: 'grid', style: 'margin-top:12px' }, signer) : null,
+      formButtons('Uložit ① a ②', b => { const d = pf.read(); const x = SF.read(); if (d && x) submit(b, 'apiSave', [q.id, 'popis', Object.assign(d, x)], 1); }));
+  } else if (key === 'opatreni' && q.can.opatreni) {
+    const f = opatreniForm(q, actsOf(q.id, '③'));
+    title = '③ Okamžitá opatření <' + hours3() + 'h';
+    body = h('div', null, f.el, formButtons('Uložit ③', saveSection(q, 'opatreni', f.read, 3)));
+  } else if (key === 'smeny' && q.can.shifts) {
     const F = makeForm({ shifts: q.shifts });
-    const b = h('button', { class: 'btn small', onclick: () => { const d = F.read(); if (d) submit(b, 'apiSave', [q.id, 'smeny', d], 4); } }, 'Uložit směny');
-    const signer = signerField(F, 'Kdo označuje směny? (vedoucí)');
-    shiftsEl = h('div', null, F.checks('shifts', 'Informace všem směnám během 5\' meetingu', shiftsAll),
-      signer ? h('div', { class: 'grid', style: 'margin-top:8px' }, signer) : null, h('div', { style: 'margin-top:8px' }, b));
-  } else {
-    shiftsEl = kv([['Informace všem směnám během 5\' meetingu', shiftsAll.map(s => (informed.includes(s) ? '✓ ' : '✗ ') + s).join('   ')]]);
-  }
-  if (q.decision) {
-    const d = DECISIONS.find(x => x.value === q.decision) || { label: q.decision };
-    return section(4, 'done', h('div', null, shiftsEl,
-      h('p', { style: 'margin-top:12px' }, h('b', null, d.label)),
-      q.decisionNote ? h('p', { class: 'pre' }, 'Komentář: ' + q.decisionNote) : null,
-      q.pilots ? kv([['Piloti', pilotNames(q)]]) : null,
-      q.decision === 'ESKALACE' ? note('Eskalováno – manažeři dostali e-mail. Manažer vybere piloty („+ přidat pilota“ v ⑤).') : null,
-      h('div', { class: 'by' }, 'Podepsal(a) ' + q.decisionBy + ' · ' + fmtDT(q.decisionAt) + ' · zamčeno'),
-      q.decision === 'VYŘEŠENO' ? closureBox(q) : null));
-  }
-  const msg = !q.s3Done ? 'Rozhodnutí je možné, až jsou okamžitá opatření ③ kompletní.'
-    : q.can.decide ? 'Rozhodněte a podepište.' : 'Čeká na rozhodnutí vedoucího.';
-  return section(4, q.status === 'ROZHODNUTÍ' ? 'now' : 'wait', h('div', null, shiftsEl, h('p', { class: 'muted', style: 'margin-top:12px' }, msg)),
-    q.can.decide ? startBtn('rozhodnuti', 'Rozhodnout') : null);
-}
-
-const needsAnalysis = q => q.decision === 'POKRAČOVAT' || q.decision === 'ESKALACE';
-
-function sec5(q) {
-  if (q.decision === 'VYŘEŠENO') return section(5, 'skip', note('Není potřeba (rozhodnutí bez 5 Proč).'));
-  if (!needsAnalysis(q)) return section(5, 'wait', note('Vyplňují piloti po rozhodnutí ④ „Pokračovat s analýzou a 5 Proč“.'));
-  if (S.edit === 'pricina') return h('div', { class: 'editing' }, section(5, 'now', pricinaForm(q)));
-  if (S.edit === 'piloti') {
+    title = '④ Informace všem směnám';
+    body = h('div', null, F.checks('shifts', 'Informace všem směnám během 5\' meetingu (pětiminutovky)', S.lists.shifts || []),
+      h('div', { class: 'grid', style: 'margin-top:12px' }, signerField(F, 'Kdo označuje směny? (vedoucí)')),
+      formButtons('Uložit směny', saveSection(q, 'smeny', F.read, 4)));
+  } else if (key === 'rozhodnuti' && q.can.decide) {
+    title = '④ Rozhodnutí OJT';
+    body = decisionForm(q);
+  } else if (key === 'pricina' && q.can.analyze) {
+    title = '⑤ Příčina 5 Proč ?';
+    body = pricinaForm(q);
+  } else if (key === 'piloti' && q.can.pilots) {
     const F = makeForm({});
     const have = split(q.pilots);
-    return h('div', { class: 'editing' }, section(5, 'now', h('div', null,
-      F.checks('pilots', 'Přidat piloty', S.people.filter(p => !have.includes(p.email)).map(p => p.name), { req: true }),
+    title = 'Přidat piloty';
+    body = h('div', null, F.checks('pilots', 'Přidat piloty', S.people.filter(p => !have.includes(p.email)).map(p => p.name), { req: true }),
       h('div', { class: 'grid', style: 'margin-top:10px' }, signerField(F, 'Kdo přidává? (vedoucí / manažer)')),
-      formButtons('Přidat', saveSection(q, 'piloti', F.read, 5)))));
+      formButtons('Přidat', saveSection(q, 'piloti', F.read, 5)));
+  } else if (/^akce:/.test(key)) {
+    const a = key === 'akce:new' ? null : actsOf(q.id, '⑥').find(x => 'akce:' + x.no === key);
+    if (a ? (a.canEdit || a.canDone) : (q.can.analyze && hasWhy(q))) { title = a ? '⑥ Konečná akce' : '⑥ Nová konečná akce'; body = actionForm(q, a); }
+  } else if (key === 'hodnoceni' && q.can.assess) {
+    title = '⑦ Hodnocení QRQC';
+    body = assessForm(q);
   }
-  const filled = c => [1, 2, 3, 4, 5].filter(i => q[c + i]);
-  const chain = (c, title) => (filled(c).length ? h('div', { style: 'margin-bottom:12px' }, h('div', { class: 'sub-h' }, title),
-    h('ol', { class: 'whys' }, filled(c).map(i => h('li', { class: Number(q['root' + c.toUpperCase()]) === i ? 'root-step' : '' },
-      h('b', null, c.toUpperCase() + i), q[c + i], Number(q['root' + c.toUpperCase()]) === i ? h('span', { class: 'badge warn', style: 'margin-left:8px' }, 'kořenová příčina') : null)))) : null);
-  const empty = !filled('o').length;
-  const pilots = h('div', { class: 'sub', style: 'margin-bottom:10px' }, 'Piloti: ' + (pilotNames(q) || '–'),
-    q.can.pilots ? [' ', h('button', { class: 'link no-print', onclick: () => edit('piloti') }, '+ přidat pilota')] : null);
-  return section(5, empty ? (isOpen(q) ? 'now' : 'wait') : 'done', h('div', null, pilots,
-    empty ? note('Zatím nevyplněno.') : [chain('o', 'Proč to vzniklo?'), chain('n', 'Proč to nebylo zachyceno?'),
-      kv([['Co jsme se naučili z QR?', q.learned || '–'],
-        ['Příležitost k aktualizaci STANDARDU?', q.std === 'ANO' ? 'ANO → ' + q.stdRef : ynText(q.std) || '–']])]),
-  q.can.analyze ? (empty ? startBtn('pricina', 'Vyplnit 5 Proč') : editBtn('pricina')) : null);
+  if (!body) return null;
+  return h('div', { class: 'card editing no-print', id: 'editor', style: 'margin-top:16px' },
+    h('div', { class: 'p-head' }, h('h2', null, title), h('div', { class: 'grow' }), h('button', { class: 'btn small ghost', onclick: () => edit(null) }, 'Zavřít')),
+    body);
 }
 
-function sec6(q) {
-  if (q.decision === 'VYŘEŠENO') return section(6, 'skip', note('Není potřeba (rozhodnutí bez 5 Proč).'));
-  if (!needsAnalysis(q)) return section(6, 'wait', note('Konečné akce zadávají piloti po analýze 5 Proč.'));
+/** ⑥ final actions with their buttons (✓ Hotovo, Upravit) – shown while the analysis runs. */
+function actionsPanel(q) {
   const acts = actsOf(q.id, '⑥');
-  const state = q.status === 'UZAVŘENO' ? 'done' : ['AKCE', 'OVĚŘENÍ'].includes(q.status) || q.status === 'ANALÝZA' ? 'now' : 'wait';
-  const canAdd = q.can.analyze && S.edit !== 'akce:new';
-  const addBtn = canAdd ? h('button', { class: 'btn small primary no-print', onclick: () => edit('akce:new') }, '+ Přidat konečnou akci') : null;
-  const hasWhy = !![1, 2, 3, 4, 5].some(i => q['o' + i] || q['n' + i]);
-  return section(6, state, h('div', null,
-    acts.length ? h('div', null, acts.map(a => (S.edit === 'akce:' + a.no ? actionForm(q, a) : actionRow(q, a))))
-      : note(q.can.analyze && !hasWhy ? 'Nejdříve vyplňte a uložte 5 Proč – každá akce odstraňuje jeden krok.' : 'Zatím žádné konečné akce.'),
-    S.edit === 'akce:new' ? actionForm(q, null) : null,
-    effectBox(q), closureBox(q)), hasWhy ? addBtn : null);
+  const work = acts.some(a => a.canDone || a.canEdit);
+  if (!acts.length || !work || !['ANALÝZA', 'AKCE', 'OVĚŘENÍ'].includes(q.status)) return null;
+  return h('div', { class: 'card acts-panel no-print' },
+    h('div', { class: 'p-head' }, h('h2', null, '⑥ Konečné akce'), h('div', { class: 'grow' }),
+      q.can.analyze && hasWhy(q) ? startBtn('akce:new', '+ Přidat konečnou akci') : null),
+    acts.map(a => actionRow(q, a)));
+}
+
+/** All ⑦ assessments (the paper shows the latest one). */
+function assessList(q) {
+  const list = S.assess.filter(a => a.qrapId === q.id).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  if (list.length < 2) return null;
+  const cls = v => (v === 'OK' ? 'ok' : v === 'NOK' ? 'bad' : '');
+  return h('div', { class: 'card no-print' }, h('h2', null, '⑦ Všechna hodnocení QRQC (' + list.length + ')'),
+    list.map(a => h('div', { class: 'assess-item' },
+      h('div', { class: 'sub' }, fmtDT(a.at) + ' · ' + a.by),
+      h('div', { style: 'margin:4px 0' }, CRITERIA.map(c => h('span', { class: 'badge ' + cls(a[c[0]]), title: c[1] }, c[1].split(' ')[0] + ' ' + a[c[0]]))),
+      a.ojtWith ? h('div', { class: 'sub' }, 'OJT s: ' + a.ojtWith) : null,
+      a.feedback ? h('div', null, a.feedbackType ? h('b', null, a.feedbackType + ': ') : null, a.feedback) : null)));
 }
 
 function actionRow(q, a) {
   const late = actLate(a);
-  const step = a.kind === 'STD' ? 'aktualizace standardu' : 'odstraňuje ' + a.kind;
+  const step = a.kind === 'STD' ? 'aktualizace standardu' : 'odstraňuje ' + whyLabel(a.kind);
   return h('div', { class: 'act' + (a.done ? ' done' : '') },
     h('div', { class: 'act-no' }, a.kind === 'STD' ? 'STD' : a.kind),
     h('div', null, h('div', { class: 'act-text' }, a.text),
@@ -1238,20 +1482,6 @@ function closureBox(q) {
       : h('ul', { class: 'checklist' }, q.checklist.map(c => h('li', null, h('span', { class: c.ok ? 'ok' : 'no' }, c.ok ? '✓ ' : '✗ '), c.label))),
     q.can.close ? h('div', null, signer ? h('div', { class: 'grid' }, signer) : null, h('div', { class: 'form-btns' }, b), signNote())
       : note('QRAP uzavírá manažer.'));
-}
-
-function sec7(q) {
-  const list = S.assess.filter(a => a.qrapId === q.id).sort((a, b) => String(b.at).localeCompare(String(a.at)));
-  const cls = v => (v === 'OK' ? 'ok' : v === 'NOK' ? 'bad' : '');
-  const items = list.map(a => h('div', { class: 'assess-item' },
-    h('div', { class: 'sub' }, fmtDT(a.at) + ' · ' + a.by),
-    h('div', { style: 'margin:4px 0' }, CRITERIA.map(c => h('span', { class: 'badge ' + cls(a[c[0]]), title: c[1] }, c[1].split(' ')[0] + ' ' + a[c[0]]))),
-    a.ojtWith ? h('div', { class: 'sub' }, 'OJT s: ' + a.ojtWith) : null,
-    a.feedback ? h('div', null, a.feedbackType ? h('b', null, a.feedbackType + ': ') : null, a.feedback) : null));
-  const form = S.edit === 'hodnoceni' ? h('div', { class: 'editing box' }, assessForm(q)) : null;
-  return section(7, list.length ? 'done' : 'wait', h('div', null,
-    list.length ? h('div', null, h('div', { class: 'sub' }, 'Celkem hodnocení: ' + list.length), items) : note('Zatím bez hodnocení.'), form),
-  q.can.assess && S.edit !== 'hodnoceni' ? editBtn('hodnoceni', '+ Hodnotit') : null);
 }
 
 function historyBox(q) {
@@ -1424,68 +1654,63 @@ function makeForm(values) {
 /** Shows or hides a block when a value changes. */
 function showIf(el, on) { el.hidden = !on; return el; }
 
-/** ① POPIS PROBLÉMU and ② KDO BYL UPOZORNĚN? – on the new page (isNew) and when editing. */
+/**
+ * ① POPIS PROBLÉMU and ② KDO BYL UPOZORNĚN? – the questions of the paper form QRAP V3.0, in its order.
+ * groups = the steps of the new-QRAP form: Problém | Kdy a kde | Kolik a kdo | Popis problému.
+ */
 function popisForm(v, isNew) {
-  const F = makeForm(Object.assign({}, v, { photoExc: v.photoException ? 'ANO' : '',
-    notifyPeople: split(v.notifyPeople).map(personName).join(', ') }));
+  const F = makeForm(v);
   const L = S.lists;
-  const howOther = showIf(h('div', { class: 'wide' }, F.input('howOther', 'JAK – jiné (popište)', { req: true })), isOther(v.how));
+  const howOther = showIf(h('div', { class: 'wide' }, F.input('howOther', 'JAK – jiné (napište)', { req: true })), isOther(v.how));
+  const whatOther = showIf(h('div', { class: 'wide' }, F.input('whatOther', 'CO – jiné (napište)', { req: true })), isOther(v.what));
   const recent = S.qraps.filter(q => q.id !== v.id && Date.now() - new Date(q.when).getTime() < 7 * 864e5)
-    .map(q => ({ value: q.id, label: q.id + ' – ' + q.what.slice(0, 60) }));
-  const repeat = showIf(h('div', { class: 'wide' }, F.select('repeatRef', 'Vyberte QRAP z posledních 7 dnů', recent,
+    .map(q => ({ value: q.id, label: q.id + ' – ' + titleOf(q).slice(0, 60) }));
+  const repeat = showIf(h('div', null, F.select('repeatRef', 'N° QRAP', recent,
     { req: true, ph: recent.length ? '— vyberte —' : 'Žádný QRAP za posledních 7 dnů' })), v.repeat7 === 'ANO');
-  const excBox = showIf(h('div', { class: 'wide' }, F.input('photoException', 'Důvod výjimky (proč nejsou fotky)', { rows: 2, req: true })),
-    !!v.photoException);
   const photos = isNew ? photoPicker() : null;
-  const one = h('div', { class: 'grid' },
-    h('div', { class: 'sub-h wide' }, 'Problém'),
-    F.yesno('safety', 'SAFETY', { req: true, hint: 'Jde o bezpečnost lidí (úraz, pád zboží, VZV…)? Vyberte vědomě.' }),
-    F.select('how', 'JAK byl objeven?', L.how || [], { req: true, hint: 'Při jaké činnosti byl problém objeven.',
-      onchange: x => showIf(howOther, isOther(x)) }),
-    howOther,
-    F.input('what', 'CO je za problém?', { req: true, rows: 3, wide: true, hint: 'Popište fakta: co je špatně a u jakého zboží.' }),
-    F.yesno('repeat7', 'Stejný problém v posledních 7 dnech?', { req: true, wide: true, onchange: x => showIf(repeat, x === 'ANO') }),
-    repeat,
-    h('div', { class: 'sub-h wide' }, 'Kdy a kde'),
-    F.input('when', 'KDY?', { req: true, type: 'datetime-local', now: true, hint: 'Čas objevení, ne čas zápisu.' }),
-    F.select('zone', 'KDE? – zóna', L.zones || [], { req: true }),
-    F.input('location', 'KDE? – lokace', { req: true, ph: 'kód lokace, např. B-12-03, rampa 3' }),
-    F.select('originZone', 'Kde vzniklo?', L.zones || [], { ph: 'nevím / stejné' }),
-    h('div', { class: 'sub-h wide' }, 'Množství'),
-    F.input('qty', 'KOLIK?', { req: true, type: 'number', min: 0 }),
-    F.select('unit', 'Jednotka', L.units || []),
-    F.toggle('nokSituation', 'NOK situace bez kusů', { wide: true }),
-    h('div', { class: 'sub-h wide' }, 'Kdo problém našel'),
-    F.input('finder', 'JMÉNO', { req: true, list: 'people-list', hint: 'Napište své jméno (nabídka ze seznamu je jen pomůcka).' }),
-    h('div', { class: 'sub-h wide' }, 'Nepovinné údaje'),
-    F.input('materialNo', 'Číslo materiálu'),
-    F.input('huNo', 'Číslo manipulační jednotky / dodacího listu'),
-    F.input('supplier', 'Dodavatel'),
-    h('div', { class: 'sub-h wide' }, 'Fotky'),
-    photos ? h('div', { class: 'wide' }, photos.el, h('small', { class: 'sub' }, 'Vyfoťte ŠPATNÝ a SPRÁVNÝ stav. Obě fotky jsou povinné.')) : null,
-    F.toggle('photoExc', 'Fotku nelze pořídit (výjimka s důvodem)', { wide: true, onchange: on => showIf(excBox, on) }),
-    excBox);
+  const groups = [
+    h('div', { class: 'grid' },
+      h('div', { class: 'sub-h wide' }, 'Problém'),
+      F.yesno('safety', 'SAFETY', { req: true, wide: true, hint: 'Jde o bezpečnost lidí (úraz, pád zboží, VZV…)? Vyberte vědomě.' }),
+      F.select('how', 'JAK byl objeven?', L.how || [], { req: true, onchange: x => showIf(howOther, isOther(x)) }),
+      F.select('what', 'CO je za problém?', L.problems || [], { req: true, onchange: x => showIf(whatOther, isOther(x)) }),
+      howOther, whatOther),
+    h('div', { class: 'grid' },
+      h('div', { class: 'sub-h wide' }, 'Kdy a kde'),
+      F.input('when', 'KDY ?', { req: true, type: 'datetime-local', now: true, hint: 'Čas a datum, kdy byl problém nalezen (ne čas zápisu).' }),
+      F.select('zone', 'KDE ?', L.zones || [], { req: true })),
+    h('div', { class: 'grid' },
+      h('div', { class: 'sub-h wide' }, 'Kolik a kdo'),
+      F.input('qty', 'KOLIK špatných dílů?', { req: true, type: 'number', min: 0 }),
+      F.select('unit', 'Jednotka', L.units || []),
+      F.yesno('repeat7', 'Stejný problém v posledních 7 dnech?', { req: true, onchange: x => showIf(repeat, x === 'ANO') }),
+      repeat,
+      F.input('finder', 'JMÉNO', { req: true, list: 'people-list', hint: 'Vaše jméno' })),
+    h('div', { class: 'grid' },
+      h('div', { class: 'sub-h wide' }, 'Popis problému'),
+      h('div', { class: 'pair-f' }, F.input('descWrong', 'ŠPATNÝ díl – popis', { req: true, rows: 4, hint: 'Co je špatně? Popište fakta.' }),
+        photos ? photos.slot('WRONG', 'ŠPATNÝ díl') : null),
+      h('div', { class: 'pair-f' }, F.input('descRight', 'DOBRÝ díl – popis', { req: true, rows: 4, hint: 'Jak to má být správně?' }),
+        photos ? photos.slot('RIGHT', 'DOBRÝ díl') : null),
+      F.input('materialNo', 'Číslo dílu (materiálu)'),
+      F.input('huNo', 'Číslo HU / dodacího listu'),
+      F.input('supplier', 'Dodavatel'))
+  ];
   const otherBox = showIf(F.input('notifiedOther', 'Jiné – kdo', { req: true }), split(v.notified).some(isOther));
-  const leaders = S.people.filter(p => ['VEDOUCÍ', 'MANAŽER', 'ADMIN'].includes(p.role)).map(p => p.name);
   const two = h('div', null,
-    F.checks('notified', 'Upozorněné role', S.lists.alert || [], { req: true, hint: 'Koho jste informovali? Vyberte alespoň jednu roli.',
+    F.checks('notified', 'Kdo byl upozorněn?', S.lists.alert || [], { req: true, hint: 'Koho jste informovali? Vyberte alespoň jednoho.',
       onchange: list => showIf(otherBox, list.some(isOther)) }),
     h('div', { style: 'margin-top:10px' }, otherBox),
-    h('p', { class: 'sub' }, 'Když je riziko u zboží na skladě nebo expedovaného (③ = ANO), přidá se Kvalita automaticky.'),
-    leaders.length ? h('div', { style: 'margin-top:14px' }, F.checks('notifyPeople', 'Poslat e-mail také (nepovinné)', leaders,
-      { hint: 'Vedoucí zóny dostane e-mail vždy. Tady můžete přidat další osoby.' })) : null);
+    h('p', { class: 'sub' }, 'Vedoucí zóny dostane e-mail automaticky. Při riziku u zboží (③ = ANO) se přidá Kvalita.'));
   return {
-    one, two, F, photos,
+    groups, one: h('div', null, groups), two, F, photos,
     read() {
       const d = F.read();
       if (!d) return null;
-      if (d.qty !== '' && Number(d.qty) === 0 && !d.nokSituation) return F.mark('qty', 'Zadejte KOLIK větší než 0, nebo zaškrtněte „NOK situace bez kusů“.');
       if (Number(d.qty) > 0 && !d.unit) return F.mark('unit', 'Vyberte jednotku.');
       if (new Date(d.when).getTime() > Date.now() + 5 * 60000) return F.mark('when', 'KDY nemůže být v budoucnosti.');
-      if (!d.photoExc) d.photoException = '';
       if (photos) {
         const p = photos.get();
-        if (!(p.WRONG && p.RIGHT) && !d.photoException) return F.mark('photoExc', 'Chybí Foto ŠPATNĚ a Foto SPRÁVNĚ (nebo výjimka s důvodem).');
         d.photoWrong = p.WRONG || '';
         d.photoRight = p.RIGHT || '';
       }
@@ -1494,35 +1719,32 @@ function popisForm(v, isNew) {
   };
 }
 
-/** ③ OKAMŽITÁ OPATŘENÍ <24h: risk, check, immediate actions, process. */
+/** ③ OKAMŽITÁ OPATŘENÍ <24h as on the paper: Ochranná opatření, Třídění – data, Okamžitá opatření, Čas re-startu. */
 function opatreniForm(v, ia) {
   const F = makeForm(v);
-  const check = showIf(h('div', { class: 'grid wide' },
-    h('div', { class: 'note warn wide' }, 'ANO → Kvalita dostane e-mail. Vyplňte data kontroly.'),
-    F.input('checked', 'Zkontrolováno (ks)', { type: 'number', min: 0 }),
-    F.input('wrong', 'Nalezeno špatně (ks)', { type: 'number', min: 0 }),
-    F.toggle('checkRunning', 'kontrola probíhá', { wide: true })), v.risk === 'ANO');
-  const restored = showIf(h('div', null, F.input('restoredAt', 'Proces obnoven v', { type: 'datetime-local', now: true,
-    hint: 'Kdy proces znovu běží' })), v.processStopped === 'ANO');
+  const sort = showIf(h('div', { class: 'grid wide' },
+    h('div', { class: 'note warn wide' }, 'ANO → oddělení KVALITY dostane e-mail. Zapište data třídění.'),
+    F.input('checked', 'Přetříděno (ks)', { type: 'number', min: 0 }),
+    F.input('wrong', 'Špatné kusy (ks)', { type: 'number', min: 0 })), v.risk === 'ANO');
   const rows = iaList(ia);
   const el = h('div', null,
     h('div', { class: 'grid' },
-      h('div', { class: 'sub-h wide' }, 'Riziko u zboží'),
-      F.yesno('risk', 'Je riziko u zboží už na skladě nebo už expedovaného?', { req: true, wide: true,
-        hint: 'Může být stejná chyba i u zboží, které je už na skladě nebo už expedované?', onchange: x => showIf(check, x === 'ANO') }),
-      check,
+      h('div', { class: 'sub-h wide' }, 'Ochranná opatření'),
+      F.yesno('risk', 'Je zde riziko na již naskladněném nebo expedovaném zboží?', { req: true, wide: true,
+        hint: 'Může být stejná chyba i u zboží, které už je na skladě nebo odešlo k zákazníkovi?', onchange: x => showIf(sort, x === 'ANO') }),
+      sort),
+    h('div', { class: 'grid' },
       h('div', { class: 'sub-h wide' }, 'Okamžitá opatření'),
       h('div', { class: 'wide' }, rows.el),
-      h('div', { class: 'sub-h wide' }, 'Proces'),
-      F.yesno('processStopped', 'Proces zastaven?', { onchange: x => showIf(restored, x === 'ANO') }),
-      restored));
+      F.input('restoredAt', 'Čas re-startu procesu/stanice', { type: 'datetime-local', now: true,
+        hint: 'Kdy proces znovu běží. Nechte prázdné, když proces nebyl zastaven.' })));
   return {
     el,
     read() {
       const d = F.read();
       if (!d) return null;
       if (d.checked !== '' && d.wrong !== '' && Number(d.wrong) > Number(d.checked)) {
-        return F.mark('wrong', '„Nalezeno špatně“ nemůže být víc než „Zkontrolováno“.');
+        return F.mark('wrong', '„Špatné kusy“ nemůže být víc než „Přetříděno“.');
       }
       const list = rows.read();
       if (!list) return null;
@@ -1532,7 +1754,7 @@ function opatreniForm(v, ia) {
   };
 }
 
-/** ③ list of immediate actions (Typ, Kdo, Co bylo uděláno, Hotovo v). A new empty row is ignored. */
+/** ③ table "Okamžitá opatření | Kdo | Čas". An untouched new row is ignored; empty Čas = still running. */
 function iaList(existing) {
   const items = [];
   const box = h('div');
@@ -1540,13 +1762,12 @@ function iaList(existing) {
     const F = makeForm(v || {});
     const item = { no: v && v.no, F, removed: false };
     item.el = h('div', { class: 'ia-row' },
-      h('div', { class: 'ia-head' }, h('b', null, 'Opatření'),
+      h('div', { class: 'ia-head' }, h('b', null, 'Okamžité opatření'),
         h('button', { class: 'link', type: 'button', onclick: () => { item.removed = true; item.el.remove(); } }, 'Odebrat')),
       h('div', { class: 'grid' },
-        F.select('kind', 'Typ', S.lists.iaTypes || [], { req: true }),
+        F.input('text', 'Co bylo uděláno', { req: true, wide: true, ph: 'např. paleta zablokována, zboží přetříděno' }),
         F.input('owner', 'Kdo', { req: true, list: 'people-list' }),
-        F.input('text', 'Co bylo uděláno', { req: true, wide: true, ph: 'Co přesně bylo uděláno' }),
-        F.input('done', 'Hotovo v', { type: 'datetime-local', now: true, hint: 'Prázdné = ještě probíhá.' })));
+        F.input('done', 'Čas', { type: 'datetime-local', now: true, hint: 'Kdy bylo hotovo. Prázdné = ještě probíhá.' })));
     items.push(item);
     box.append(item.el);
   };
@@ -1560,7 +1781,7 @@ function iaList(existing) {
       for (const it of items) {
         if (it.removed) { if (it.no) out.push({ no: it.no, remove: true }); continue; }
         const p = it.F.peek();
-        if (!it.no && !p.kind && !p.text) continue; // untouched new row
+        if (!it.no && !p.text && !p.done) continue; // untouched new row
         const d = it.F.read();
         if (!d) return null;
         out.push(Object.assign({ no: it.no || '' }, d));
@@ -1614,7 +1835,7 @@ function pricinaForm(q) {
     roots[c] = [1, 2, 3, 4, 5].map(i => h('input', { type: 'radio', name, value: i, checked: Number(q['root' + c.toUpperCase()]) === i }));
     return h('div', null, h('div', { class: 'sub-h' }, title),
       [1, 2, 3, 4, 5].map(i => h('div', { class: 'why-row' },
-        F.input(c + i, c.toUpperCase() + i + ' – Proč?', { ph: i === 1 ? first : 'Proč se stalo to předchozí?' }),
+        F.input(c + i, c === 'o' ? i + ' PROČ ?' : 'N' + i + ' – PROČ nebylo zachyceno?', { ph: i === 1 ? first : 'Proč se stalo to předchozí?' }),
         h('label', { class: 'why-root' }, roots[c][i - 1], 'kořenová příčina'))));
   };
   const nBox = showIf(h('div', null, chain('n', 'Proč to nebylo zachyceno?', 'Proč problém nebyl zachycen dříve?')),
@@ -1649,7 +1870,7 @@ function actionForm(q, a) {
   const full = !a || a.canEdit;
   const steps = [];
   ['o', 'n'].forEach(c => [1, 2, 3, 4, 5].forEach(i => {
-    if (q[c + i]) steps.push({ value: c.toUpperCase() + i, label: c.toUpperCase() + i + ' – ' + q[c + i].slice(0, 70) });
+    if (q[c + i]) steps.push({ value: c.toUpperCase() + i, label: whyLabel(c.toUpperCase() + i) + ' – ' + q[c + i].slice(0, 70) });
   }));
   if (a && a.kind === 'STD') steps.push({ value: 'STD', label: 'STD – aktualizace standardu' });
   const done = a ? F.input('done', 'Hotovo', { type: 'date', max: today(), hint: 'Datum hotovo akci uzavře.' }) : null;
@@ -1706,55 +1927,54 @@ function assessForm(q) {
 // ------------------------------------------------------------------ 8. PHOTOS
 const PHOTOS = {}; // fileId → image, so each photo is downloaded only once
 
-/** ① Foto ŠPATNĚ and Foto SPRÁVNĚ in the detail (with "Vyfotit znovu" while ① can be edited). */
-function photosView(q) {
-  const slot = (kind, key, title) => {
-    const id = q[key];
-    const tile = h('button', { class: 'ph', type: 'button' }, id ? 'Načítám…' : 'Bez fotky');
-    if (id) {
-      const show = url => { fill(tile, h('img', { src: url, alt: title })); tile.onclick = () => zoom(url); };
-      if (PHOTOS[id]) show(PHOTOS[id]);
-      else api('apiPhoto', q.id, id).then(url => { PHOTOS[id] = url; show(url); }).catch(() => { tile.textContent = 'Fotku nelze načíst'; });
-    }
-    let control = null;
-    if (q.can.popis) {
-      const input = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: async e => {
-        const file = e.target.files[0];
-        if (!file) return;
-        button.textContent = 'Nahrávám…';
-        button.disabled = true;
-        try { store(await api('apiSetPhoto', q.id, kind, await shrink(file))); toast('Fotka uložena ✓'); } catch (err) { toast(errText(err), true); }
-        render();
-      } });
-      const button = h('button', { class: 'btn small', type: 'button', onclick: () => input.click() }, id ? 'Vyfotit znovu' : 'Vyfotit');
-      control = h('div', { class: 'no-print' }, button, input);
-    }
-    return h('div', { class: 'pslot ' + (kind === 'RIGHT' ? 'right' : 'wrong') }, h('b', null, title), tile, control);
-  };
-  return h('div', { style: 'margin-top:14px' },
-    h('div', { class: 'photo-slots' }, slot('WRONG', 'photoWrong', 'Foto ŠPATNĚ'), slot('RIGHT', 'photoRight', 'Foto SPRÁVNĚ')),
-    q.photoException ? h('p', { class: 'sub', style: 'margin-top:8px' }, 'Výjimka – proč nejsou fotky: ' + q.photoException) : null);
+/**
+ * One photo on the paper (QRAP page): loads once, opens big on a tap. While ① can be changed, "Vyfotit" opens
+ * the camera on a tablet / phone (capture), or the file picker on a PC.
+ */
+function photoSlot(q, kind, key, title) {
+  const id = q[key];
+  const tile = id ? h('button', { class: 'pp-ph', type: 'button', title: title }, 'Načítám…') : null;
+  if (id) {
+    const show = url => { fill(tile, h('img', { src: url, alt: title })); tile.onclick = e => { e.stopPropagation(); zoom(url); }; };
+    if (PHOTOS[id]) show(PHOTOS[id]);
+    else api('apiPhoto', q.id, id).then(url => { PHOTOS[id] = url; show(url); }).catch(() => { tile.textContent = 'Fotku nelze načíst'; });
+  }
+  if (!q.can.popis) return tile;
+  const input = h('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true, onchange: async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    button.textContent = 'Nahrávám…';
+    button.disabled = true;
+    try { store(await api('apiSetPhoto', q.id, kind, await shrink(file))); toast('Fotka uložena ✓'); } catch (err) { toast(errText(err), true); }
+    render();
+  } });
+  const button = h('button', { class: 'btn small pp-cam no-print', type: 'button', onclick: e => { e.stopPropagation(); input.click(); } },
+    id ? '📷 Vyfotit znovu' : '📷 Přidat foto');
+  return h('div', null, tile, button, input);
 }
 
-/** Photo slots for the new-problem page: photos are shrunk in the browser, so the upload is quick. */
+/** Optional photos in the new-QRAP form, shrunk in the browser so the upload is quick. */
 function photoPicker() {
   const urls = { WRONG: '', RIGHT: '' };
   const slot = (kind, title) => {
     const box = h('div', { class: 'pslot ' + (kind === 'RIGHT' ? 'right' : 'wrong') });
-    const input = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: async e => {
+    const input = h('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true, onchange: async e => {
       const file = e.target.files[0];
       if (!file) return;
       try { urls[kind] = await shrink(file); } catch (err) { toast(errText(err), true); }
       input.value = '';
       draw();
     } });
-    const draw = () => fill(box, h('b', null, title),
-      h('button', { class: 'ph', type: 'button', onclick: () => input.click() }, urls[kind] ? h('img', { src: urls[kind], alt: title }) : 'Zatím bez fotky'),
-      h('button', { class: 'btn small', type: 'button', onclick: () => input.click() }, urls[kind] ? 'Vyfotit znovu' : 'Vyfotit'), input);
+    const draw = () => fill(box,
+      urls[kind] ? h('button', { class: 'ph', type: 'button', onclick: () => input.click() }, h('img', { src: urls[kind], alt: title })) : null,
+      h('div', { class: 'inline-form' },
+        h('button', { class: 'btn small', type: 'button', onclick: () => input.click() }, urls[kind] ? '📷 Vyfotit znovu' : '📷 Přidat foto (nepovinné)'),
+        urls[kind] ? h('button', { class: 'btn small ghost', type: 'button', onclick: () => { urls[kind] = ''; draw(); } }, 'Odebrat') : null),
+      input);
     draw();
     return box;
   };
-  return { el: h('div', { class: 'photo-slots' }, slot('WRONG', 'Foto ŠPATNĚ'), slot('RIGHT', 'Foto SPRÁVNĚ')), get: () => Object.assign({}, urls) };
+  return { slot, get: () => Object.assign({}, urls) };
 }
 
 function shrink(file) {
@@ -1847,11 +2067,16 @@ function dashPage() {
   const stat = (ic, label, n, extra, onClick) => h(onClick ? 'button' : 'div', { class: 'stat', onclick: onClick || null },
     h('div', { class: 'stat-top' }, ibox(ic), label), h('b', null, n), extra);
 
-  const tbody = h('tbody');
+  const listBox = h('div');
+  const switchBox = h('span');
   let words = '';
   const drawRows = () => {
     const rows = open.filter(LISTS[S.dashList][1]).filter(q => !words || haystack(q).includes(words)).sort(order);
-    fill(tbody, rows.length ? rows.map(rowEl) : h('tr', null, h('td', { colspan: COLUMNS.length, class: 'empty' }, 'Nic tu není.')));
+    fill(switchBox, layoutSwitch(drawRows));
+    fill(listBox, !rows.length ? h('div', { class: 'empty' }, 'Nic tu není.') : S.layout === 'table'
+      ? h('div', { class: 'tbl-scroll' }, h('table', { class: 'list' }, h('thead', null, h('tr', { class: 'head' }, COLUMNS.map(c => h('th', null, c[1])))),
+        h('tbody', null, rows.map(rowEl))))
+      : h('div', { style: 'padding:0 var(--s4) var(--s4)' }, paperList(rows)));
   };
   const listSel = h('select', { style: 'width:auto', onchange: e => { S.dashList = e.target.value; drawRows(); } },
     Object.keys(LISTS).map(k => h('option', { value: k }, LISTS[k][0] + ' (' + open.filter(LISTS[k][1]).length + ')')));
@@ -1870,9 +2095,9 @@ function dashPage() {
         h('div', { class: 'meter', title: s3in + ' z ' + withS3.length + ' včas' }, h('i', { style: 'width:' + (pct || 0) + '%' })))),
     h('div', { class: 'tbl-wrap' },
       h('div', { class: 'p-head', style: 'padding:var(--s4) var(--s4) var(--s3);margin:0' }, h('h2', null, 'Otevřené QRAP'), listSel, h('div', { class: 'grow' }),
+        switchBox,
         h('label', { class: 'search' }, icon('search'), h('input', { type: 'search', placeholder: 'Hledat…', oninput: e => { words = e.target.value.trim().toLowerCase(); drawRows(); } }))),
-      h('div', { class: 'tbl-scroll' }, h('table', { class: 'list' },
-        h('thead', null, h('tr', { class: 'head' }, COLUMNS.map(c => h('th', null, c[1])))), tbody))),
+      listBox),
     h('details', { class: 'more-stats', style: 'margin-top:var(--s4)' },
       h('summary', null, icon('right'), 'Další statistiky'),
       h('div', { class: 'cols3' },
@@ -1980,8 +2205,8 @@ function adminPage() {
 function helpPage() {
   const yes = '✓', no = '–';
   const rows = [
-    ['① ② nahlásit problém + ③ otázka na riziko', yes, yes, yes],
-    ['③ doplnit okamžitá opatření (do 24 h)', yes, yes, yes],
+    ['① ② ③ nahlásit problém a okamžitá opatření', yes, yes, yes],
+    ['③ doplnit okamžitá opatření (do ' + hours3() + ' h)', yes, yes, yes],
     ['④ informované směny, rozhodnutí a podpis', no, yes, yes],
     ['⑤ 5 Proč, ⑥ konečné akce (piloti vybraní v ④)', 'pilot', yes, yes],
     ['⑥ označit svou akci, zapsat kontrolu směny', yes, yes, yes],
@@ -1990,14 +2215,14 @@ function helpPage() {
     ['Zrušit / znovu otevřít / odemknout ①–④, Přehled', no, no, yes]
   ];
   const flow = [
-    ['Operátor', '① popis + fotky, ② kdo byl upozorněn, ③ riziko ano/ne → Odeslat. Vedoucí zóny dostane e-mail.'],
-    ['TL / vedoucí', '③ doplní okamžitá opatření do ' + hours3() + ' h, ④ informuje směny a podepíše rozhodnutí.'],
+    ['Operátor', '① popis problému (CO, JAK, KDY, KDE, KOLIK, ŠPATNÝ a DOBRÝ díl), ② kdo byl upozorněn, ③ okamžitá opatření → Odeslat. Vedoucí zóny dostane e-mail.'],
+    ['TL / vedoucí', '③ doplní, co chybí, do ' + hours3() + ' h. ④ informuje směny a podepíše rozhodnutí.'],
     ['Piloti', '⑤ 5 Proč a kořenová příčina, ⑥ konečné akce s termínem.'],
     ['Ověření', '⑥ efektivní na 5 různých směnách (zapisuje TL u tabule).'],
     ['Manažer', 'uzavře QRAP. ⑦ hodnocení QRQC.']
   ];
   return h('div', null,
-    pageHead('Jak to funguje', 'Elektronická verze formuláře QRAP V3.0 pro sklad a expedici – stejné otázky ① až ⑦.', null, 'Jak to funguje'),
+    pageHead('Jak to funguje', 'Elektronická verze papírového formuláře QRAP V3.0 pro sklad a expedici – stejné bloky a otázky ① až ⑦.', null, 'Jak to funguje'),
     h('div', { class: 'flow' }, flow.map((f, i) => h('div', null, h('span', { class: 'num' }, i + 1), h('b', null, f[0]), h('span', { class: 'sub' }, f[1])))),
     h('div', { class: 'cols2' }, h('div', { class: 'card' }, h('h2', null, 'Kdo co může'),
       h('div', { class: 'slots-wrap' }, h('table', { class: 'roles' },

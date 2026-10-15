@@ -40,43 +40,51 @@ throws(() => call('dailyReminder', { triggerUid: 'fake' }), /jen vlastník/, 'fa
 // ---------------------------------------------------------------- ① ② validation (the questions of the paper form)
 as(USER);
 const base = {
-  safety: 'NE', what: 'Na paletě jiný materiál než na etiketě', how: 'vychystávání', when: iso(3), zone: 'Expedice',
-  location: 'Rampa 2', qty: 6, unit: 'ks', repeat7: 'NE', finder: 'Tomáš Černý', notified: ['Team Leader'],
+  safety: 'NE', how: 'vychystávání', what: 'špatný materiál', when: iso(3), zone: 'Expedice',
+  qty: 6, unit: 'ks', repeat7: 'NE', finder: 'Tomáš Černý', notified: ['Team Leader'],
+  descWrong: 'Na paletě je jiný materiál, než je na etiketě', descRight: 'Materiál odpovídá etiketě',
   photoWrong: PNG, photoRight: PNG, s3: { risk: 'NE' }
 };
 const mk = o => Object.assign({}, base, o);
-throws(() => call('apiCreate', { s3: { risk: 'NE' } }), /SAFETY, CO je za problém\?, JAK byl objeven\?, KDY\?, KDE\? – zóna, KDE\? – lokace, KOLIK\?, Stejný problém v posledních 7 dnech\?, JMÉNO, ② Kdo byl upozorněn\?/, 'all required ① ② fields');
+let r0;
+throws(() => call('apiCreate', { s3: { risk: 'NE' } }), /SAFETY, JAK byl objeven\?, CO je za problém\?, KDY\?, KDE\?, KOLIK špatných dílů\?, Stejný problém v posledních 7 dnech\?, JMÉNO, Popis – ŠPATNÝ díl, Popis – DOBRÝ díl, ② Kdo byl upozorněn\?/, 'all required ① ② fields in paper order');
+throws(() => call('apiCreate', mk({ what: 'jiné' })), /CO – jiné/, 'CO jiné needs text');
+eq(call('apiCreate', mk({ what: 'jiné', whatOther: 'Chybí plomba na kamionu' })).qrap.whatOther, 'Chybí plomba na kamionu', 'CO jiné with text');
+throws(() => call('apiCreate', mk({ descRight: ' ' })), /Popis – DOBRÝ díl/, 'description of the good part required');
 throws(() => call('apiCreate', mk({ how: 'jiné' })), /JAK – jiné/, 'JAK jiné needs text');
 throws(() => call('apiCreate', mk({ notified: ['jiné'] })), /② Jiné – kdo/, '② jiné needs text');
 throws(() => call('apiCreate', mk({ when: new Date(Date.now() + 3600e3).toISOString() })), /budoucnosti/, 'KDY not in the future');
-throws(() => call('apiCreate', mk({ qty: 0 })), /NOK situace bez kusů/, 'KOLIK 0 needs NOK situation');
-ok(call('apiCreate', mk({ qty: 0, unit: '', nokSituation: true, what: 'Chybí dokumentace k zásilce' })).qrap.nokSituation === 'ANO', 'KOLIK 0 + NOK situation ok');
+eq(call('apiCreate', mk({ qty: 0, unit: '', what: 'chybějící dokumentace' })).qrap.qty, 0, 'KOLIK 0 is allowed (no NOK checkbox on the paper)');
 throws(() => call('apiCreate', mk({ unit: '' })), /jednotku/, 'KOLIK > 0 needs a unit');
 throws(() => call('apiCreate', mk({ qty: 1.5 })), /celé číslo/, 'KOLIK must be whole');
 throws(() => call('apiCreate', mk({ repeat7: 'ANO' })), /opakovaného QRAP/, 'repeat needs a number');
 throws(() => call('apiCreate', mk({ repeat7: 'ANO', repeatRef: 'Q-2020-001' })), /neexistuje/, 'repeat QRAP must exist');
-throws(() => call('apiCreate', mk({ photoRight: '' })), /Foto ŠPATNĚ a Foto SPRÁVNĚ/, 'both photos required');
-ok(call('apiCreate', mk({ photoWrong: '', photoRight: '', photoException: 'Mobil nefunguje' })).qrap.photoException, 'photo exception with reason');
+ok(call('apiCreate', mk({ photoWrong: '', photoRight: '' })).qrap.id, 'photos are optional (the descriptions are required)');
+ok(call('apiCreate', mk({ photoRight: '' })).qrap.photoWrong, 'one photo is fine');
 throws(() => call('apiCreate', mk({ s3: {} })), /riziko/, '③ risk answer required');
-throws(() => call('apiCreate', mk({ s3: { risk: 'ANO', checked: 2, wrong: 5 } })), /Nalezeno špatně/, 'wrong ≤ checked');
-throws(() => call('apiCreate', mk({ s3: { risk: 'NE', ia: [{ kind: 'přebalení', text: 'x' }] } })), /Typ, Co bylo uděláno a Kdo/, 'immediate action needs all fields');
-throws(() => call('apiCreate', mk({ s3: { risk: 'NE', ia: [{ kind: 'přebalení', text: 'x', owner: 'y', done: iso(5) }] } })), /před KDY/, '„Hotovo v“ not before KDY');
+throws(() => call('apiCreate', mk({ s3: { risk: 'ANO', checked: 2, wrong: 5 } })), /Špatné kusy/, 'wrong ≤ sorted');
+throws(() => call('apiCreate', mk({ s3: { risk: 'NE', ia: [{ text: 'x' }] } })), /co bylo uděláno, a Kdo/, 'immediate action needs what and who');
+throws(() => call('apiCreate', mk({ s3: { risk: 'NE', ia: [{ text: 'x', owner: 'y', done: iso(5) }] } })), /před KDY/, '„Čas“ not before KDY');
+r0 = call('apiCreate', mk({ s3: { risk: 'ANO', checked: 12, wrong: 1, restoredAt: iso(1),
+  ia: [{ text: 'Paleta zablokována', owner: 'Tomáš Černý', done: iso(2) }] } }));
+eq(r0.qrap.status, 'ROZHODNUTÍ', 'operator fills the whole ③ on the paper → ROZHODNUTÍ at once');
+eq([r0.qrap.checked, r0.qrap.wrong], [12, 1], 'Třídění – data stored');
 throws(() => call('apiCreate', mk({ finder: '' })), /JMÉNO/, 'JMÉNO required (no badge number any more)');
 
 state.sent = [];
-let r = call('apiCreate', mk({ materialNo: '0012345', huNo: '=HYPERLINK("http://x")', qty: '6', notifyPeople: 'Petr Svoboda' }));
+let r = call('apiCreate', mk({ materialNo: '0012345', huNo: '=HYPERLINK("http://x")', qty: '6' }));
 const id1 = r.qrap.id;
 ok(/^Q-\d{4}-\d{3}$/.test(id1), 'id ' + id1);
 eq(r.qrap.status, 'OPATŘENÍ', 'only the risk answered → OPATŘENÍ');
-eq(r.qrap.s3Missing, ['alespoň jedno opatření', 'odpověď „Proces zastaven?“'], '③ missing list');
+eq(r.qrap.s3Missing, ['alespoň jedno okamžité opatření'], '③ missing list');
 eq(r.qrap.materialNo, '0012345', 'leading zeros kept');
 eq(r.qrap.huNo, '=HYPERLINK("http://x")', 'formula-like text stays text');
 eq(r.qrap.qty, 6, 'KOLIK is a number');
 ok(r.qrap.photoWrong && r.qrap.photoRight && !r.qrap.photoException, 'two photos stored');
 ok(r.qrap.can.popis && r.qrap.can.opatreni && !r.qrap.can.decide && !r.qrap.can.shifts, 'reporter rights');
 eq(state.sent.length, 1, 'one mail');
-eq(state.sent[0].to, LEAD + ',' + LEAD2, 'mail to the leader of the zone + the person chosen in ②');
-eq(r.qrap.notifyPeople, LEAD2, 'chosen person stored');
+eq(state.sent[0].to, LEAD, 'mail to the leader of the zone');
+ok(/ŠPATNÝ díl: Na paletě/.test(state.sent[0].body), 'mail has the description of the wrong part');
 ok(/\?id=Q-/.test(state.sent[0].body), 'mail has a link');
 const idRepeat = call('apiCreate', mk({ repeat7: 'ANO', repeatRef: id1, what: 'Znovu jiný materiál' })).qrap.id;
 ok(idRepeat, 'repeat of a QRAP from the last 7 days');
@@ -97,10 +105,10 @@ r = call('apiSave', id1, 'opatreni', { risk: 'ANO', checkRunning: true, processS
     { kind: 'přeetiketování', text: 'Etikety vyměněny', owner: 'Náhodný kolega' }] });
 eq(r.qrap.notified, 'Team Leader, Kvalita', 'Kvalita added to ② automatically');
 ok(state.sent.some(m => m.to === 'kvalita@example.com'), 'Quality mailed');
-eq(r.qrap.s3Missing, ['kontrola ještě probíhá', 'všechna opatření hotová', 'čas obnovení procesu'], '③ missing after a partial save');
+eq(r.qrap.s3Missing, ['třídění – data', 'čas u všech okamžitých opatření'], '③ missing after a partial save');
 const ia = r.actions.filter(a => a.part === '③');
 eq(ia.length, 2, 'two immediate actions');
-throws(() => call('apiSave', id1, 'opatreni', { risk: 'ANO', processStopped: 'ANO', restoredAt: iso(4) }), /před KDY/, 'restore not before KDY');
+throws(() => call('apiSave', id1, 'opatreni', { risk: 'ANO', restoredAt: iso(4) }), /před KDY/, 're-start not before KDY');
 r = call('apiSave', id1, 'opatreni', { risk: 'ANO', checked: 30, wrong: 2, processStopped: 'ANO', restoredAt: iso(1),
   ia: [{ no: ia[0].no, remove: true }, { no: ia[1].no, kind: 'přeetiketování', text: 'Etikety vyměněny', owner: 'Náhodný kolega', done: iso(1) },
     { kind: 'přebalení', text: 'Krabice přebaleny', owner: 'Náhodný kolega', done: iso(1) }] });
@@ -108,7 +116,7 @@ eq(r.qrap.status, 'ROZHODNUTÍ', '③ complete → ROZHODNUTÍ');
 ok(r.qrap.s3Done, '③ completion time set');
 eq(r.actions.filter(a => a.part === '③' && !a.removed).length, 2, 'two active immediate actions');
 eq(r.actions.filter(a => a.removed === 'ANO').length, 1, 'removed action is kept and marked');
-r = call('apiSave', id1, 'opatreni', { risk: 'ANO', checked: 30, wrong: 2, checkRunning: true, processStopped: 'ANO', restoredAt: iso(1),
+r = call('apiSave', id1, 'opatreni', { risk: 'ANO', checked: 30, wrong: '', restoredAt: iso(1),
   ia: r.actions.filter(a => a.part === '③' && !a.removed) });
 eq(r.qrap.status, 'OPATŘENÍ', '③ can become incomplete again before ④');
 r = call('apiSave', id1, 'opatreni', { risk: 'ANO', checked: 30, wrong: 2, processStopped: 'ANO', restoredAt: iso(1),
@@ -195,7 +203,7 @@ eq(r.qrap.status, 'OVĚŘENÍ', 'all actions done → OVĚŘENÍ (5 shifts)');
 as(KIOSK); // TL on the kiosk records a slot
 throws(() => call('apiSaveEffect', id1, { slot: 1, date: day(0), shift: 'Ranní' }), /výsledek/, 'result required');
 throws(() => call('apiSaveEffect', id1, { slot: 1, date: day(1), shift: 'Ranní', result: 'EFEKTIVNÍ', by: 'TL' }), /budoucnosti/, 'shift not in the future');
-throws(() => call('apiSaveEffect', id1, { slot: 1, date: day(0), shift: 'Víkend', result: 'EFEKTIVNÍ', by: 'TL' }), /směnu/, 'unknown shift');
+throws(() => call('apiSaveEffect', id1, { slot: 1, date: day(0), shift: 'Sobota', result: 'EFEKTIVNÍ', by: 'TL' }), /směnu/, 'unknown shift');
 r = call('apiSaveEffect', id1, { slot: 1, date: day(0), shift: 'Ranní', result: 'EFEKTIVNÍ', by: 'TL Novák' });
 eq(r.qrap.eff.ok, 1, 'one effective shift');
 throws(() => call('apiSaveEffect', id1, { slot: 2, date: day(0), shift: 'Ranní', result: 'EFEKTIVNÍ', by: 'TL' }), /jiná směna/, 'the same shift twice is refused');

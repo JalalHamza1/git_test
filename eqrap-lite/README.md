@@ -23,10 +23,11 @@ The app is two files: **`Code.gs`** (server) and **`Index.html`** (everything yo
 
 ## 1. What the app is
 
-- It is the firm's **QRAP V3.0 form** (logistics version), sections ① to ⑦, with the same questions and QRQC rules. Only the APU and plant-level parts, which belong to production, were left out.
+- It is the firm's **paper QRAP V3.0 form**, sections ① to ⑦, with the same blocks, questions and QRQC rules. Only the APU and plant-level parts, which belong to production, were left out.
+- **The screens look like the paper:** the board shows every QRAP as a strip of the paper form, and a QRAP opens as the full paper form with its blocks filled in.
 - **Everything can be done on one kiosk tablet:**
-  - The operator fills ①, ② and the ③ risk question, clicks **Odeslat**, and the screen returns to the board.
-  - The TL finishes ③, the leader signs ④, and the pilots fill ⑤ and ⑥.
+  - As on the paper, the operator fills ① Popis problému, ② Kdo byl upozorněn? and ③ Okamžitá opatření, clicks **Odeslat**, and the screen returns to the board. Only the ③ risk question is required; the TL completes the rest of ③ within 24 h.
+  - The leader signs ④, and the pilots fill ⑤ and ⑥.
   - A **manager** closes the QRAP.
   - At every signature the kiosk asks **"Kdo podepisuje?"** and checks the name and role against the Lidé tab.
 - **The status is calculated automatically** from what has been filled in. Nobody sets it by hand.
@@ -74,27 +75,23 @@ The app is two files: **`Code.gs`** (server) and **`Index.html`** (everything yo
 
 ### Tabule: the home page
 
-![Tabule](../dev-tests/lite/shots/01-board.png)
+![Tabule](../dev-tests/lite/shots/01-board-paper.png)
 
 - **Big "+ Nahlásit problém" button** at the top right.
-- **Four count cards.** Click a card to filter the table:
+- **Four count cards.** Click a card to filter the list:
   - On a personal account: Otevřené, Moje úkoly, Po termínu, Uzavřené.
   - On the kiosk: Otevřené, Čeká na rozhodnutí, Čeká na manažera, Po termínu.
 - **"Moje úkoly"** is each person's own work:
   - leaders: QRAPs in their zone waiting for ③ or ④
   - pilots: their analysis and actions
   - managers: QRAPs waiting to be closed
-- **Search** looks in the QRAP number, the problem text, material, HU / delivery note, supplier, zone and location.
-- **Filters:**
-  - **Stav:** all the card filters, plus Čeká na rozhodnutí, Čeká na manažera and, for managers, Zrušené.
-  - **Zóna**
-  - **Období:** 24 h, 7 or 30 days.
-- **Table columns:** Číslo · Problém · Kde · Kdy · Nahlásil · Stav (and who it waits for) · Krok ①–⑦ (progress bar).
-  - Click a column header to sort (▲, then ▼, then back to the default order). The default order is open before closed, late and SAFETY first, then newest first.
-  - Click a row to open the QRAP.
-  - The footer has page buttons and a "rows per page" setting.
-  - Overdue QRAPs say **po termínu!** in bold.
-- **"Moje konečné akce"** appears above the table when you are the pilot of an open action.
+- **Search** looks in the QRAP number, CO, the descriptions of the wrong and good part, part / HU / delivery note numbers, supplier and zone.
+- **Filters:** Stav (including Čeká na rozhodnutí, Čeká na manažera and, for managers, Zrušené), Zóna, Období (24 h, 7 or 30 days).
+- **Zobrazení: "Formulář QRAP" (default) or "Tabulka".** The choice is remembered on each device.
+  - **Formulář QRAP:** the paper header once at the top, then one paper strip per QRAP. Above each strip is the number, the status, who it waits for, and "po termínu!" when late. The block that is next (for example ③ or ④) has a green frame. Long texts are shortened; click the strip to open the full form.
+  - **Tabulka:** the compact table (Číslo · Problém · Kde · Kdy · Nahlásil · Stav · Krok ①–⑦), sortable by clicking a column header.
+  - Both views have page buttons and a "rows per page" setting at the bottom.
+- **"Moje konečné akce"** appears above the list when you are the pilot of an open action.
 - **"Zobrazit i starší uzavřené"** loads closed QRAPs older than `ZOBRAZIT_UZAVRENE_DNI` days.
 - **"Zrušené"** link (managers only) shows cancelled QRAPs.
 - The board refreshes by itself every 90 seconds. **Obnovit** refreshes now.
@@ -103,30 +100,47 @@ The app is two files: **`Code.gs`** (server) and **`Index.html`** (everything yo
 
 ![Nový QRAP](../dev-tests/lite/shots/02-new.png)
 
-- The tabs across the top are the steps: **Problém → Kdy a kde → Množství → Fotky → Upozornění → Riziko → Kontrola**.
+- The tabs across the top are the steps, in the order of the paper:
+
+  | Step | Questions |
+  |---|---|
+  | **Problém** | SAFETY · JAK byl objeven? · CO je za problém? (both dropdowns; "jiné" asks for a text) |
+  | **Kdy a kde** | KDY ? (date and time, "Teď" button) · KDE ? (one zone) |
+  | **Kolik a kdo** | KOLIK špatných dílů? + unit · Stejný problém v posledních 7 dnech? (ANO → N° QRAP) · JMÉNO |
+  | **Popis** | ŠPATNÝ díl – popis · DOBRÝ díl – popis (both required) · optional photo of each · číslo dílu, HU / dodací list, dodavatel (optional) |
+  | **Upozornění** | Kdo byl upozorněn? (roles + jiné) |
+  | **Opatření** | Ochranná opatření: riziko na již naskladněném / expedovaném zboží? (required; ANO → Přetříděno / Špatné kusy) · Okamžitá opatření (Co, Kdo, Čas) · Čas re-startu procesu/stanice |
+  | **Kontrola** | everything on one page for a last check |
+
   - ✓ = done, ○ = not yet, green = the current step.
   - You can click a tab to go back. To go forward, use **Pokračovat →**, which checks the step first.
 - **Hints:**
   - In text fields the hint is the grey placeholder; it disappears when you type.
   - Other fields have a small **ⓘ** next to the label. Tap it to show a one-line hint.
 - **Required fields** have a red ✱. If something is missing, the field turns red and a message appears at the bottom.
-- **Fotky:** a photo of the WRONG and the RIGHT state, or tick "Fotku nelze pořídit" and give a reason.
+- **Photos are optional.** "📷 Přidat foto" opens the camera directly on the kiosk tablet or a phone, and the file picker on a PC. Photos are made smaller in the browser before they are sent. A photo can also be added later on the QRAP page, until ④ is signed.
+- **③ for the operator:** only the risk question is required. Whatever the operator doesn't know (for example the re-start time) stays empty; the QRAP then waits in "③ Opatření" and the TL completes it within 24 h. If the operator fills ③ completely, the QRAP goes straight to "④ Rozhodnutí".
 - **Kontrola** shows everything on one page for a last check. **Odeslat ✓** saves the QRAP, sends the e-mails and returns to the board with a green confirmation.
 
-### QRAP detail: the form ①–⑦
+### QRAP page: the paper form ①–⑦
 
-![QRAP detail](../dev-tests/lite/shots/03-closed.png)
+![QRAP page](../dev-tests/lite/shots/03-closed.png)
 
 - **At the top:** the breadcrumb (Tabule / Q-…), the number, the status, SAFETY / ESKALACE marks, and the **Tisk / PDF** button.
-- **On the right** (on a phone, at the top):
-  - **Další krok:** what has to happen next, who does it, what is missing, and the deadline.
-  - **Průběh QRAP:** ✓ for finished steps, ● for the current step, ○ for steps still ahead.
-- **On the left: sections ① to ⑦** as cards.
-  - The number circle is green when the section is done, solid green when it's the current section, and grey when it's waiting.
-  - Buttons inside a card (Doplnit ③, Rozhodnout, Vyplnit 5 Proč, + Přidat konečnou akci, ✓ Hotovo, Podepsat uzavření, + Hodnotit…) appear **only for people who are allowed to use them**.
+- **Další krok** bar: what has to happen next, who does it, what is missing, the deadline, and the main button for you (for example **Doplnit ③**, **Rozhodnout ④**, **Vyplnit 5 Proč ⑤**, **+ Přidat konečnou akci ⑥**).
+- **The paper form**, exactly in the paper's layout:
+  - grey bands "QR vyplňuje OPERÁTOR…", "Vyplňuje Supervizor", "Vyplňují pověření pracovníci…", "Supervizor / Manažer"
+  - ① Popis problému (N°, SAFETY, CO a JAK, KDY, KDE, KOLIK, Stejný problém, JMÉNO, ŠPATNÝ / DOBRÝ díl with photos), ② Kdo byl upozorněn?, ③ Okamžitá opatření <24h
+  - ④ Rozhodnutí OJT (shifts, decision, piloti, komentář, podpis)
+  - ⑤ Příčina 5 Proč ? (the arrow with 1–5 PROČ; the root cause is green; the optional "Proč nebylo zachyceno" chain is written under it)
+  - ⑥ Konečné akce (Co jsme se naučili, actions with Kdo / plán / hotovo, Uzavření QRAP schváleno, Efektivita ①–⑤, Příležitost k aktualizaci STANDARDU)
+  - ⑦ Hodnocení QRQC (the latest assessment; older ones are listed under the form)
+  - the block that is next has a green frame.
+- **Filling a block:** each block has a small button (**Upravit ① ②**, **Doplnit ③**, **Rozhodnout ④**, **Vyplnit 5 Proč**, **+ Konečná akce**, **+ Hodnotit**). The form for that block opens under the paper; **Zavřít** closes it. Buttons appear **only for people who are allowed to use them**.
+- **Under the paper**, when needed: ⑥ Konečné akce with **✓ Hotovo** / **Upravit**, the 5-shift table (Ověření 5 směn), the closing checklist with **Podepsat uzavření** / **Schválit a uzavřít**.
 - **Historie změn:** click **Zobrazit** to load who changed what and when.
 - **Správa QRAP (manažer)**, managers only, each with a required reason: **Odemknout ①–④**, **Zrušit QRAP**, **Znovu otevřít**.
-- **Tisk / PDF** prints the form without buttons and menus, or saves it as a PDF.
+- **Tisk / PDF** prints just the paper form on one landscape A4, or saves it as a PDF.
 
 ### Přehled manažera (managers and admin)
 
@@ -137,8 +151,8 @@ The app is two files: **`Code.gs`** (server) and **`Index.html`** (everything yo
   - **Čeká na vás** (waiting for closure)
   - **Nahlášeno** in the last 8 weeks, with a small bar strip per week. Hover a bar for the exact number.
   - **③ do 24 h**: the share of QRAPs whose immediate actions were complete within the deadline.
-  - Clicking Otevřené or Čeká na vás switches the table below.
-- **Otevřené QRAP:** the main table, with a switch for Všechny otevřené / Čeká na uzavření / SAFETY a eskalace / Po termínu, plus search.
+  - Clicking Otevřené or Čeká na vás switches the list below.
+- **Otevřené QRAP:** the main list as paper strips (or the table, with the same switch as on the board), with a choice of Všechny otevřené / Čeká na uzavření / SAFETY a eskalace / Po termínu, plus search.
 - **Další statistiky** (closed until you click it):
   - QRAPs by zone and by how they were found (last 90 days). Click a bar to open the board filtered by it.
   - Overdue final actions per pilot.
@@ -148,7 +162,7 @@ The app is two files: **`Code.gs`** (server) and **`Index.html`** (everything yo
 ### Správa (admin only)
 
 - **Lidé a role:** add a person, edit, or deactivate. People are never deleted.
-- **Seznamy ve formuláři:** one item per line (zones, how found, units, roles in ②, types of immediate actions, shifts).
+- **Seznamy ve formuláři:** one item per line: Zóny (KDE), CO je za problém, JAK byl objeven, Jednotky, Kdo byl upozorněn (②), Směny (④). Keep a line "jiné" in CO, JAK and ② if people should be able to write their own text.
 - **Nastavení:** app name, e-mails on/off, Quality and BOZP e-mails, the ③ deadline, how many days of closed QRAPs to show, the kiosk timeout, and the app link for e-mails.
 
 Changes apply immediately for you. Other users see them after reloading the page. Every change is written to the history as "SPRÁVA".
@@ -163,8 +177,8 @@ Changes apply immediately for you. Other users see them after reloading the page
 ## 4. How a QRAP moves from ① to ⑦
 
 ```
-①②③  Operátor     – ① popis + fotky, ② kdo byl upozorněn, ③ riziko ano/ne → Odeslat
-③     TL           – doplní okamžitá opatření do 24 h od KDY
+①②③  Operátor     – ① popis problému, ② kdo byl upozorněn, ③ okamžitá opatření (povinné jen riziko) → Odeslat
+③     TL           – doplní, co v ③ chybí, do 24 h od KDY
 ④     Vedoucí      – informované směny + rozhodnutí + podpis
         ├─ „Problém vyřešen: ŽÁDNÉ 5 Proč“ → manažer schválí a uzavře
         ├─ „Eskalace“ → manažeři dostanou e-mail
@@ -189,13 +203,13 @@ Changes apply immediately for you. Other users see them after reloading the page
 **Important rules:**
 
 - **When ③ is complete** (the page lists anything that is missing):
-  - the risk question is answered
-  - if the risk is ANO, the check data (checked / wrong) is filled in and no check is still running
-  - there is at least one immediate action, and all of them are done
-  - "Proces zastaven?" is answered, and if ANO, the restore time is filled in
+  - the risk question (Ochranná opatření) is answered
+  - if the risk is ANO, Třídění – data (Přetříděno / Špatné kusy) is filled in
+  - there is at least one immediate action, and every one has its Čas (= done)
+  - "Čas re-startu" is optional, as on the paper
 - **Signing ④** locks ①–④. Only a manager can unlock them (with a reason), and the decision must then be signed again.
 - **"Vyřešeno bez 5 Proč"** is not allowed when SAFETY = ANO.
-- **Each final action** removes one 5 Proč step (O1–O5 or N1–N5), or is "Aktualizovat standard".
+- **Each final action** removes one 5 Proč step (1.–5. Proč, or a step of the optional "Proč nebylo zachyceno" chain), or is "Aktualizovat standard".
 - **Effectiveness:** 5 slots, each a **different** shift (date + shift).
   - "NEEFEKTIVNÍ" sends the QRAP back to analysis.
   - A new round of slots starts, and a new action is needed.
@@ -217,7 +231,7 @@ Changes apply immediately for you. Other users see them after reloading the page
 
 | | none (operators) | **VEDOUCÍ** | **MANAŽER** | **ADMIN** |
 |---|:-:|:-:|:-:|:-:|
-| ①② report + ③ risk question | ✓ | ✓ | ✓ | ✓ |
+| ①②③ report the problem and the immediate actions | ✓ | ✓ | ✓ | ✓ |
 | ③ finish immediate actions (until ④) | ✓ | ✓ | ✓ | ✓ |
 | edit ①② of an own report before ④ | own only | ✓ | ✓ | ✓ |
 | ④ informed shifts, sign the decision | – | ✓ | ✓ | ✓ |
@@ -246,7 +260,7 @@ Changes apply immediately for you. Other users see them after reloading the page
 
 | When | Who |
 |---|---|
-| new QRAP | leaders of the zone + anyone ticked under "Poslat e-mail také" in ② |
+| new QRAP | leaders of the zone |
 | SAFETY = ANO | `EMAIL_BOZP` + managers |
 | ③ risk = ANO | `EMAIL_KVALITA` |
 | pilots chosen in ④ | the pilots |
@@ -343,11 +357,11 @@ Google Sheet  ←→  Code.gs (server, runs as the owner)  ←→  Index.html (s
 | 1. State and texts | `S` (all data on the page), `STATUS` (status names), `DECISIONS`, `CRITERIA` (⑦), `SECTION_TITLES` |
 | 2. Small helpers | `h()` creates elements (text is always safe), `fill()`, `api()`, `save()`, `submit()`, `store()`, date formatting, `isLate`… |
 | 3. Header and routing | `ICONS` / `icon()`, `go()` (switch page), `render()`, `header()`, `pageHead()`, `viewAsSelect()` |
-| 4. Board | `FILTERS`, `COLUMNS`, `boardPage()`, `rowEl()` (one table row), `myActions()` |
+| 4. Board | `FILTERS`, `COLUMNS`, `boardPage()`, `rowEl()` (one table row), `myActions()`, `layoutSwitch()` (Formulář QRAP / Tabulka) |
 | 5. New problem | `newPage()`: the step tabs and the `steps` list |
-| 6. Detail ①–⑦ | `detailPage()`, `steps()` (progress list), `nextBox()`, `sec1()` … `sec7()`, `effectBox()`, `closureBox()`, `historyBox()`, `adminBox()` |
+| 6. The paper form | `paperHead()` (grey bands and titles), `paperBody(q, big)` (one QRAP filled into blocks ①–⑦), `paperList()` (board strips); the QRAP page: `detailPage()`, `nextBar()`, `editorPanel()` (form of the block being filled), `actionsPanel()`, `effectBox()`, `closureBox()`, `historyBox()`, `adminBox()` |
 | 7. Forms | `makeForm()` (form builder), `popisForm`, `opatreniForm`, `decisionForm`, `pricinaForm`, `actionForm`, `assessForm`, `signerField` |
-| 8. Photos | `photosView`, `photoPicker`, `shrink` (resizes before upload) |
+| 8. Photos | `photoSlot` (photo on the paper + camera button), `photoPicker` (new QRAP), `shrink` (resizes before upload) |
 | 9. Pages and start | `sparkline()`, `barList()`, `dashPage()`, `adminPage()`, `helpPage()`, `refresh()`, `startKiosk()`, `start()` |
 
 **Tip:** to find something, search (Ctrl+F) for the Czech text you see on the screen. For example, search for `'Podepsat uzavření'` to land in `closureBox`.
@@ -406,7 +420,7 @@ function canAssess_(me, q) { return me.lead && q.status !== 'ZRUŠENO'; }
 - `statusOf_` decides the status from the data, with the first matching rule winning.
 - `s3Missing_` lists what ③ still needs.
 - `checklist_` builds the closing checklist.
-- If you add a status, also add it to `NEXT_STEP` in Code.gs and to `STATUS` (and `stage()`, `steps()`) in Index.html.
+- If you add a status, also add it to `NEXT_STEP` in Code.gs and to `STATUS`, `stage()` and `NOW_CELL` (which paper block is highlighted) in Index.html.
 
 ### E-mails: section 7
 
@@ -460,7 +474,7 @@ h('button', { class: 'btn primary', onclick: () => go('new') }, '+ Nahlásit pro
 
 ```js
 const F = makeForm(values);
-F.input('what', 'CO je za problém?', { req: true, rows: 3, wide: true, hint: 'Popište fakta: co je špatně a u jakého zboží.' })
+F.input('descWrong', 'ŠPATNÝ díl – popis', { req: true, rows: 4, hint: 'Co je špatně? Popište fakta.' })
 F.select('how', 'JAK byl objeven?', S.lists.how, { req: true, hint: '…' })
 F.yesno('safety', 'SAFETY', { req: true })
 F.checks('shifts', 'Směny', S.lists.shifts)
@@ -510,8 +524,8 @@ Before you start any recipe: **make a copy of the Sheet and test in the copy** (
    `orderNo: txt_(f.orderNo, 60),`
 3. **Index.html part 7 `popisForm`**, next to the `supplier` field, add:
    `F.input('orderNo', 'Číslo zakázky', { hint: 'např. 4500012345' }),`
-4. **Index.html part 6 `sec1`**, in the `kv([...])` list, add:
-   `['Číslo zakázky', q.orderNo],`
+4. **Index.html part 6 `paperBody`**, in the `numbers` line of ① (under ŠPATNÝ / DOBRÝ díl), add:
+   `q.orderNo ? 'zakázka: ' + q.orderNo : '',`
 5. *(Optional)* to make it searchable, add `q.orderNo` to `haystack()` in part 4.
 6. Run **eQRAP → Nastavit tabulku** (it adds the column), then publish a new version (§12).
 
@@ -563,6 +577,14 @@ No code needed: **Správa → Nastavení**.
 
 ## 12. Testing and publishing a change
 
+### Upgrading a Sheet from an earlier version (before the paper layout)
+
+Run **eQRAP → Nastavit tabulku** once after pasting the new code. It adds the new columns **① CO – jiné**, **① Popis – ŠPATNÝ díl**, **① Popis – DOBRÝ díl** and the list **CO je za problém** in Seznamy. Nothing is deleted:
+
+- Old QRAPs keep their values. Their old free-text "CO" is shown as it was, and old KDE lokace, NOK situace and photo exceptions are still shown on the paper.
+- The old Seznamy column "Typy okamžitých opatření" is no longer used (the paper has no type); you may delete that column.
+- Existing lists are not changed. If you want the paper's shift "Víkend" or its roles in ② (Údržba, Logistika / nákup…), add them on **Správa → Seznamy**.
+
 ### Safe way to change the live app
 
 1. **File → Make a copy** of the Sheet. The copy gets its own Apps Script project.
@@ -578,7 +600,7 @@ No code needed: **Správa → Nastavení**.
 The repository has a local copy of the Google services in `dev-tests/lite/`:
 
 ```bash
-node dev-tests/lite/lite_server_test.js   # 218 checks of every rule in Code.gs
+node dev-tests/lite/lite_server_test.js   # 222 checks of every rule in Code.gs
 node dev-tests/lite/lite_e2e.js           # full browser run: report → close, kiosk, phone, Správa
 ```
 

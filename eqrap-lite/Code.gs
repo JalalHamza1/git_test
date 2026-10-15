@@ -41,16 +41,19 @@ const COLS = {
   'Problémy': [
     ['id', 'ID'], ['status', 'Stav'], ['created', 'Nahlášeno'], ['createdBy', 'Účet'],
     // ① POPIS PROBLÉMU
-    ['safety', '① SAFETY'], ['what', '① CO je za problém?'], ['how', '① JAK byl objeven?'], ['howOther', '① JAK – jiné'],
+    ['safety', '① SAFETY'], ['what', '① CO je za problém?'], ['whatOther', '① CO – jiné'],
+    ['how', '① JAK byl objeven?'], ['howOther', '① JAK – jiné'],
     ['when', '① KDY?'], ['zone', '① KDE? – zóna'], ['location', '① KDE? – lokace'], ['originZone', '① Kde vzniklo?'],
     ['qty', '① KOLIK?'], ['unit', '① Jednotka'], ['nokSituation', '① NOK situace bez kusů'],
     ['repeat7', '① Stejný problém v posledních 7 dnech?'], ['repeatRef', '① Opakovaný QRAP'],
     ['finder', '① JMÉNO'],
+    ['descWrong', '① Popis – ŠPATNÝ díl'], ['descRight', '① Popis – DOBRÝ díl'],
     ['materialNo', '① Číslo materiálu'], ['huNo', '① Číslo HU / dodacího listu'], ['supplier', '① Dodavatel'],
     ['photoWrong', '① Foto ŠPATNĚ'], ['photoRight', '① Foto SPRÁVNĚ'], ['photoException', '① Výjimka – proč nejsou fotky'],
     // ② KDO BYL UPOZORNĚN?
     ['notified', '② Upozorněni'], ['notifiedOther', '② Jiné – kdo'], ['notifyPeople', '② Informovat e-mailem'],
-    // ③ OKAMŽITÁ OPATŘENÍ <24h (the actions themselves are rows in the tab Akce, part ③)
+    // ③ OKAMŽITÁ OPATŘENÍ <24h (the actions themselves are rows in the tab Akce, part ③).
+    //   Proces obnoven = "Čas re-startu" on the paper form. Kontrola probíhá / Proces zastaven are kept for old QRAPs.
     ['risk', '③ Riziko u zboží na skladě / expedovaného?'], ['checked', '③ Zkontrolováno ks'],
     ['wrong', '③ Nalezeno špatně ks'], ['checkRunning', '③ Kontrola probíhá'],
     ['processStopped', '③ Proces zastaven?'], ['restoredAt', '③ Proces obnoven'], ['s3Done', '③ Kompletní'],
@@ -103,14 +106,13 @@ const SETTINGS = [
 // Tab "Seznamy": [name in code, column header, default values]. The admin edits the values in the Sheet.
 const LISTS = [
   ['zones', 'Zóny', ['Příjem', 'Sklad', 'Vychystávání', 'Balení', 'Expedice', 'Nakládka']],
+  ['problems', 'CO je za problém', ['chybí / špatná etiketa', 'špatný materiál', 'špatné množství', 'poškozené zboží / obal',
+    'chybějící dokumentace', 'jiné']],
   ['how', 'JAK byl objeven', ['příjem zboží', 'skladování', 'vychystávání', 'balení', 'kontrola expedice', 'inventura',
     'reklamace zákazníka', 'dodávka dodavatele', 'jiné']],
   ['units', 'Jednotky', ['ks', 'krabice', 'palety', 'manipulační jednotky']],
-  ['alert', 'Kdo byl upozorněn', ['Team Leader', 'Supervizor', 'Kvalita', 'Vedoucí logistiky', 'Nákup / dodavatel',
-    'Údržba (VZV, zařízení)', 'jiné']],
-  ['iaTypes', 'Typy okamžitých opatření', ['blokace / karanténa zásob', 'přeetiketování', 'přebalení', 'pozdržení expedice',
-    'informovat zákazníka / dodavatele', 'jiné']],
-  ['shifts', 'Směny', ['Ranní', 'Odpolední', 'Noční']]
+  ['alert', 'Kdo byl upozorněn', ['Team Leader', 'Supervizor', 'Údržba', 'Kvalita', 'Vedoucí skladu', 'Logistika / nákup', 'jiné']],
+  ['shifts', 'Směny', ['Ranní', 'Odpolední', 'Noční', 'Víkend']]
 ];
 
 // Example people written by setup. The admin replaces them with real colleagues.
@@ -195,9 +197,6 @@ function apiCreate(f) {
   const q = popisFrom_(f);
   Object.assign(q, opatreniFrom_(s3in, q.when));
   const ia = (s3in.ia || []).filter(r => !r.remove).map(r => iaFields_(r, q.when));
-  need_((f.photoWrong && f.photoRight) || q.photoException.length >= 3,
-    'Chybí Foto ŠPATNĚ a Foto SPRÁVNĚ (nebo výjimka s důvodem).');
-  if (f.photoWrong && f.photoRight) q.photoException = '';
   const pw = f.photoWrong ? savePhoto_(f.photoWrong) : '';
   const pr = f.photoRight ? savePhoto_(f.photoRight) : '';
   return lock_(() => {
@@ -209,7 +208,7 @@ function apiCreate(f) {
     q.photoRight = pr;
     addQuality_(q);
     ia.forEach((r, i) => insert_(TAB.actions, Object.assign({ qrapId: q.id, no: i + 1, part: '③', created: nowIso_() }, r)));
-    finish_(q, 'Nahlášeno: ' + short_(q.what), true);
+    finish_(q, 'Nahlášeno: ' + short_(title_(q)), true);
     mailNew_(q);
     return pack_(q.id);
   });
@@ -232,8 +231,6 @@ function apiSave(id, part, f) {
       need_(canPopis_(me, q), 'Popis ① ② může upravit ten, kdo problém nahlásil, nebo vedoucí – jen do rozhodnutí ④.');
       const before = q.safety;
       Object.assign(q, popisFrom_(f));
-      need_((q.photoWrong && q.photoRight) || q.photoException.length >= 3, 'Chybí Foto ŠPATNĚ a Foto SPRÁVNĚ (nebo výjimka s důvodem).');
-      if (q.photoWrong && q.photoRight) q.photoException = '';
       checkRepeat_(q);
       addQuality_(q);
       if (q.safety === 'ANO' && before !== 'ANO') mailSafety_(q);
@@ -422,7 +419,6 @@ function apiSetPhoto(id, kind, dataUrl) {
     need_(canPopis_(me, q), 'Fotku může změnit ten, kdo problém nahlásil, nebo vedoucí – jen do rozhodnutí ④.');
     const key = kind === 'RIGHT' ? 'photoRight' : 'photoWrong';
     q[key] = savePhoto_(dataUrl);
-    if (q.photoWrong && q.photoRight) q.photoException = '';
     finish_(q, '① Nahrána fotka ' + (kind === 'RIGHT' ? 'SPRÁVNĚ' : 'ŠPATNĚ'));
     return pack_(id);
   });
@@ -632,18 +628,20 @@ function defActions_(acts) { return acts.filter(a => a.part === '⑥' && !a.remo
 function iaActions_(acts) { return acts.filter(a => a.part === '③' && !a.removed); }
 function rootOk_(q) { return !!((q.rootO && q['o' + q.rootO]) || (q.rootN && q['n' + q.rootN])); }
 
-/** Which ③ rules are not met yet (empty list = ③ complete). */
+/**
+ * Which ③ rules are not met yet (empty list = ③ complete):
+ * the risk is answered, with ANO the sorting data (přetříděno / špatné kusy) is filled in,
+ * and there is at least one immediate action and every one has its time (= done).
+ */
 function s3Missing_(q, ia) {
   const m = [];
-  if (!q.risk) m.push('odpověď na riziko');
+  if (!q.risk) m.push('odpověď na riziko (ochranná opatření)');
   if (q.risk === 'ANO') {
-    if (q.checkRunning) m.push('kontrola ještě probíhá');
-    else if (q.checked === '' || q.wrong === '') m.push('data kontroly');
+    if (q.checkRunning) m.push('třídění ještě probíhá');
+    else if (q.checked === '' || q.wrong === '') m.push('třídění – data');
   }
-  if (!ia.length) m.push('alespoň jedno opatření');
-  else if (ia.some(a => !a.done)) m.push('všechna opatření hotová');
-  if (!q.processStopped) m.push('odpověď „Proces zastaven?“');
-  else if (q.processStopped === 'ANO' && !q.restoredAt) m.push('čas obnovení procesu');
+  if (!ia.length) m.push('alespoň jedno okamžité opatření');
+  else if (ia.some(a => !a.done)) m.push('čas u všech okamžitých opatření');
   return m;
 }
 
@@ -1059,39 +1057,49 @@ function emailsOf_(v) {
   }).filter((e, i, a) => a.indexOf(e) === i);
 }
 
-/** ① ② from the form, checked like the paper form. */
+/**
+ * ① ② from the form, checked like the paper form.
+ * Old QRAPs keep their KDE – lokace, Kde vzniklo, NOK situace, photo exception and extra e-mails (no longer asked).
+ */
 function popisFrom_(f) {
   const q = {
-    safety: yn_(f.safety), what: txt_(f.what), how: txt_(f.how, 100), howOther: txt_(f.howOther, 200),
-    when: iso_(f.when), zone: txt_(f.zone, 100), location: txt_(f.location, 100), originZone: txt_(f.originZone, 100),
-    qty: num_(f.qty, 'KOLIK'), unit: txt_(f.unit, 50), nokSituation: f.nokSituation === true || f.nokSituation === 'ANO' ? 'ANO' : '',
+    safety: yn_(f.safety), how: txt_(f.how, 100), howOther: txt_(f.howOther, 200),
+    what: txt_(f.what, 100), whatOther: txt_(f.whatOther, 200),
+    when: iso_(f.when), zone: txt_(f.zone, 100), qty: num_(f.qty, 'KOLIK špatných dílů'), unit: txt_(f.unit, 50),
     repeat7: yn_(f.repeat7), repeatRef: txt_(f.repeatRef, 40).toUpperCase(), finder: txt_(f.finder, 100),
+    descWrong: txt_(f.descWrong, 1000), descRight: txt_(f.descRight, 1000),
     materialNo: txt_(f.materialNo, 60), huNo: txt_(f.huNo, 60), supplier: txt_(f.supplier, 100),
-    photoException: txt_(f.photoException, 500), notified: multi_(f.notified), notifiedOther: txt_(f.notifiedOther, 200),
-    notifyPeople: emailsOf_(f.notifyPeople).join(',')
+    notified: multi_(f.notified), notifiedOther: txt_(f.notifiedOther, 200)
   };
   if (!isOther_(q.how)) q.howOther = '';
+  if (!isOther_(q.what)) q.whatOther = '';
   if (q.repeat7 !== 'ANO') q.repeatRef = '';
   if (!list_(q.notified).some(isOther_)) q.notifiedOther = '';
   const miss = [];
   if (!q.safety) miss.push('SAFETY');
-  if (!q.what) miss.push('CO je za problém?');
   if (!q.how) miss.push('JAK byl objeven?'); else if (isOther_(q.how) && !q.howOther) miss.push('JAK – jiné');
+  if (!q.what) miss.push('CO je za problém?'); else if (isOther_(q.what) && !q.whatOther) miss.push('CO – jiné');
   if (!q.when) miss.push('KDY?');
-  if (!q.zone) miss.push('KDE? – zóna');
-  if (!q.location) miss.push('KDE? – lokace');
-  if (q.qty === '') miss.push('KOLIK?');
+  if (!q.zone) miss.push('KDE?');
+  if (q.qty === '') miss.push('KOLIK špatných dílů?');
   if (!q.repeat7) miss.push('Stejný problém v posledních 7 dnech?');
   if (!q.finder) miss.push('JMÉNO');
+  if (!q.descWrong) miss.push('Popis – ŠPATNÝ díl');
+  if (!q.descRight) miss.push('Popis – DOBRÝ díl');
   if (!q.notified) miss.push('② Kdo byl upozorněn?');
   else if (list_(q.notified).some(isOther_) && !q.notifiedOther) miss.push('② Jiné – kdo');
   need_(!miss.length, 'Vyplňte prosím: ' + miss.join(', ') + '.');
   notFuture_(q.when, 'KDY');
-  need_(q.qty > 0 || q.nokSituation, 'Zadejte KOLIK větší než 0, nebo zaškrtněte „NOK situace bez kusů“.');
-  need_(!(q.qty > 0) || q.unit, 'Vyberte jednotku (KOLIK).');
-  need_(q.repeat7 !== 'ANO' || q.repeatRef, 'Vyberte číslo opakovaného QRAP.');
+  need_(!(q.qty > 0) || q.unit, 'Vyberte jednotku (KOLIK špatných dílů).');
+  need_(q.repeat7 !== 'ANO' || q.repeatRef, 'Vyberte N° opakovaného QRAP.');
   return q;
 }
+
+/** CO je za problém (the "jiné" text when chosen). */
+function what_(q) { return isOther_(q.what) && q.whatOther ? q.whatOther : q.what; }
+
+/** A short title for lists, e-mails and the history: CO + the description of the wrong part. */
+function title_(q) { return what_(q) + (q.descWrong ? ' – ' + q.descWrong : ''); }
 
 /** "Stejný problém v posledních 7 dnech? = ANO" → the QRAP must exist and be from the 7 days before KDY. */
 function checkRepeat_(q) {
@@ -1105,25 +1113,23 @@ function checkRepeat_(q) {
 /** ③ answers from the form (the actions are checked by iaFields_). Only the risk answer is required. */
 function opatreniFrom_(f, when) {
   const s = {
-    risk: yn_(f.risk), checked: num_(f.checked, 'Zkontrolováno'), wrong: num_(f.wrong, 'Nalezeno špatně'),
-    checkRunning: f.checkRunning === true || f.checkRunning === 'ANO' ? 'ANO' : '',
-    processStopped: yn_(f.processStopped), restoredAt: iso_(f.restoredAt)
+    risk: yn_(f.risk), checked: num_(f.checked, 'Přetříděno'), wrong: num_(f.wrong, 'Špatné kusy'),
+    checkRunning: '', restoredAt: iso_(f.restoredAt)
   };
-  need_(s.risk, 'Odpovězte: Je riziko u zboží už na skladě nebo už expedovaného?');
-  if (s.risk !== 'ANO') Object.assign(s, { checked: '', wrong: '', checkRunning: '' });
-  need_(s.wrong === '' || s.checked === '' || s.wrong <= s.checked, '„Nalezeno špatně“ nemůže být víc než „Zkontrolováno“.');
-  if (s.processStopped !== 'ANO') s.restoredAt = '';
-  notFuture_(s.restoredAt, 'Čas obnovení procesu');
-  need_(!s.restoredAt || s.restoredAt >= when, 'Proces nemohl být obnoven před KDY.');
+  need_(s.risk, 'Odpovězte: Je zde riziko na již naskladněném nebo expedovaném zboží?');
+  if (s.risk !== 'ANO') Object.assign(s, { checked: '', wrong: '' });
+  need_(s.wrong === '' || s.checked === '' || s.wrong <= s.checked, '„Špatné kusy“ nemůže být víc než „Přetříděno“.');
+  notFuture_(s.restoredAt, 'Čas re-startu');
+  need_(!s.restoredAt || s.restoredAt >= when, 'Čas re-startu nemůže být před KDY.');
   return s;
 }
 
-/** One ③ immediate action: Typ, Co bylo uděláno, Kdo (required), Hotovo v (empty = still running). */
+/** One ③ immediate action as on the paper: Okamžitá opatření (what), Kdo, Čas (empty = still running). */
 function iaFields_(r, when) {
   const a = { kind: txt_(r.kind, 100), text: txt_(r.text, 500), owner: txt_(r.owner, 100), done: iso_(r.done) };
-  need_(a.kind && a.text && a.owner, 'U každého okamžitého opatření vyplňte Typ, Co bylo uděláno a Kdo.');
-  notFuture_(a.done, 'Čas „Hotovo v“');
-  need_(!a.done || a.done >= when, '„Hotovo v“ nemůže být před KDY.');
+  need_(a.text && a.owner, 'U každého okamžitého opatření vyplňte, co bylo uděláno, a Kdo.');
+  notFuture_(a.done, 'Čas opatření');
+  need_(!a.done || a.done >= when, 'Čas opatření nemůže být před KDY.');
   return a;
 }
 
@@ -1229,7 +1235,9 @@ function managers_() {
 }
 
 function facts_(q) {
-  return ['CO: ' + q.what, 'KDE: ' + [q.zone, q.location].filter(String).join(' / '), 'KDY: ' + fmt_(q.when),
+  return ['CO: ' + what_(q) + ' (JAK: ' + (isOther_(q.how) && q.howOther ? q.howOther : q.how) + ')',
+    'ŠPATNÝ díl: ' + (q.descWrong || '–'), 'DOBRÝ díl: ' + (q.descRight || '–'),
+    'KDE: ' + [q.zone, q.location].filter(String).join(' / '), 'KDY: ' + fmt_(q.when),
     'KOLIK: ' + (q.qty === '' ? '–' : q.qty + ' ' + q.unit), 'JMÉNO: ' + q.finder];
 }
 
@@ -1249,7 +1257,7 @@ function mailSafety_(q) {
 function mailQuality_(q) {
   send_([setting_('EMAIL_KVALITA')], q.id + ' – riziko u zboží na skladě / expedovaného',
     ['U problému je riziko, že stejná chyba je i u zboží na skladě nebo už expedovaného.', ''].concat(facts_(q),
-      ['Zkontrolováno: ' + (q.checked === '' ? '–' : q.checked) + ' · Nalezeno špatně: ' + (q.wrong === '' ? '–' : q.wrong)]), q.id);
+      ['Přetříděno: ' + (q.checked === '' ? '–' : q.checked) + ' ks · Špatné kusy: ' + (q.wrong === '' ? '–' : q.wrong) + ' ks']), q.id);
 }
 
 function mailPilots_(q, emails) {
@@ -1266,7 +1274,7 @@ function mailAction_(q, a) {
   if (!a.ownerEmail) return;
   send_([a.ownerEmail], q.id + ' – máte konečnou akci (plán ' + a.due + ')', [
     'Byla vám přidělena konečná akce k problému ' + q.id + '.', '',
-    'Akce: ' + a.text, 'Plán: ' + a.due, 'Problém: ' + q.what, '',
+    'Akce: ' + a.text, 'Plán: ' + a.due, 'Problém: ' + title_(q), '',
     'Až bude hotovo, otevřete odkaz a klikněte na „✓ Hotovo“.'
   ], q.id);
 }
@@ -1314,7 +1322,7 @@ function dailyReminder(e) {
     const mine = open.filter(q => !p.area || p.area === q.zone);
     if (!mine.length) return;
     send_([p.email], 'otevřené problémy: ' + mine.length, ['Dobré ráno, tyto QRAP jsou otevřené:', '']
-      .concat(mine.map(q => q.id + '  čeká: ' + NEXT_STEP[q.status] + '  –  ' + short_(q.what))), '');
+      .concat(mine.map(q => q.id + '  čeká: ' + NEXT_STEP[q.status] + '  –  ' + short_(title_(q)))), '');
   });
   const late = allActs.filter(a => a.part === '⑥' && !a.done && !a.removed && a.ownerEmail && a.due && a.due <= today &&
     open.some(q => q.id === a.qrapId));
@@ -1450,22 +1458,24 @@ function exampleData() {
   ownerOnly_();
   NO_MAIL_ = true;
   const hoursAgo = h => new Date(Date.now() - h * 3600e3).toISOString();
-  const base = { safety: 'NE', repeat7: 'NE', finder: 'Ukázka', notified: 'Team Leader', photoException: 'Ukázková data bez fotek' };
+  const base = { safety: 'NE', repeat7: 'NE', finder: 'Ukázka', notified: 'Team Leader' };
   apiCreate(Object.assign({}, base, {
-    what: 'Promáčknutý obal na paletě, 2 krabice poškozené', how: 'skladování', when: hoursAgo(2), zone: 'Sklad',
-    location: 'B-12-03', qty: 2, unit: 'krabice', materialNo: '00-4711', s3: { risk: 'NE' }
+    how: 'skladování', what: 'poškozené zboží / obal', when: hoursAgo(2), zone: 'Sklad', qty: 2, unit: 'krabice',
+    descWrong: 'Promáčknutý obal na paletě B-12-03, 2 krabice poškozené', descRight: 'Obal celý, krabice bez poškození',
+    materialNo: '00-4711', s3: { risk: 'NE' }
   }));
   const b = apiCreate(Object.assign({}, base, {
-    what: 'Na 4 boxech chybí etiketa zákazníka', how: 'kontrola expedice', when: hoursAgo(5), zone: 'Expedice',
-    location: 'Rampa 3', qty: 4, unit: 'krabice', huNo: 'DL-2026-0815', notified: 'Team Leader, Supervizor',
-    s3: { risk: 'ANO', checked: 40, wrong: 4, processStopped: 'NE',
-      ia: [{ kind: 'přeetiketování', text: 'Etikety doplněny na všech 4 boxech', owner: 'Ukázka', done: hoursAgo(4) }] }
+    how: 'kontrola expedice', what: 'chybí / špatná etiketa', when: hoursAgo(5), zone: 'Expedice', qty: 4, unit: 'krabice',
+    descWrong: 'Rampa 3: na 4 boxech chybí etiketa zákazníka', descRight: 'Každý box má etiketu zákazníka na čelní straně',
+    huNo: 'DL-2026-0815', notified: 'Team Leader, Supervizor',
+    s3: { risk: 'ANO', checked: 40, wrong: 4,
+      ia: [{ text: 'Etikety doplněny na všech 4 boxech', owner: 'Ukázka', done: hoursAgo(4) }] }
   })).qrap.id;
   const c = apiCreate(Object.assign({}, base, {
-    what: 'Zákazník obdržel o 1 paletu méně, než je na dodacím listu', how: 'reklamace zákazníka', when: hoursAgo(50),
-    zone: 'Nakládka', location: 'Rampa 1', qty: 1, unit: 'palety', huNo: 'DL-2026-0790', notified: 'Supervizor, Vedoucí logistiky',
-    s3: { risk: 'NE', processStopped: 'NE',
-      ia: [{ kind: 'informovat zákazníka / dodavatele', text: 'Chybějící paleta odeslána expresem', owner: 'Ukázka', done: hoursAgo(48) }] }
+    how: 'reklamace zákazníka', what: 'špatné množství', when: hoursAgo(50), zone: 'Nakládka', qty: 1, unit: 'palety',
+    descWrong: 'Zákazník obdržel o 1 paletu méně, než je na dodacím listu', descRight: 'Počet palet = počet na dodacím listu',
+    huNo: 'DL-2026-0790', notified: 'Supervizor, Logistika / nákup',
+    s3: { risk: 'NE', ia: [{ text: 'Chybějící paleta odeslána expresem', owner: 'Ukázka', done: hoursAgo(48) }] }
   })).qrap.id;
   const lead = cfg_().people.filter(p => p.active && p.role && p.email)[0] || { name: me_().name, email: me_().email };
   apiSave(c, 'rozhodnuti', { decision: 'POKRAČOVAT', decisionNote: 'Opakuje se podruhé tento měsíc', pilots: lead.email,
