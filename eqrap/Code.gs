@@ -62,6 +62,10 @@ const TAB = {
   people: 'Lidé', lists: 'Seznamy', settings: 'Nastavení'
 };
 const HANDOVER_TAB = 'Předání aplikace';
+// Tab Lidé, column "E-maily": ANO or empty = the person gets the app's e-mails, NE = none at all. Found by its header,
+// so it may sit in any column (setup and Správa add it as column F when it is missing).
+const PEOPLE_MAIL = 'E-maily';
+const CFG_KEY = 'cfg:v2'; // cache key of cfg_ – a new name, so a cache from the previous version (without "E-maily") is never used
 
 // [name used in the code, column header in the Sheet]. Do not rename these headers in the Sheet.
 const COLS = {
@@ -742,7 +746,7 @@ function adminData_() {
   clearCache_();
   const c = cfg_();
   return {
-    people: c.people.map(p => ({ row: p.row, name: p.name, email: p.email, role: p.role, area: p.area, active: p.active })),
+    people: c.people.map(p => ({ row: p.row, name: p.name, email: p.email, role: p.role, area: p.area, active: p.active, mail: p.mail !== false })),
     lists: LISTS.map(l => ({ key: l[0], title: l[1], values: c.lists[l[0]] })),
     settings: SETTINGS.map(x => ({ key: x[0], value: c.settings[x[0]], help: x[2] })),
     roles: ROLES,
@@ -759,7 +763,7 @@ function savePerson_(p) {
     clearCache_();
     const people = cfg_().people;
     const v = [txt_(p.name, 100), txt_(p.email, 100).toLowerCase(), p.role ? oneOf_(p.role, ROLES, 'Neplatná role.') : '',
-      txt_(p.area, 100), p.active === false ? 'NE' : 'ANO'];
+      txt_(p.area, 100), p.active === false ? 'NE' : 'ANO', p.mail === false ? 'NE' : 'ANO'];
     need_(v[0], 'Vyplňte jméno.');
     need_(EMAIL_RE.test(v[1]), 'Vyplňte platný e-mail.');
     const row = Number(p.row) || 0;
@@ -769,16 +773,22 @@ function savePerson_(p) {
     need_(!self || (v[2] === 'ADMIN' && v[4] === 'ANO' && v[1] === me.email),
       'Sami sobě nemůžete odebrat roli ADMIN, změnit e-mail ani se deaktivovat – tím byste přišli o Správu. Požádejte jiného admina.');
     const sh = sheet_(TAB.people);
-    // Role and Aktivní have a dropdown check in the Sheet: written plain; text columns as text.
+    const mc = mailColOf_(sh); // the "E-maily" column (added when missing)
+    // Role, Aktivní and E-maily have a dropdown check in the Sheet: written plain; text columns as text.
     const cells = [v[0] ? "'" + v[0] : '', "'" + v[1], v[2], v[3] ? "'" + v[3] : '', v[4]];
     if (row) {
       need_(people.some(x => x.row === row), 'Osoba nenalezena.');
-      sh.getRange(row, 1, 1, 5).setValues([cells]);
+      if (mc === 6) sh.getRange(row, 1, 1, 6).setValues([cells.concat(v[5])]);
+      else { sh.getRange(row, 1, 1, 5).setValues([cells]); sh.getRange(row, mc).setValue(v[5]); }
     } else {
-      sh.appendRow(cells);
+      const line = cells.slice();
+      while (line.length < mc) line.push('');
+      line[mc - 1] = v[5];
+      sh.appendRow(line);
     }
     WROTE_ = true;
-    log_('SPRÁVA', 'Lidé: ' + v[0] + ' <' + v[1] + '> ' + (v[2] || 'uživatel') + (v[4] === 'NE' ? ' (neaktivní)' : ''));
+    log_('SPRÁVA', 'Lidé: ' + v[0] + ' <' + v[1] + '> ' + (v[2] || 'uživatel') + (v[4] === 'NE' ? ' (neaktivní)' : '') +
+      (v[5] === 'NE' ? ' (bez e-mailů)' : ''));
     return adminData_();
   });
 }
@@ -1419,10 +1429,10 @@ function rate_(bucket, max, seconds) {
 function cfg_() {
   if (CFG_) return CFG_;
   const cache = CacheService.getScriptCache();
-  const hit = cache.get('cfg');
+  const hit = cache.get(CFG_KEY);
   if (hit) { CFG_ = JSON.parse(hit); return CFG_; }
   CFG_ = { settings: readSettings_(), lists: readLists_(), people: readPeople_() };
-  try { cache.put('cfg', JSON.stringify(CFG_), 1800); } catch (e) { /* too big for the cache – fine */ }
+  try { cache.put(CFG_KEY, JSON.stringify(CFG_), 1800); } catch (e) { /* too big for the cache – fine */ }
   return CFG_;
 }
 
@@ -1450,17 +1460,41 @@ function readLists_() {
 }
 
 function readPeople_() {
-  return sheet_(TAB.people).getDataRange().getValues().slice(1)
+  const values = sheet_(TAB.people).getDataRange().getValues();
+  const mi = mailCol_(values[0]) - 1; // no "E-maily" column (-1): everybody gets e-mails, as before
+  return values.slice(1)
     .map((r, i) => ({
       row: i + 2,
       name: String(r[0]).trim(),
       email: String(r[1]).trim().toLowerCase(),
       role: roleOf_(r[2]),
       area: String(r[3]).trim(),
-      active: plain_(r[4]) !== 'NE'
+      active: plain_(r[4]) !== 'NE',
+      mail: mi < 0 || plain_(r[mi]) !== 'NE' // only an explicit NE switches the e-mails off
     }))
     .filter(p => p.name || p.email);
 }
+
+/** The column number (1-based) of "E-maily" in the header row of Lidé, 0 when there is none ("Emaily" works too). */
+function mailCol_(head) {
+  return (head || []).map(h => plain_(h).replace(/[^A-Z]/g, '')).indexOf('EMAILY') + 1;
+}
+
+/** The "E-maily" column of the tab Lidé – created as column F (or the first free column) when it is missing. */
+function mailColOf_(sh) {
+  const last = Math.max(sh.getLastColumn(), 5);
+  const head = sh.getRange(1, 1, 1, last).getValues()[0];
+  let c = mailCol_(head);
+  if (!c) {
+    c = String(head[5] === undefined ? '' : head[5]).trim() ? last + 1 : 6;
+    if (sh.getMaxColumns() < c) sh.insertColumnsAfter(sh.getMaxColumns(), c - sh.getMaxColumns());
+    sh.getRange(1, c).setValue(PEOPLE_MAIL);
+  }
+  return c;
+}
+
+/** Does this person get the app's e-mails? Active, with an e-mail, and not "E-maily = NE". */
+function wantsMail_(p) { return !!(p && p.active && p.email && p.mail !== false); }
 
 /** Role from the column Role: MANAŽER and ADMIN; older words ("Vedoucí", "TL", "správce" …) keep working. */
 function roleOf_(v) {
@@ -1819,13 +1853,14 @@ function trash_(ids) {
 
 /** Managers of a zone (Oblast empty = all zones). If there are none, all managers. */
 function zoneManagers_(zone) {
-  const m = cfg_().people.filter(p => p.active && p.email && p.role === 'MANAŽER' && (!p.area || p.area === zone)).map(p => p.email);
+  // only people who want e-mails: when every manager of the zone said NE, the other managers are told instead
+  const m = cfg_().people.filter(p => wantsMail_(p) && p.role === 'MANAŽER' && (!p.area || p.area === zone)).map(p => p.email);
   return m.length ? m : managers_();
 }
 
-/** All managers – or, when there are none, all admins. */
+/** All managers who get e-mails – or, when there are none, all admins who do. */
 function managers_() {
-  const people = cfg_().people.filter(p => p.active && p.email);
+  const people = cfg_().people.filter(wantsMail_);
   const m = people.filter(p => p.role === 'MANAŽER').map(p => p.email);
   return m.length ? m : people.filter(p => p.role === 'ADMIN').map(p => p.email);
 }
@@ -1899,14 +1934,22 @@ function send_(to, subject, lines, id) {
   });
 }
 
-/** Allowed recipients: one Set per request (people in Lidé + Kvalita + BOZP), plus the company domain. */
+/**
+ * Allowed recipients (one check per request): people in Lidé who get e-mails, the Kvalita / BOZP addresses, the company
+ * domain. Never anybody in Lidé with "E-maily = NE" or "Aktivní = NE" – whatever sends the e-mail (pilot, action owner,
+ * manager, daily reminder). The Kvalita / BOZP addresses always get theirs: they are set on purpose in Nastavení.
+ */
 function mailAllowed_(email) {
   if (!MAILOK_) {
     const c = cfg_();
-    MAILOK_ = new Set(c.people.filter(p => p.active && p.email).map(p => p.email)
-      .concat([c.settings.EMAIL_KVALITA, c.settings.EMAIL_BOZP].map(x => String(x || '').trim().toLowerCase()).filter(String)));
+    const fixed = [c.settings.EMAIL_KVALITA, c.settings.EMAIL_BOZP].map(x => String(x || '').trim().toLowerCase()).filter(String);
+    MAILOK_ = {
+      ok: new Set(c.people.filter(wantsMail_).map(p => p.email).concat(fixed)),
+      off: new Set(c.people.filter(p => p.email && !wantsMail_(p) && fixed.indexOf(p.email) < 0).map(p => p.email))
+    };
   }
-  return MAILOK_.has(email) || sameDomain_(email);
+  if (MAILOK_.off.has(email)) return false;
+  return MAILOK_.ok.has(email) || sameDomain_(email);
 }
 
 /** Sends the queued e-mails now (daily reminder, menu functions). */
@@ -2035,7 +2078,7 @@ function dailyReminder(e) {
   const openIds = new Set(open.map(q => q.id));
   const today = Utilities.formatDate(new Date(), tz_(), 'yyyy-MM-dd');
   const MAX = 100;
-  cfg_().people.filter(p => p.active && p.role && p.email).forEach(p => {
+  cfg_().people.filter(p => wantsMail_(p) && p.role).forEach(p => {
     const mine = open.filter(q => !p.area || p.area === q.zone);
     if (!mine.length) return;
     send_([p.email], 'otevřené problémy: ' + mine.length, ['Dobré ráno, tyto QRAP jsou otevřené:', '']
@@ -2100,7 +2143,7 @@ function clearCache() {
 }
 
 function clearCache_() {
-  CacheService.getScriptCache().remove('cfg');
+  CacheService.getScriptCache().removeAll(['cfg', CFG_KEY]);
   CFG_ = null;
   ME_ = null;
   MAILOK_ = null;
@@ -2121,12 +2164,16 @@ function setup() {
 
   let people = ss.getSheetByName(TAB.people);
   if (!people) {
-    people = makeTab_(ss, TAB.people, ['Jméno', 'E-mail', 'Role', 'Oblast', 'Aktivní']);
+    people = makeTab_(ss, TAB.people, ['Jméno', 'E-mail', 'Role', 'Oblast', 'Aktivní', PEOPLE_MAIL]);
     const rows = [['Správce aplikace', Session.getEffectiveUser().getEmail(), 'ADMIN', '', 'ANO']].concat(EXAMPLE_PEOPLE);
     people.getRange(2, 1, rows.length, 5).setValues(rows);
     people.getRange(2, 5, 500, 1).setDataValidation(SpreadsheetApp.newDataValidation()
       .requireValueInList(['ANO', 'NE'], true).build());
   }
+  // E-maily: ANO / NE per person (an older Sheet gets the column now; empty = ANO, nobody loses e-mails)
+  people.getRange(2, mailColOf_(people), 500, 1).setDataValidation(SpreadsheetApp.newDataValidation()
+    .requireValueInList(['ANO', 'NE'], true)
+    .setHelpText('ANO nebo prázdné = dostává e-maily z aplikace. NE = nedostane žádný (lze nastavit i v aplikaci: Správa → Lidé).').build());
   // The Role dropdown always offers the current roles (older values still work, see roleOf_).
   people.getRange(2, 3, 500, 1).setDataValidation(SpreadsheetApp.newDataValidation()
     .requireValueInList(ROLES, true).setAllowInvalid(false)

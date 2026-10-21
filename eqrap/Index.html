@@ -1533,6 +1533,7 @@ function newPage() {
       data.s3 = d3;
       data.token = token;
       w.step(2, 'run');
+      pf.photos.pause(); // the server ends the photo hand-off with this save
       const res = await api('apiCreate', data);
       w.step(2, 'ok');
       w.step(3, 'ok', 'E-mail manažerovi zóny – odchází na pozadí');
@@ -1548,6 +1549,7 @@ function newPage() {
       go('board', null, true);
     } catch (e) {
       w.end();
+      pf.photos.resume();
       toast(errText(e) + ' Vyplněné údaje zůstaly – zkuste Odeslat znovu (dvakrát se QRAP nezaloží).', true);
     }
   } }, 'Odeslat ✓');
@@ -2914,7 +2916,10 @@ function photoPicker(init, onChange) {
     if (p && p.value && p.thumb) { pics[k] = { thumb: p.thumb, value: p.value, state: p.state === 'phone' ? 'phone' : 'staged' }; have[k] = p.value; }
   });
   let root = null; // the form this belongs to: background work stops when it is gone
-  let dlg = null, polling = false, seen = false;
+  let dlg = null, polling = false, seen = false, used = false;
+  // true while "Odeslat" runs and after it: the server ends the hand-off when the QRAP is saved, so a check still
+  // on its way would hear "link no longer valid" – that is not an expired link and must not be reported as one
+  let stopped = false;
   const alive = () => !root || root.isConnected;
   const redraws = [];
   const changed = () => { redraws.forEach(f => f()); sayDlg(); if (onChange) onChange(); };
@@ -2952,7 +2957,7 @@ function photoPicker(init, onChange) {
         else delete have[kind]; // replaced meanwhile – the next poll says what the server really has
       }, e => {
         if (pics[kind] === p) p.state = 'local';
-        if (/neplatí/.test(errText(e))) sessionLost();
+        if (/neplatí/.test(errText(e)) && !stopped) sessionLost();
       })
       .then(changed);
     return chain[kind];
@@ -2993,9 +2998,9 @@ function photoPicker(init, onChange) {
     polling = true;
     let fails = 0, quiet = Date.now();
     try {
-      while (session && alive() && Date.now() - quiet < 20 * 60000) {
+      while (session && alive() && !stopped && Date.now() - quiet < 20 * 60000) {
         await sleep(dlg ? 2500 : 6000);
-        if (!session || !alive()) break;
+        if (!session || !alive() || stopped) break;
         try {
           const r = await api('apiPhotoPoll', session.token, have);
           fails = 0;
@@ -3008,6 +3013,7 @@ function photoPicker(init, onChange) {
           });
           if (got.length) { quiet = Date.now(); DIRTY = true; changed(); }
         } catch (e) {
+          if (stopped || !alive()) break; // the QRAP was sent meanwhile (or the form left) – nothing to report
           if (/neplatí/.test(errText(e))) { sessionLost(); sayDlg(errText(e)); break; }
           if (++fails >= 5) { sayDlg('Spojení se nedaří: ' + errText(e)); break; }
         }
@@ -3019,6 +3025,7 @@ function photoPicker(init, onChange) {
 
   async function phoneDialog() {
     if (dlg) return;
+    used = true;
     const status = h('p', { class: 'sub', role: 'status', style: 'min-height:1.5em' });
     const qrBox = h('div', { class: 'qr-box' }, h('span', { class: 'skel', style: 'width:220px;height:220px' }));
     const thumbs = h('div', { class: 'qr-thumbs' });
@@ -3067,6 +3074,9 @@ function photoPicker(init, onChange) {
     /** Resolves when every photo taken so far is shrunk and uploaded (or failed and will go with the form). */
     settle: () => Promise.all(KINDS.map(k => Promise.resolve(prep[k]).then(() => chain[k]))),
     token: () => (session ? session.token : ''),
+    /** "Odeslat" starts: no more checks of the hand-off (see stopped). resume() after a failed send. */
+    pause: () => { stopped = true; },
+    resume: () => { stopped = false; if (session && used) poll(); },
     // kinds whose photo in the hand-off must NOT be attached: removed here, or a photo that goes with the form instead
     drop: () => KINDS.filter(k => !(pics[k] && (pics[k].state === 'staged' || pics[k].state === 'phone'))),
     /** For the draft: only what is safely on the server (value) – with its preview. */
@@ -3100,6 +3110,7 @@ function photoPicker(init, onChange) {
     },
     /** The form was thrown away: its uploaded photos go to the Drive trash. */
     discard() {
+      stopped = true;
       const t = session && session.token;
       session = null;
       KINDS.forEach(k => { pics[k] = null; });
@@ -3335,21 +3346,27 @@ function adminPage() {
     try { const res = await api(fn, ...args); w.end(); saved(res); } catch (e) { w.end(); toast(errText(e), true); }
   };
   function personForm(p) {
-    const F = makeForm(p ? Object.assign({}, p, { active: p.active ? 'ANO' : '' }) : { active: 'ANO' });
+    const F = makeForm(p ? Object.assign({}, p, { active: p.active ? 'ANO' : '', mail: p.mail !== false ? 'ANO' : '' }) : { active: 'ANO', mail: 'ANO' });
     const b = h('button', { class: 'btn primary', onclick: async () => {
       const d = F.read(); if (!d) return;
       const off = p && p.active && d.active !== 'ANO';
       const demote = p && p.role && p.role !== d.role;
-      if ((off || demote) && !(await ask({ title: off ? 'Deaktivovat ' + p.name + '?' : 'Změnit roli ' + p.name + '?', ok: 'Ano, uložit', cancel: 'Zpět',
+      const mute = p && p.mail !== false && d.mail !== 'ANO' && d.active === 'ANO';
+      if ((off || demote || mute) && !(await ask({ title: off ? 'Deaktivovat ' + p.name + '?' : demote ? 'Změnit roli ' + p.name + '?' : 'Vypnout e-maily pro ' + p.name + '?',
+        ok: 'Ano, uložit', cancel: 'Zpět', danger: true,
         text: (off ? 'Osoba přestane dostávat e-maily a nebude ji možné vybrat jako pilota. ' : '') +
-          (demote ? 'Role ' + roleName(p.role) + ' → ' + (roleName(d.role) || 'uživatel') + '. ' : '') + 'V historii zůstane vše, jak bylo.', danger: true }))) return;
-      call(b, 'apiSavePerson', [{ row: p ? p.row : '', name: d.name, email: d.email, role: d.role, area: d.area, active: d.active === 'ANO' }]);
+          (demote ? 'Role ' + roleName(p.role) + ' → ' + (roleName(d.role) || 'uživatel') + '. ' : '') +
+          (mute ? 'Nedostane žádný e-mail z aplikace – ani o nových problémech, SAFETY nebo svých akcích. ' : '') +
+          'V historii zůstane vše, jak bylo.' }))) return;
+      call(b, 'apiSavePerson', [{ row: p ? p.row : '', name: d.name, email: d.email, role: d.role, area: d.area, active: d.active === 'ANO',
+        mail: d.mail === 'ANO' }]);
     } }, p ? 'Uložit' : 'Přidat osobu');
     return h('div', { class: 'act-form' }, h('div', { class: 'grid' },
       F.input('name', 'Jméno', { req: true, len: 100 }), F.input('email', 'E-mail (firemní účet Google)', { req: true, type: 'email' }),
       F.select('role', 'Role', S.adm.roles.map(r => ({ value: r, label: r + ' – ' + ROLE_HELP[r] })), { ph: '— bez role (uživatel) —' }),
       F.select('area', 'Zóna', S.lists.zones || [], { ph: '— všechny zóny —' }),
-      F.toggle('active', 'Aktivní (neaktivní osoba je dál v historii, ale nemá roli)', { wide: true })),
+      F.toggle('active', 'Aktivní (neaktivní osoba je dál v historii, ale nemá roli)', { wide: true }),
+      F.toggle('mail', 'Dostává e-maily z aplikace (nové problémy ve své zóně, SAFETY, pilot, akce, denní připomínky)', { wide: true })),
     h('div', { class: 'form-btns' }, b, h('button', { class: 'btn ghost', onclick: () => open(null) }, 'Zrušit')));
   }
   function peopleCard() {
@@ -3359,15 +3376,17 @@ function adminPage() {
         S.edit === 'person:new' ? null : h('button', { class: 'btn small primary', onclick: () => open('person:new') }, '+ Přidat osobu')),
       S.edit === 'person:new' ? personForm(null) : null,
       h('div', { class: 'slots-wrap' }, h('table', { class: 'people' },
-        h('tr', null, ['Jméno', 'E-mail', 'Role', 'Zóna', 'Stav', ''].map(x => h('th', null, x))),
-        people.map(p => (S.edit === 'person:' + p.row ? h('tr', null, h('td', { colspan: 6 }, personForm(p)))
+        h('tr', null, ['Jméno', 'E-mail', 'Role', 'Zóna', 'Stav', 'E-maily', ''].map(x => h('th', null, x))),
+        people.map(p => (S.edit === 'person:' + p.row ? h('tr', null, h('td', { colspan: 7 }, personForm(p)))
           : h('tr', { class: p.active ? '' : 'inactive' }, h('td', null, h('b', null, p.name)), h('td', null, p.email),
             h('td', null, p.role ? h('span', { class: 'tag' }, roleName(p.role)) : h('span', { class: 'sub' }, 'uživatel')),
             h('td', null, p.area || h('span', { class: 'sub' }, 'všechny')), h('td', null, p.active ? 'aktivní' : 'neaktivní'),
+            h('td', null, p.mail !== false && p.active ? h('span', { class: 'badge ok' }, 'ano') : h('span', { class: 'badge muted' }, 'ne')),
             h('td', null, h('button', { class: 'btn small ghost', onclick: () => open('person:' + p.row) }, 'Upravit'))))))),
       h('p', { class: 'sub' }, 'Lidé se nemažou – nastavte „neaktivní“. Role: prázdná = uživatel (může vyplnit a podepsat každý krok QRAP), MANAŽER (navíc ' +
         'zrušit / znovu otevřít / odemknout QRAP, Přehled manažera a e-maily o nových problémech ve své zóně), ADMIN (navíc Správa). Adminů může být víc – aspoň jeden by měl ve firmě zůstat. ' +
-        'Kdo není na seznamu, může aplikaci používat jako uživatel.'));
+        'Kdo není na seznamu, může aplikaci používat jako uživatel. E-maily = ne: osoba nedostane žádný e-mail z aplikace ' +
+        '(adresy Kvality a BOZP v Nastavení dostávají svoje e-maily vždy).'));
   }
   function listsCard() {
     return h('div', { class: 'card' }, h('h2', null, 'Seznamy ve formuláři'),
