@@ -4,24 +4,34 @@
 <base target="_top">
 <meta charset="utf-8">
 <style>
-:root { --ink: #151B1F; --ink-3: #6b757e; --line: #cbd3cf; --page: #ecf2e8; --accent: #66B539; --accent-ink: #3f7d1f; --accent-soft: #E8F7DD; --bad: #b8322a; }
+:root { --ink: #151B1F; --ink-3: #6b757e; --line: #cbd3cf; --page: #ecf2e8; --accent: #66B539; --accent-ink: #3f7d1f; --accent-soft: #E8F7DD; --bad: #b8322a; --panel: #fff; }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { margin: 0; background: var(--page); color: var(--ink); font: 17px/1.45 "Segoe UI", -apple-system, Roboto, Arial, sans-serif; }
 main { max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; }
 h1 { font-size: 22px; margin: 0 0 6px; }
 p { margin: 0 0 14px; color: var(--ink-3); }
-.pic { display: block; width: 100%; margin: 0 0 14px; padding: 0; background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.pic { display: block; width: 100%; margin: 0 0 14px; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
 .pic.done { border-color: var(--accent); background: var(--accent-soft); }
-.pic button { display: block; width: 100%; min-height: 68px; padding: 14px 16px; border: 0; background: none; font: inherit; font-weight: 650; color: var(--ink); text-align: left; }
-.pic img { display: block; width: 100%; max-height: 240px; object-fit: cover; }
-.pic .state { display: block; font-weight: 400; font-size: 14px; color: var(--ink-3); }
+.pic.fail { border-color: var(--bad); }
+.pic > button { display: block; width: 100%; min-height: 68px; padding: 14px 16px; border: 0; background: none; font: inherit; font-weight: 650; color: var(--ink); text-align: left; }
+.pic > button:disabled { opacity: .85; }
+.pic .state { display: flex; align-items: center; gap: 8px; font-weight: 400; font-size: 14px; color: var(--ink-3); }
 .pic.done .state { color: var(--accent-ink); }
+.pic.fail .state { color: var(--bad); font-weight: 600; }
+.shot { position: relative; }
+.shot img { display: block; width: 100%; max-height: 240px; object-fit: cover; }
+.shot.busy img { opacity: .55; }
+.bar { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--accent); width: 0; transition: width .3s ease-out; }
+.pic > button.retry { display: block; width: calc(100% - 32px); margin: 0 16px 14px; min-height: 48px; border: 0; border-radius: 10px; background: var(--bad); color: #fff; font: inherit; font-weight: 650; }
+.spin { display: inline-block; width: 15px; height: 15px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
 #msg { color: var(--bad); font-weight: 600; min-height: 1.4em; }
-.error { background: #fff; border: 1px solid var(--bad); border-radius: 12px; padding: 16px; color: var(--bad); font-weight: 600; }
+.all-done { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px; padding: 16px; color: var(--accent-ink); font-weight: 650; margin-bottom: 14px; }
+.error { background: var(--panel); border: 1px solid var(--bad); border-radius: 12px; padding: 16px; color: var(--bad); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } .bar { transition: none; } }
 @media (prefers-color-scheme: dark) {
-  :root { --ink: #e6ecee; --ink-3: #9aa6ad; --line: #3a464d; --page: #151B1F; --accent-soft: #22361a; --accent-ink: #8fd16a; }
-  .pic { background: #1d252a; }
-  .error { background: #1d252a; }
+  :root { --ink: #e6ecee; --ink-3: #9aa6ad; --line: #3a464d; --page: #151B1F; --accent-soft: #22361a; --accent-ink: #8fd16a; --panel: #1d252a; }
 }
 </style>
 </head>
@@ -30,6 +40,10 @@ p { margin: 0 0 14px; color: var(--ink-3); }
 <script type="application/json" id="boot"><?!= boot ?></script>
 <script>
 'use strict';
+/* The page a company phone opens after scanning the QR code on the kiosk (PhotoHandoff.gs).
+   NO EMPTY WAITING: the photo shows at once, a bar and a short text say what is happening, a slow upload says so.
+   SAFETY: an upload that fails keeps the photo – one tap sends it again (no new photo needed); a hiccup in the network
+   is retried once by itself; leaving the page during an upload asks first. */
 const BOOT = (() => { try { return JSON.parse(document.getElementById('boot').textContent) || {}; } catch (e) { return { error: 'Stránku se nepodařilo načíst.' }; } })();
 const app = document.getElementById('app');
 
@@ -50,17 +64,23 @@ function shrink(file) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const src = URL.createObjectURL(file);
-    const jpeg = (max, quality) => {
-      const scale = Math.min(1, max / Math.max(img.width, img.height));
+    const draw = (from, w0, h0, max) => {
+      const scale = Math.min(1, max / Math.max(w0, h0));
       const c = document.createElement('canvas');
-      c.width = Math.max(1, Math.round(img.width * scale));
-      c.height = Math.max(1, Math.round(img.height * scale));
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      return c.toDataURL('image/jpeg', quality);
+      c.width = Math.max(1, Math.round(w0 * scale));
+      c.height = Math.max(1, Math.round(h0 * scale));
+      const g = c.getContext('2d');
+      g.imageSmoothingQuality = 'high';
+      g.drawImage(from, 0, 0, c.width, c.height);
+      return c;
     };
     img.onload = () => {
       URL.revokeObjectURL(src);
-      try { resolve({ full: jpeg(1280, 0.8), thumb: jpeg(480, 0.7) }); } catch (e) { reject(e); }
+      try {
+        const big = draw(img, img.width, img.height, 1280);
+        const small = draw(big, big.width, big.height, 480); // from the 1280 px copy: much faster than from the camera original
+        resolve({ full: big.toDataURL('image/jpeg', 0.8), thumb: small.toDataURL('image/jpeg', 0.7) });
+      } catch (e) { reject(e); }
     };
     img.onerror = () => { URL.revokeObjectURL(src); reject(new Error('Soubor není obrázek.')); };
     img.src = src;
@@ -68,39 +88,88 @@ function shrink(file) {
 }
 
 const errText = e => String((e && e.message) || e || '').replace(/^(ScriptError|Exception|Error|Výjimka):\s*/, '') || 'Nastala chyba. Zkuste to znovu.';
+const isNetErr = e => /NetworkError|Failed to fetch|network|HTTP 0/i.test(String((e && e.message) || e || ''));
+const isGone = e => /neplatí/.test(errText(e));
+const send = (kind, p) => new Promise((ok, bad) => google.script.run.withSuccessHandler(ok).withFailureHandler(bad)
+  .apiPhoneUpload(BOOT.token, kind, p.full, p.thumb));
+
+let busy = 0; // uploads running now – leaving the page asks first
+window.addEventListener('beforeunload', e => { if (busy) { e.preventDefault(); e.returnValue = ''; } });
 
 if (BOOT.error || !BOOT.token) {
   app.append(h('div', { class: 'error', role: 'alert' }, BOOT.error || 'Odkaz není platný. Na kiosku zobrazte nový QR kód.'));
 } else {
   const msg = h('p', { id: 'msg', role: 'alert' });
+  const allDone = h('div', { class: 'all-done', role: 'status', hidden: true }, '✓ Obě fotky jsou na kiosku. Vraťte se ke kiosku a pokračujte ve formuláři.');
+  const done = { WRONG: false, RIGHT: false };
+  let gone = false;
   app.append(h('h1', null, 'Fotky k QRAP'),
-    h('p', null, 'Vyfoťte díly. Fotka se za pár vteřin objeví na kiosku. Můžete vyfotit nebo vybrat z galerie.'));
+    h('p', null, 'Vyfoťte díly. Fotka se za pár vteřin objeví na kiosku. Můžete vyfotit nebo vybrat z galerie.'), allDone);
   [['WRONG', 'ŠPATNÝ díl'], ['RIGHT', 'DOBRÝ díl']].forEach(([kind, label]) => {
     // no "capture" on purpose: the phone offers both the camera and the gallery
     const input = h('input', { type: 'file', accept: 'image/*', hidden: true });
     const state = h('span', { class: 'state' }, 'klepněte a vyfoťte');
     const btn = h('button', { type: 'button', onclick: () => input.click() }, '📷 ' + label, state);
-    const box = h('div', { class: 'pic' }, btn);
+    const shot = h('div', { class: 'shot', hidden: true });
+    const retry = h('button', { class: 'retry', type: 'button', hidden: true, onclick: () => upload(last) }, 'Odeslat fotku znovu');
+    const box = h('div', { class: 'pic' }, btn, shot, retry);
+    let last = null; // the photo of the last try: "Odeslat znovu" needs no new photo
+    const say = (text, spin) => { state.replaceChildren(...(spin ? [h('span', { class: 'spin', 'aria-hidden': 'true' })] : []), text); };
+
+    async function upload(p) {
+      if (!p || gone) return;
+      last = p;
+      busy++;
+      btn.disabled = true;
+      retry.hidden = true;
+      box.classList.remove('done', 'fail');
+      const bar = h('i', { class: 'bar' });
+      shot.replaceChildren(h('img', { src: p.thumb, alt: label }), bar); // the photo shows at once
+      shot.hidden = false;
+      shot.classList.add('busy');
+      msg.textContent = '';
+      // the bar fills on its own (an upload gives no progress); the text says when it takes long
+      const t0 = Date.now();
+      const tick = setInterval(() => {
+        const s = (Date.now() - t0) / 1000;
+        bar.style.width = (10 + 80 * (1 - Math.exp(-s / 3))) + '%';
+        if (s > 5) say('pomalé připojení – pořád odesílám… ' + Math.round(s) + ' s', true);
+      }, 300);
+      say('odesílám na kiosk…', true);
+      try {
+        try { await send(kind, p); } catch (e) {
+          if (!isNetErr(e)) throw e;
+          say('spojení zakolísalo – zkouším znovu…', true);
+          await new Promise(r => setTimeout(r, 1500));
+          await send(kind, p); // the same photo again: on the kiosk it simply replaces the first try
+        }
+        bar.style.width = '100%';
+        setTimeout(() => bar.remove(), 450);
+        box.classList.add('done');
+        say('✓ nahráno – klepnutím vyfotíte znovu');
+        done[kind] = true;
+        allDone.hidden = !(done.WRONG && done.RIGHT);
+      } catch (e) {
+        if (isGone(e)) gone = true;
+        box.classList.add('fail');
+        say(gone ? 'odkaz vypršel' : 'nepodařilo se – fotka zůstala, stačí ji odeslat znovu');
+        retry.hidden = gone;
+        msg.textContent = errText(e);
+      } finally {
+        clearInterval(tick);
+        shot.classList.remove('busy');
+        busy--;
+        btn.disabled = gone;
+      }
+    }
+
     input.addEventListener('change', async () => {
       const file = input.files[0];
+      input.value = '';
       if (!file) return;
       btn.disabled = true;
-      state.textContent = 'nahrávám…';
-      msg.textContent = '';
-      try {
-        const p = await shrink(file);
-        await new Promise((ok, bad) => google.script.run.withSuccessHandler(ok).withFailureHandler(bad)
-          .apiPhoneUpload(BOOT.token, kind, p.full, p.thumb));
-        box.classList.add('done');
-        box.querySelector('img') && box.querySelector('img').remove();
-        box.append(h('img', { src: p.thumb, alt: label }));
-        state.textContent = '✓ nahráno – klepnutím vyfotíte znovu';
-      } catch (e) {
-        msg.textContent = errText(e);
-        state.textContent = 'nepodařilo se – zkuste to znovu';
-      }
-      btn.disabled = false;
-      input.value = '';
+      say('zmenšuji fotku…', true);
+      try { await upload(await shrink(file)); } catch (e) { msg.textContent = errText(e); say('tohle není fotka – zkuste to znovu'); btn.disabled = false; }
     });
     app.append(box, input);
   });

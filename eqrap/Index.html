@@ -3,8 +3,7 @@
 <head>
 <base target="_top">
 <meta charset="utf-8">
-<!-- QR code for the phone photo hand-off (if it fails to load, the dialog shows the link as text instead) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<!-- The QR code library for the phone photo hand-off is loaded only when needed (qrLib), so it never delays the start. -->
 <style>
 /* =====================================================================
    eQRAP – stylesheet. Light green-grey page, white cards with a soft shadow,
@@ -518,8 +517,75 @@ body:has(.float-bar) .toast { bottom: 92px; }
 
 /* ---------- toast ---------- */
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 8px;
-  font-size: 14px; font-weight: 500; z-index: 60; max-width: 92vw; }
+  font-size: 14px; font-weight: 500; z-index: 80; max-width: 92vw; display: flex; align-items: center; gap: 14px; }
 .toast.bad { background: var(--bad); }
+.toast button { flex: none; background: none; border: 1px solid rgba(255,255,255,.65); color: #fff; border-radius: 6px; padding: 4px 12px; font-weight: 650; }
+.toast button:hover { background: rgba(255,255,255,.12); }
+
+/* ---------- waiting: never an empty wait (thin bar on top, spinner in the button, a card with what happens + tips) ---------- */
+.topbar { position: fixed; left: 0; top: 0; height: 3px; width: 0; background: var(--accent); z-index: 100; opacity: 0; pointer-events: none;
+  transition: width .25s ease-out, opacity .4s; box-shadow: 0 0 6px rgba(102,181,57,.55); }
+.topbar.on { opacity: 1; }
+.spin { display: inline-block; width: 15px; height: 15px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+  animation: spin .7s linear infinite; flex: none; vertical-align: -2px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.btn .spin { width: 14px; height: 14px; }
+.wait { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 70; width: min(460px, calc(100vw - 32px)); background: #fff;
+  border: 1px solid var(--line-2); border-radius: 12px; box-shadow: 0 8px 28px rgba(21,27,31,.2); padding: 14px 18px; }
+.wait-top { display: flex; align-items: center; gap: 10px; font-weight: 650; }
+.wait-top .spin { color: var(--accent-ink); }
+.wait-s { margin-left: auto; font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; font-weight: 400; }
+.wait-steps { list-style: none; margin: 10px 0 0; padding: 0; font-size: 14px; }
+.wait-steps li { display: flex; align-items: center; gap: 8px; padding: 3px 0; color: var(--ink-3); }
+.wait-steps li.run { color: var(--ink); font-weight: 600; }
+.wait-steps li.ok { color: var(--accent-ink); }
+.wait-steps li i { width: 16px; text-align: center; font-style: normal; flex: none; }
+.wait-tip { margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--ink-2); }
+body:has(.wait) .toast { bottom: 170px; }
+body.busy { cursor: progress; }
+body.busy #app { pointer-events: none; }
+.skel { display: block; border-radius: 6px; background: linear-gradient(90deg, #eef1ef 25%, #f8faf8 37%, #eef1ef 63%); background-size: 400% 100%;
+  animation: skel 1.3s ease infinite; }
+@keyframes skel { from { background-position: 100% 50%; } to { background-position: 0 50%; } }
+.pp-ph .skel, .ph .skel { width: 100%; height: 100%; border-radius: 0; }
+.ph, .pp-ph { position: relative; }
+.ph-busy { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(21,27,31,.75);
+  color: #fff; font-size: 12.5px; font-weight: 600; text-align: left; }
+.ph-busy.ok { background: rgba(47,102,41,.85); }
+.pulse { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); animation: pulse 1.4s ease-in-out infinite; vertical-align: 1px; }
+@keyframes pulse { 0%, 100% { opacity: .3; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.15); } }
+.lightbox .lb-soft { width: min(94vw, 1280px); height: auto; max-height: 94vh; object-fit: contain; filter: blur(1.5px); }
+.lightbox .lb-note { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); color: #fff; background: rgba(0,0,0,.6); padding: 6px 14px;
+  border-radius: 999px; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+
+/* ---------- questions that must be answered on purpose (ask) and dialogs ---------- */
+.modal { position: fixed; inset: 0; z-index: 90; background: rgba(21,27,31,.55); display: grid; place-items: center; padding: 16px; }
+.modal-card { background: #fff; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.3); padding: 22px 24px; width: min(500px, 100%); max-height: calc(100vh - 32px); overflow: auto; }
+.modal-card h2 { font-size: 19px; margin-bottom: 8px; }
+.modal-card > p { color: var(--ink-2); }
+.modal-card .form-btns { justify-content: flex-end; }
+.modal-card .btn { min-height: 46px; padding: 0 18px; font-size: 15px; white-space: normal; text-align: center; }
+.btn.danger-fill { background: var(--bad); border-color: var(--bad); color: #fff; }
+.btn.danger-fill:hover { background: #9c2a23; border-color: #9c2a23; }
+.qr-how { text-align: left; margin: 6px 0 12px; padding-left: 20px; color: var(--ink-2); font-size: 14px; }
+.qr-box { display: grid; place-items: center; min-height: 220px; }
+.qr-thumbs { display: flex; gap: 8px; justify-content: center; margin-top: 6px; }
+.qr-thumbs img { width: 96px; height: 72px; object-fit: cover; border-radius: 6px; border: 2px solid var(--accent); }
+
+/* ---------- banners under the top bar: offline, "zobrazit jako", a new version ---------- */
+.banner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 8px var(--gutter); font-size: 14px; font-weight: 600;
+  background: var(--warm-soft); color: var(--warm); border-top: 1px solid #f3d3c0; }
+.banner.info { background: var(--accent-soft); color: var(--accent-ink); border-top-color: #cfe8bf; }
+.banner .btn { min-height: 30px; }
+.count { display: block; text-align: right; font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+.count.near { color: var(--warn); font-weight: 600; }
+.note.warn.box-warn { border: 1px solid #f0d9a8; background: #fff8e8; border-radius: 8px; padding: 10px 14px; margin: 0 12px 12px; }
+.draft-note { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 10px 16px; margin-bottom: 14px; border: 1px solid #cfe8bf;
+  background: var(--accent-soft); border-radius: var(--r); color: var(--accent-ink); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) {
+  .spin, .skel, .pulse { animation: none; }
+  .topbar { transition: none; }
+}
 
 /* ---------- tablet ---------- */
 @media (max-width: 1180px) {
@@ -558,6 +624,8 @@ body:has(.float-bar) .toast { bottom: 92px; }
   .act { grid-template-columns: 36px minmax(0, 1fr); }
   .act-st, .act-btns { grid-column: 2; }
   .hbar { grid-template-columns: 110px 1fr 28px; }
+  .wait { bottom: 12px; }
+  .modal-card .form-btns .btn { flex: 1 1 100%; }
 }
 @media print {
   @page { size: A4 landscape; margin: 7mm; }
@@ -569,7 +637,7 @@ body:has(.float-bar) .toast { bottom: 92px; }
   .pp-cell.now { outline: 0; background: none; }
   .pp-band, .pp-h, .pp-g, .p5-w, .p5-w::before, .cb i, .p6-eff span { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { background: #fff; }
-  .top, .no-print, .btn, .toast { display: none !important; }
+  .top, .no-print, .btn, .toast, .wait, .topbar, .modal, .banner { display: none !important; }
   main { padding: 0; }
   .card { border-color: #ccc; box-shadow: none; break-inside: avoid; }
 }
@@ -590,14 +658,19 @@ body:has(.float-bar) .toast { bottom: 92px; }
    The questions are the ones of the firm's QRAP V3.0 form (logistics version), ① to ⑦.
    All data arrives together with the page (#boot), so moving around is instant.
    The server is called only to save, to open a QRAP (answered "unchanged" when nothing changed),
-   and for a quiet refresh every 90 s (which reads nothing on the server when nothing changed).
+   and for a quiet refresh every 90 s of the board or the open QRAP (nothing is read when nothing changed).
 
    Lists arrive compact ({ k: column names, r: rows }) and are turned into objects once (loadLists).
    Lookups by QRAP number use Maps that are rebuilt only when a list is replaced (never patched in place).
 
+   NO EMPTY WAITING (2b): every wait shows a spinner, a bar on top, then what is happening and tips.
+   SAFETY: unsaved work is never lost by one click (2c: questions before leaving, a draft of a new QRAP in this
+   browser), important steps are confirmed (ask), a save locks the page until it is done, and two people
+   cannot overwrite each other's changes (fingerprints, fpOf – the server refuses and the page asks).
+
    1. State and texts      4. Board (Tabule)           7. Forms (① … ⑦)
    2. Small helpers        5. New problem (Nahlásit)   8. Photos (kiosk camera + phone hand-off)
-   3. Header and routing   6. Problem detail ①–⑦      9. Dashboard, Správa, help, refresh, start
+   2b. Waiting  2c. Unsaved work  3. Header and routing  6. Problem detail ①–⑦  9. Dashboard, Správa, help, refresh, start
    ===================================================================================== */
 
 // ------------------------------------------------------------------ 1. STATE AND TEXTS
@@ -610,7 +683,7 @@ const S = {
   me: BOOT.me || {}, cfg: BOOT.cfg || {}, lists: BOOT.lists || {}, people: BOOT.people || [], meta: BOOT.meta || {},
   qraps: [], actions: [], effects: [], assess: [], all: false, ver: BOOT.ver || '',
   view: 'board', id: null, edit: null, editMode: 'panel', filter: 'open', area: '', range: '', search: '', page: 0, per: 10,
-  history: {}, flash: null, adm: null, dashList: 'open', loadedAt: Date.now()
+  history: {}, flash: null, adm: null, dashList: 'open', loadedAt: Date.now(), newBuild: false
 };
 const isManager = () => S.me.role === 'MANAŽER' || S.me.role === 'ADMIN';
 const isAdmin = () => S.me.role === 'ADMIN';
@@ -636,6 +709,34 @@ const CRITERIA = [
   ['c5', '5 ON JOB TRAINING', 'OJT provedené managementem']
 ];
 const YES_NO = [{ value: 'ANO', label: 'ano' }, { value: 'NE', label: 'ne' }];
+
+/**
+ * Fingerprints of the parts of a QRAP, exactly as Code.gs computes them (FP_FIELDS, fp_ – keep both equal).
+ * A form remembers the fingerprint of what it showed; the server refuses the save if somebody changed that part since.
+ */
+const FP_FIELDS = {
+  popis: ['safety', 'what', 'whatOther', 'how', 'howOther', 'when', 'zone', 'qty', 'unit', 'nokSituation', 'repeat7',
+    'repeatRef', 'finder', 'descWrong', 'descRight', 'reference', 'notified', 'notifiedOther'],
+  opatreni: ['risk', 'checked', 'wrong', 'restoredAt'],
+  smeny: ['shifts'],
+  pricina: ['o1', 'o2', 'o3', 'o4', 'o5', 'rootO', 'n1', 'n2', 'n3', 'n4', 'n5', 'rootN', 'learned', 'std', 'stdRef'],
+  akce: ['text', 'kind', 'owner', 'due', 'done', 'evidence', 'note']
+};
+function fp(vals) {
+  const s = vals.map(v => {
+    v = String(v === null || v === undefined ? '' : v);
+    return /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(v) ? v.slice(0, 16) : v;
+  }).join('\u001f');
+  let x = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 0x01000193) >>> 0; }
+  return x.toString(36);
+}
+function fpOf(q, part) {
+  const vals = FP_FIELDS[part].map(k => q[k]);
+  if (part === 'opatreni') actsOf(q.id, '③').forEach(a => vals.push(a.no, a.text, a.owner, a.done));
+  return fp(vals);
+}
+const fpAct = a => fp(FP_FIELDS.akce.map(k => a[k]));
 
 /** Compact list from the server ({ k: names, r: rows }) → objects. A plain array is taken as it is. */
 function rowsOf(t) {
@@ -698,16 +799,34 @@ function fill(el, ...kids) {
 }
 
 /** Calls that are safe to repeat: retried once after a network hiccup (apiCreate carries a one-time token). */
-const RETRY = new Set(['apiRefresh', 'apiGet', 'apiPhoto', 'apiHistory', 'apiAdminData', 'apiCreate']);
+const RETRY = new Set(['apiRefresh', 'apiGet', 'apiPhoto', 'apiHistory', 'apiAdminData', 'apiCreate', 'apiPhotoPoll', 'apiMail']);
 const isNetErr = e => /NetworkError|Failed to fetch|network|HTTP 0/i.test(String((e && e.message) || e || ''));
+/** "Aplikace je právě zaneprázdněná" = the server's lock was not free and nothing was written: always safe to repeat. */
+const isBusyErr = e => /zaneprázdněn/i.test(String((e && e.message) || e || ''));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-/** Calls a server function from Code.gs and returns a Promise. */
+/**
+ * Calls a server function from Code.gs and returns a Promise. A busy server is asked once more by itself; a network
+ * hiccup too, for calls that are safe to repeat. E-mails of a save are sent right after, in the background.
+ */
 function api(fn, ...args) {
   const once = () => new Promise((resolve, reject) => {
     google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
   });
-  if (!RETRY.has(fn)) return once();
-  return once().catch(e => (isNetErr(e) ? new Promise(r => setTimeout(r, 1500)).then(once) : Promise.reject(e)));
+  return once().catch(e => {
+    if (isBusyErr(e)) { waitSay('Na serveru se právě ukládá něco jiného – za chvilku to zkusím znovu…'); return sleep(2000).then(once); }
+    if (isNetErr(e) && RETRY.has(fn)) { waitSay('Spojení zakolísalo – zkouším to znovu…'); return sleep(1500).then(once); }
+    throw e;
+  }).then(res => {
+    if (res && res.mailKeys) mailLater(res.mailKeys);
+    return res;
+  });
+}
+
+/** The e-mails of a save go out in a second call after the page has shown the result (Code.gs mailAfterSave_). */
+function mailLater(keys) {
+  const send = left => google.script.run.withFailureHandler(() => { if (left) setTimeout(() => send(left - 1), 5000); }).apiMail(keys);
+  send(2); // if all tries fail (page closed, no network), the server sends them itself a little later
 }
 
 function errText(e) {
@@ -717,37 +836,68 @@ function errText(e) {
 }
 
 let toastTimer = null;
-function toast(msg, bad) {
+/** A short message at the bottom. action = { label, run } adds a button (e.g. "Vrátit zpět"). */
+function toast(msg, bad, action) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
+  fill(t, h('span', null, msg), action ? h('button', { type: 'button', onclick: () => { t.hidden = true; action.run(); } }, action.label) : null);
   t.className = 'toast' + (bad ? ' bad' : '');
   t.setAttribute('role', bad ? 'alert' : 'status');
   t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, bad ? 7000 : 2500);
+  toastTimer = setTimeout(() => { t.hidden = true; }, action ? 9000 : bad ? 7000 : 2500);
 }
 
-/** Saves: disables the button while waiting, stores the answer, shows "Uloženo". Returns the answer or null. */
-async function save(btn, fn, args) {
-  const label = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = 'Ukládám…';
-  try {
-    const res = await api(fn, ...args);
-    store(res);
-    toast('Uloženo ✓');
-    return res;
-  } catch (e) {
-    toast(errText(e), true);
-    btn.disabled = false;
-    btn.textContent = label;
+/**
+ * Saves: the button shows what is happening, the page is locked until the answer is there (WAIT), the answer is
+ * stored, "Uloženo" is shown. Returns the answer or null. o = { phases, done (toast text), undo ({ label, run }) }.
+ * When somebody else saved the same part meanwhile (answer.conflict), nothing was written and the person decides.
+ */
+async function save(btn, fn, args, o) {
+  o = o || {};
+  if (navigator.onLine === false) {
+    toast('Jste offline – nic se neuložilo. Počkejte na připojení a zkuste to znovu (vyplněné údaje zůstaly).', true);
     return null;
   }
+  const w = waitStart(btn, o);
+  let res;
+  try {
+    res = await api(fn, ...args);
+  } catch (e) {
+    w.end(false);
+    if (isNetErr(e)) {
+      toast('Spojení se serverem selhalo. Není jisté, zda se to uložilo – stránka se teď aktualizuje, zkontrolujte to a případně uložte znovu.', true);
+      if (S.view === 'detail' && S.id) refreshOne(S.id);
+    } else toast(errText(e), true);
+    return null;
+  }
+  w.end(true);
+  if (res && res.conflict) return conflict(res, btn, fn, args, o);
+  store(res);
+  DIRTY = false;
+  toast(o.done || 'Uloženo ✓', false, o.undo);
+  return res;
+}
+
+/** Somebody else saved this part while it was open here. Nothing was written – the person chooses what happens. */
+async function conflict(res, btn, fn, args, o) {
+  const c = res.conflict;
+  const how = await ask({
+    title: 'Mezitím to uložil někdo jiný',
+    text: c.by + ' uložil(a) tento QRAP ' + (c.at ? 'v ' + fmtDT(c.at) : 'před chvílí') + ', zatímco jste měli formulář otevřený. ' +
+      'Vaše změny zatím NEJSOU uložené.',
+    cancel: 'Zpět do formuláře', third: 'Zahodit moje, ukázat aktuální', ok: 'Uložit moje (přepíše jejich)', danger: true
+  });
+  if (how === true) { // save again without the fingerprint = overwrite
+    args.forEach(a => { if (a && typeof a === 'object') delete a._fp; });
+    return save(btn, fn, args, o);
+  }
+  if (how === 'third') { store(res); DIRTY = false; S.edit = null; render(); toast('Zobrazena aktuální verze.'); }
+  return null;
 }
 
 /** Save from inside the detail page, then close the form and show the section again. */
-async function submit(btn, fn, args, secNo) {
-  const res = await save(btn, fn, args);
+async function submit(btn, fn, args, secNo, o) {
+  const res = await save(btn, fn, args, o);
   if (!res) return null;
   S.edit = null;
   render();
@@ -766,6 +916,220 @@ function store(res) {
   S.effects = S.effects.filter(a => a.qrapId !== id).concat(res.effects || []);
   S.assess = S.assess.filter(a => a.qrapId !== id).concat(res.assess || []);
   delete S.history[id];
+}
+
+// ------------------------------------------------------------------ 2b. WAITING – never an empty wait
+/**
+ * Every wait is visible and says what is going on:
+ *   at once   the button shows a spinner and a short word; a thin green bar on top of the page starts to fill
+ *   1.2 s     a card at the bottom: what is happening now (phases), seconds so far, the steps of the work (steps)
+ *   4 s       the card adds a QRAP tip, a new one every 7 s – a long wait teaches something useful
+ * A save locks the page while it runs (lock, default): no second click, no half-typed change, no leaving.
+ * A watchdog ends a wait that the server never answered, so the page can never stay locked.
+ */
+const PHASES = {
+  save: [[0, 'Ukládám…'], [2500, 'Zapisuji do tabulky…'], [6000, 'Ještě chvilku – Google Tabulky dnes potřebují víc času…'],
+    [15000, 'Trvá to déle než obvykle. Nezavírejte stránku – nic se neztratí.'],
+    [40000, 'Server je hodně vytížený. Pokud to do minuty nedoběhne, zkuste to znovu.']],
+  create: [[0, 'Odesílám QRAP…'], [3000, 'Zapisuji QRAP do tabulky…'], [8000, 'Ještě chvilku – Google Tabulky dnes potřebují víc času…'],
+    [18000, 'Trvá to déle než obvykle. Nezavírejte stránku – nic se neztratí, dvakrát se QRAP nezaloží.']],
+  load: [[0, 'Načítám…'], [2500, 'Stahuji aktuální data…'], [8000, 'Ještě chvilku…']],
+  photo: [[0, 'Zpracovávám fotku…'], [1500, 'Nahrávám fotku…'], [6000, 'Ukládám fotku na Disk Google…'],
+    [12000, 'Pomalé připojení – fotka se pořád nahrává…']]
+};
+const TIPS = [
+  'Tip: Dobrý popis jsou fakta – co přesně je špatně, kde a kolik kusů.',
+  'Tip: Při SAFETY = ANO dostanou BOZP a manažeři e-mail hned po odeslání.',
+  'Tip: Fotka ŠPATNÉHO a DOBRÉHO dílu vedle sebe řekne víc než dlouhý popis.',
+  () => 'Tip: Okamžitá opatření ③ mají být hotová do ' + hours3() + ' h od KDY.',
+  'Tip: 5× Proč hledá chybu v procesu, ne viníka.',
+  'Tip: Fotit můžete i firemním telefonem – tlačítko „📱 Fotit telefonem“.',
+  'Tip: Každý krok se podepíše vaším účtem Google – nic dalšího vyplňovat nemusíte.',
+  'Tip: Stejný problém v posledních 7 dnech? Označte to – pomůže to najít skutečnou příčinu.',
+  'Tip: Konečná akce platí, až když je efektivní na 5 různých směnách.',
+  'Tip: Rozepsaný QRAP se průběžně ukládá v tomto prohlížeči – po nechtěném zavření ho najdete na tabuli.',
+  'Tip: Kliknutím na kartu na tabuli otevřete celý formulář QRAP.'
+];
+const WAIT = { list: [], bar: null, timer: null };
+
+/**
+ * Starts a visible wait. btn = the button that started it (or null). o = { lock (default true), phases, steps,
+ * short (word in the button), cardAt (ms until the card shows) }. Returns { say(text), step(i, state, text), end() }.
+ */
+function waitStart(btn, o) {
+  o = o || {};
+  const phases = o.phases || PHASES.save;
+  const w = { t0: Date.now(), lock: o.lock !== false, phases, cardAt: o.cardAt === undefined ? 1200 : o.cardAt, text: '', key: '',
+    steps: (o.steps || []).map(t => ({ t, st: '' })), tip0: Math.floor(Math.random() * TIPS.length), btn, card: null };
+  if (btn) {
+    w.kids = [...btn.childNodes];
+    w.minW = btn.style.minWidth;
+    w.dis = btn.disabled;
+    btn.style.minWidth = btn.offsetWidth + 'px'; // the button keeps its size – nothing jumps
+    btn.disabled = true;
+    fill(btn, h('span', { class: 'spin', 'aria-hidden': 'true' }), h('span', null, o.short || phases[0][1]));
+  }
+  w.say = text => { w.text = text; waitTick(); };
+  w.step = (i, st, text) => { if (w.steps[i]) { w.steps[i].st = st; if (text) w.steps[i].t = text; } waitTick(); };
+  w.end = () => waitEnd(w);
+  WAIT.list.push(w);
+  if (w.lock) lockPage(true);
+  if (!WAIT.timer) WAIT.timer = setInterval(waitTick, 250);
+  waitTick();
+  return w;
+}
+
+function waitTick() {
+  const list = WAIT.list;
+  if (!list.length) return;
+  const now = Date.now();
+  if (!WAIT.bar) WAIT.bar = document.body.appendChild(h('div', { class: 'topbar', 'aria-hidden': 'true' }));
+  WAIT.bar.classList.add('on');
+  WAIT.bar.style.width = (8 + 82 * (1 - Math.exp(-(now - list[0].t0) / 3000))) + '%'; // fills quickly, never reaches the end alone
+  list.filter(x => now - x.t0 > 390000).forEach(x => { // the server gives up after 6 min – so does the page
+    waitEnd(x);
+    toast('Server neodpověděl. Zkontrolujte připojení a zkuste to znovu.', true);
+  });
+  const w = list[list.length - 1];
+  if (!w) return;
+  const ms = now - w.t0;
+  if (ms < w.cardAt) return;
+  const phase = w.text || w.phases.filter(p => ms >= p[0]).pop()[1];
+  const tipN = ms >= 4000 ? Math.floor((ms - 4000) / 7000) : -1;
+  const tip = tipN < 0 ? null : TIPS[(w.tip0 + tipN) % TIPS.length];
+  const key = [phase, Math.floor(ms / 1000), tipN, w.steps.map(s => s.st + s.t).join('|')].join('#');
+  if (key === w.key) return; // redraw only when something visible changed
+  w.key = key;
+  if (!w.card) w.card = document.body.appendChild(h('div', { class: 'wait no-print', role: 'status', 'aria-live': 'polite' }));
+  fill(w.card,
+    h('div', { class: 'wait-top' }, h('span', { class: 'spin', 'aria-hidden': 'true' }), h('span', null, phase),
+      h('span', { class: 'wait-s', 'aria-hidden': 'true' }, Math.floor(ms / 1000) + ' s')),
+    w.steps.length ? h('ol', { class: 'wait-steps' }, w.steps.map(s => h('li', { class: s.st },
+      h('i', { 'aria-hidden': 'true' }, s.st === 'ok' ? '✓' : s.st === 'run' ? h('span', { class: 'spin' }) : '•'), s.t))) : null,
+    tip ? h('p', { class: 'wait-tip' }, typeof tip === 'function' ? tip() : tip) : null);
+}
+
+function waitEnd(w) {
+  const i = WAIT.list.indexOf(w);
+  if (i < 0) return;
+  WAIT.list.splice(i, 1);
+  if (w.card) w.card.remove();
+  if (w.btn && w.btn.isConnected) { w.btn.replaceChildren(...w.kids); w.btn.disabled = w.dis; w.btn.style.minWidth = w.minW; }
+  if (w.lock && !WAIT.list.some(x => x.lock)) lockPage(false);
+  if (WAIT.list.length) return;
+  clearInterval(WAIT.timer);
+  WAIT.timer = null;
+  const bar = WAIT.bar;
+  bar.style.width = '100%';
+  setTimeout(() => { if (!WAIT.list.length) bar.classList.remove('on'); }, 300);
+  setTimeout(() => { if (!WAIT.list.length) bar.style.width = '0'; }, 800);
+}
+
+/** Changes the text of the newest wait (e.g. "trying again"). */
+function waitSay(text) { const w = WAIT.list[WAIT.list.length - 1]; if (w) w.say(text); }
+
+/** While a save runs nothing on the page can be clicked or typed into (dialogs, toast and the wait card stay usable). */
+function lockPage(on) {
+  const app = document.getElementById('app');
+  app.inert = on;
+  if (on) app.setAttribute('aria-busy', 'true'); else app.removeAttribute('aria-busy');
+  document.body.classList.toggle('busy', on);
+}
+
+/**
+ * A question that must be answered on purpose: big buttons, the safe answer has the focus, Esc or a click outside =
+ * the safe answer. o = { title, text, body, ok, cancel, third, danger }. Returns a Promise of true / false / 'third'.
+ */
+function ask(o) {
+  return new Promise(resolve => {
+    const prev = document.activeElement;
+    const id = 'q' + Math.random().toString(36).slice(2);
+    const done = v => {
+      box.remove();
+      document.removeEventListener('keydown', key, true);
+      if (prev && prev.isConnected && prev.focus) prev.focus({ preventScroll: true });
+      resolve(v);
+    };
+    const no = h('button', { class: 'btn', type: 'button', onclick: () => done(false) }, o.cancel || 'Zpět');
+    const third = o.third ? h('button', { class: 'btn', type: 'button', onclick: () => done('third') }, o.third) : null;
+    const yes = h('button', { class: 'btn ' + (o.danger ? 'danger-fill' : 'primary'), type: 'button', onclick: () => done(true) }, o.ok || 'Ano');
+    const btns = [no, third, yes].filter(Boolean);
+    const key = e => {
+      if (e.key === 'Escape') { e.preventDefault(); done(false); }
+      else if (e.key === 'Tab') { // the focus stays in the question
+        e.preventDefault();
+        const i = btns.indexOf(document.activeElement);
+        btns[(i + (e.shiftKey ? btns.length - 1 : 1) + btns.length) % btns.length].focus();
+      }
+    };
+    const box = h('div', { class: 'modal no-print', role: 'alertdialog', 'aria-modal': 'true', 'aria-labelledby': id,
+      onclick: e => { if (e.target === box) done(false); } },
+      h('div', { class: 'modal-card' }, h('h2', { id }, o.title), o.text ? h('p', null, o.text) : null, o.body || null,
+        h('div', { class: 'form-btns' }, btns)));
+    document.body.append(box);
+    document.addEventListener('keydown', key, true);
+    (o.danger ? no : yes).focus();
+  });
+}
+
+// ------------------------------------------------------------------ 2c. UNSAVED WORK – never lost by one wrong click
+/**
+ * DIRTY = something was typed or chosen in a form and is not saved yet (new QRAP, a block of a QRAP, Správa).
+ * Then leaving asks first: the menu, "Zrušit", another block, the browser's Back button, closing the tab.
+ * Filters, search and paging are not work – they carry data-free. A new QRAP is also kept as a draft (DRAFT),
+ * so leaving it loses nothing at all.
+ */
+let DIRTY = false;
+let onLeave = null; // the page being left can still keep something (the new-QRAP form saves its draft)
+function markDirty(e) {
+  const t = e.target;
+  if (!t || !t.closest || !t.closest('main') || t.closest('[data-free]')) return;
+  if (S.view === 'new' || S.view === 'detail' || S.view === 'admin') DIRTY = true;
+}
+
+/** true = the page may be left now. Asks only when there is unsaved work that would be lost (once, also on a double click). */
+let leaveQ = null;
+async function leaveOk(text) {
+  if (!DIRTY) return true;
+  if (S.view === 'new' && DRAFT.works && !S.edit) return true; // the draft keeps everything
+  if (!leaveQ) {
+    leaveQ = ask({ title: 'Zahodit neuložené změny?', text: text || 'Máte vyplněné údaje, které ještě nejsou uložené. Když budete pokračovat, ztratí se.',
+      ok: 'Zahodit změny', cancel: 'Zpět k vyplňování', danger: true });
+    leaveQ.then(() => { leaveQ = null; });
+  }
+  const ok = await leaveQ;
+  if (ok) DIRTY = false;
+  return ok;
+}
+function leaving() { if (onLeave) { const f = onLeave; onLeave = null; f(); } }
+
+/**
+ * The draft of a new QRAP in this browser (per account, for 24 h): typing, step, the one-time token and the photos
+ * already uploaded. After a reload, a crash or a wrong click the form continues where it was. A send reuses the
+ * token, so a QRAP that did reach the server is never created twice. Storage may be off – then nothing is kept.
+ */
+const DRAFT = {
+  works: (() => { try { localStorage.setItem('eqrap:t', '1'); localStorage.removeItem('eqrap:t'); return true; } catch (e) { return false; } })(),
+  key: () => 'eqrap:draft:' + (S.me.email || ''),
+  get() {
+    try {
+      const d = JSON.parse(localStorage.getItem(DRAFT.key()) || 'null');
+      return d && d.v === 1 && Date.now() - d.at < 24 * 3600e3 ? d : null;
+    } catch (e) { return null; }
+  },
+  put(d) {
+    const v = Object.assign({ v: 1, at: Date.now() }, d);
+    try { localStorage.setItem(DRAFT.key(), JSON.stringify(v)); return true; } catch (e) { /* full: try without the previews */ }
+    try { localStorage.setItem(DRAFT.key(), JSON.stringify(Object.assign(v, { photos: null }))); return true; } catch (e) { return false; }
+  },
+  clear() { try { localStorage.removeItem(DRAFT.key()); } catch (e) { /* not available */ } }
+};
+
+/** Throws a draft away (with its uploaded photos, which go to the Drive trash). */
+function dropDraft(d) {
+  DRAFT.clear();
+  const t = d && d.photos && d.photos.session && d.photos.session.token;
+  if (t) api('apiPhotoDiscard', t).catch(() => { /* expired anyway */ });
 }
 
 const pad = n => String(n).padStart(2, '0');
@@ -849,8 +1213,17 @@ function icon(name) {
 const ibox = name => h('span', { class: 'ibox' }, icon(name));
 
 // ------------------------------------------------------------------ 3. HEADER AND ROUTING
-/** Show another page. replace = true: do not keep the current page in the browser's Back history. */
+/**
+ * Show another page. replace = true: do not keep the current page in the browser's Back history.
+ * Unsaved work is asked about first (leaveOk); a new QRAP keeps its draft.
+ */
 function go(view, id, replace) {
+  if (DIRTY && !(S.view === 'new' && DRAFT.works && !S.edit)) {
+    leaveOk().then(ok => { if (ok) go(view, id, replace); });
+    return;
+  }
+  leaving();
+  DIRTY = false;
   S.view = view;
   S.id = id || null;
   S.edit = null;
@@ -867,6 +1240,10 @@ function go(view, id, replace) {
  * otherwise the full form opens under the paper (buttons in "Další krok").
  */
 function edit(key, mode) {
+  if (DIRTY) { // "Zrušit" or another block while this one has unsaved changes
+    leaveOk('Změny v tomto bloku ještě nejsou uložené. Když budete pokračovat, ztratí se.').then(ok => { if (ok) edit(key, mode); });
+    return;
+  }
   S.edit = key;
   S.editMode = key && mode === 'paper' ? 'paper' : 'panel';
   render();
@@ -895,11 +1272,24 @@ function header() {
     h('div', { class: 'grow' }),
     h('div', { class: 'top-right' },
       isManager() ? h('button', { class: 'btn btn-dash' + (S.view === 'dash' ? ' on' : ''), onclick: () => go('dash') }, icon('chart'), h('span', null, 'Přehled manažera')) : null,
-      S.view === 'board' ? null : h('button', { class: 'btn primary', onclick: () => go('new') }, '+ Nahlásit problém'),
+      S.view === 'board' || S.view === 'new' ? null : h('button', { class: 'btn primary', onclick: () => go('new') }, '+ Nahlásit problém'),
       S.me.canViewAs ? viewAsSelect() : null,
       h('span', { class: 'avatar', 'aria-hidden': 'true' }, initials),
-      who)));
+      who)),
+    h('div', { class: 'banners' }, banners()));
 }
+
+/** Lines under the top bar that must not be missed: offline, "zobrazit jako", a new version of the app. */
+function banners() {
+  return [
+    navigator.onLine === false ? h('div', { class: 'banner', role: 'alert' }, '⚠ Jste offline – teď se nic nedá uložit. Vyplněné údaje zůstanou, uložte je po připojení.') : null,
+    S.me.viewAs ? h('div', { class: 'banner info' }, 'Zobrazujete aplikaci jako ' + (S.me.viewAs === '-' ? 'uživatel' : 'manažer') +
+      ' – i ukládání proběhne s touto rolí.', h('button', { class: 'btn small', onclick: e => setViewAs('', e.currentTarget) }, 'Zpět jako Admin')) : null,
+    S.newBuild ? h('div', { class: 'banner info' }, 'Je k dispozici nová verze aplikace.',
+      BOOT.url ? h('a', { class: 'btn small', href: BOOT.url, target: '_top' }, 'Obnovit stránku') : 'Obnovte prosím stránku.') : null
+  ];
+}
+function drawBanners() { const b = document.querySelector('.banners'); if (b) fill(b, banners()); }
 
 /** Page title with an optional breadcrumb and buttons on the right. */
 function pageHead(title, sub, right, crumb) {
@@ -911,21 +1301,30 @@ function pageHead(title, sub, right, crumb) {
 
 /** Admins only: "Zobrazit jako" – try the app as another role (the server uses that role too). */
 function viewAsSelect() {
-  const sel = h('select', { class: 'view-as', title: 'Zobrazit aplikaci jako jiná role', 'aria-label': 'Zobrazit jako', onchange: async e => {
-    sel.disabled = true;
-    try {
-      const b = await api('apiViewAs', e.target.value);
-      Object.assign(S, { me: b.me, cfg: b.cfg, lists: b.lists, people: b.people, meta: b.meta || S.meta, adm: null, edit: null });
-      loadLists(b);
-      fillPeopleList();
-      toast(e.target.value ? 'Zobrazeno jako: ' + e.target.selectedOptions[0].textContent : 'Zpět jako Admin');
-      go('board');
-    } catch (err) { toast(errText(err), true); sel.disabled = false; }
-  } },
+  const sel = h('select', { class: 'view-as', title: 'Zobrazit aplikaci jako jiná role', 'aria-label': 'Zobrazit jako',
+    onchange: e => setViewAs(e.target.value, sel) },
   [['', 'Admin (vy)'], ['-', 'jako: uživatel'], ['MANAŽER', 'jako: manažer']]
     .map(o => h('option', { value: o[0] }, o[1])));
   sel.value = S.me.viewAs || '';
   return sel;
+}
+
+async function setViewAs(role, el) {
+  if (!(await leaveOk())) { if (el && el.tagName === 'SELECT') el.value = S.me.viewAs || ''; return; }
+  const w = waitStart(el && el.tagName === 'BUTTON' ? el : null, { phases: PHASES.load });
+  try {
+    const b = await api('apiViewAs', role);
+    w.end();
+    Object.assign(S, { me: b.me, cfg: b.cfg, lists: b.lists, people: b.people, meta: b.meta || S.meta, adm: null, edit: null });
+    loadLists(b);
+    fillPeopleList();
+    toast(role ? 'Zobrazeno jako: ' + (role === '-' ? 'uživatel' : 'manažer') : 'Zpět jako Admin');
+    go('board');
+  } catch (err) {
+    w.end();
+    toast(errText(err), true);
+    if (el && el.tagName === 'SELECT') el.value = S.me.viewAs || '';
+  }
 }
 
 // ------------------------------------------------------------------ 4. BOARD (TABULE = HOME)
@@ -1007,11 +1406,23 @@ function boardPage() {
   const flash = S.flash;
   S.flash = null;
   const cancelled = S.qraps.filter(FILTERS.cancelled.test).length;
+  const draft = DRAFT.get();
+  const draftBox = draft ? h('div', { class: 'draft-note', role: 'status' }, icon('clock'),
+    h('span', null, 'Máte rozepsaný QRAP (naposledy upraveno ' + fmtDT(new Date(draft.at).toISOString()) + ').'), h('div', { class: 'grow' }),
+    h('button', { class: 'btn small primary', onclick: () => go('new') }, 'Pokračovat ve vyplňování'),
+    h('button', { class: 'btn small ghost', onclick: async () => {
+      if (!(await ask({ title: 'Zahodit rozepsaný QRAP?', text: 'Vyplněné údaje i nahrané fotky tohoto konceptu se smažou.',
+        ok: 'Zahodit', cancel: 'Ponechat', danger: true }))) return;
+      dropDraft(draft);
+      draftBox.remove();
+      toast('Koncept zahozen.');
+    } }, 'Zahodit')) : null;
   return h('div', null,
     pageHead('Tabule QRAP', null,
-      h('button', { class: 'btn primary hero-btn', onclick: () => go('new') }, '+ Nahlásit problém')),
+      h('button', { class: 'btn primary hero-btn', onclick: () => go('new') }, draft ? 'Pokračovat v rozepsaném QRAP' : '+ Nahlásit problém')),
     flash ? h('div', { class: 'flash' }, icon('check'), h('span', null, flash.text), h('div', { class: 'grow' }),
       flash.id ? h('button', { class: 'btn small', onclick: () => go('detail', flash.id) }, 'Otevřít ' + flash.id) : null) : null,
+    draftBox,
     stats,
     myActions(),
     h('div', { class: 'toolbar' }, h('label', { class: 'search' }, icon('search'), search), stSel, areaSel, rangeSel, h('div', { class: 'grow' }),
@@ -1060,11 +1471,31 @@ function myActions() {
  * Only the risk question of ③ is required now – what is missing in ③ the TL completes within 24 h.
  * The last step shows everything for a check before sending. The form carries a one-time token,
  * so a double click or a retry after a lost answer never creates two QRAPs.
+ * Everything typed is kept as a draft in this browser (DRAFT): a reload, a crash or a wrong click loses nothing,
+ * the form continues where it was. Photos are uploaded in the background as soon as they are taken (photoPicker),
+ * so "Odeslat" sends only text.
  */
 function newPage() {
-  const pf = popisForm({ when: new Date().toISOString(), zone: S.me.area || '' }, true);
-  const s3 = opatreniForm({}, []);
-  const token = window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
+  const draft = DRAFT.get();
+  const d0 = draft || {};
+  const pv = Object.assign({ when: new Date().toISOString(), zone: S.me.area || '' }, d0.p || {});
+  if (d0.p) pv.nokSituation = d0.p.qtyNA || '';
+  let page = null;
+  const keep = () => { // the draft, a moment after the last change (and at once when leaving)
+    clearTimeout(keepT);
+    keepT = setTimeout(keepNow, 500);
+  };
+  let keepT = null;
+  let sent = false;
+  const keepNow = () => {
+    clearTimeout(keepT);
+    if (sent || !(DIRTY || draft)) return; // nothing typed yet: no draft
+    DRAFT.put({ token, step: at, p: pf.F.peek(), s3: s3.peek(), photos: pf.photos.state() });
+  };
+  const pf = popisForm(pv, true, d0.photos, keep);
+  const s3 = opatreniForm(d0.s3 || {}, (d0.s3 && d0.s3.ia) || []);
+  const token = d0.token || (window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 12));
+  qrLib().catch(() => { /* loaded again when the QR code is needed */ }); // ready before anybody presses "Fotit telefonem"
   const step = (...kids) => h('div', { class: 'step' }, kids);
   const steps = [
     { name: 'Problém', title: 'Popis problému – CO a JAK', el: step(pf.groups[0]) },
@@ -1080,21 +1511,45 @@ function newPage() {
   const bar = h('div', { class: 'wiz-list' });
   const body = h('div');
   const back = h('button', { class: 'btn ghost', onclick: () => show(at - 1) }, '← Zpět');
-  const next = h('button', { class: 'btn primary btn-cta', onclick: () => { if (valid(at)) show(at + 1); } }, 'Pokračovat →');
+  const next = h('button', { class: 'btn primary btn-cta', onclick: async () => {
+    if (!valid(at)) return;
+    if (at === 1 && !(await whenOk())) return;
+    show(at + 1);
+  } }, 'Pokračovat →');
   const send = h('button', { class: 'btn primary btn-cta', onclick: async () => {
-    const data = pf.read();
-    if (!data) return;
-    const d3 = s3.read();
-    if (!d3) return;
-    data.s3 = d3;
-    data.token = token;
-    const phoneUsed = pf.photos.drop().length < 2; // at least one photo came from the phone
-    const res = await save(send, 'apiCreate', [data]);
-    if (!res) return;
-    S.flash = { id: res.qrap.id, text: 'QRAP ' + res.qrap.id + ' odeslán. Manažer zóny dostal e-mail.' +
-      (phoneUsed && res.phoneExpired ? ' Fotky z telefonu se nepodařilo připojit – přidejte je na stránce QRAP (Přidat foto).' : '') };
-    S.filter = 'open';
-    go('board', null, true);
+    if (!pf.read() || !s3.read() || !(await whenOk())) return; // the fields are checked before anything is sent
+    if (navigator.onLine === false) { toast('Jste offline – QRAP se neodeslal. Nic se neztratilo, odešlete ho po připojení.', true); return; }
+    const w = waitStart(send, { phases: PHASES.create, cardAt: 0, short: 'Odesílám…',
+      steps: ['Kontrola údajů', 'Fotky', 'Zápis QRAP do tabulky', 'E-mail manažerovi zóny'] });
+    w.step(0, 'ok');
+    try {
+      const n = pf.photos.count();
+      w.step(1, 'run', pf.photos.pending() ? 'Dokončuji nahrání fotek…' : 'Fotky');
+      await pf.photos.settle(); // photos taken here went up in the background – usually they are already there
+      w.step(1, 'ok', n ? 'Fotky (' + n + ')' : 'Bez fotek');
+      const data = pf.read();
+      const d3 = s3.read();
+      if (!data || !d3) { w.end(); return; }
+      data.s3 = d3;
+      data.token = token;
+      w.step(2, 'run');
+      const res = await api('apiCreate', data);
+      w.step(2, 'ok');
+      w.step(3, 'ok', 'E-mail manažerovi zóny – odchází na pozadí');
+      sent = true;
+      DIRTY = false;
+      DRAFT.clear();
+      store(res);
+      pf.photos.seed(res.qrap); // the previews are already here – the QRAP page shows them without downloading
+      const photoNote = pf.photos.afterCreate(res);
+      w.end();
+      S.flash = { id: res.qrap.id, text: 'QRAP ' + res.qrap.id + ' odeslán. Manažer zóny dostane e-mail.' + photoNote };
+      S.filter = 'open';
+      go('board', null, true);
+    } catch (e) {
+      w.end();
+      toast(errText(e) + ' Vyplněné údaje zůstaly – zkuste Odeslat znovu (dvakrát se QRAP nezaloží).', true);
+    }
   } }, 'Odeslat ✓');
   const titleEl = h('h2', { class: 'shell-sub' });
   titleEl.tabIndex = -1;
@@ -1107,6 +1562,24 @@ function newPage() {
     if (i === 2 && Number(d.qty) > 0 && !d.unit) return !!pf.F.mark('unit', 'Vyberte jednotku.');
     return st.check ? !!st.check() : true;
   }
+  // KDY more than 7 days back is usually a typo (wrong year or month): asked once per value
+  let whenChecked = '';
+  async function whenOk() {
+    const when = pf.F.peek().when;
+    const days = Math.floor((Date.now() - new Date(when).getTime()) / 864e5);
+    if (!when || days < 7 || when === whenChecked) return true;
+    const ok = await ask({ title: 'KDY je před ' + days + ' dny – je to správně?', text: 'Zadali jste ' + fmtDT(when) +
+      '. Opravdu byl problém nalezen tehdy? Lhůta pro ③ okamžitá opatření se počítá od KDY.', ok: 'Ano, je to správně', cancel: 'Opravit KDY' });
+    if (ok) whenChecked = when;
+    else pf.F.item('when').focus();
+    return ok;
+  }
+  /** Open QRAPs that look like the same problem (same zone and CO within 2 days) – shown before sending. */
+  function similar() {
+    const d = pf.F.peek();
+    const t = new Date(d.when).getTime();
+    return S.qraps.filter(q => isOpen(q) && q.zone === d.zone && q.what === d.what && Math.abs(new Date(q.when || q.created).getTime() - t) < 2 * DAY).slice(0, 3);
+  }
   function show(i) {
     for (let k = 0; k < i; k++) if (k >= at && !valid(k)) { i = k; break; }
     at = Math.max(0, Math.min(i, steps.length - 1));
@@ -1115,26 +1588,59 @@ function newPage() {
       title: (k + 1) + '. ' + (st.title || st.name), 'aria-current': k === at ? 'step' : null, onclick: () => show(k) },
       icon(k <= at ? 'check' : 'circle'), h('span', null, st.name))));
     titleEl.textContent = (at + 1) + '. ' + (last ? 'Kontrola a odeslání' : steps[at].title || steps[at].name);
-    fill(body, last ? steps.slice(0, -1).map(st => h('div', { class: 'review-part' }, h('h3', null, st.title || st.name), st.el)) : steps[at].el);
+    const twins = last ? similar() : [];
+    fill(body, last ? [
+      twins.length ? h('div', { class: 'note warn box-warn', role: 'note' }, 'Pozor, podobný otevřený QRAP už existuje (stejná zóna i problém): ',
+        twins.map(q => h('div', null, h('button', { class: 'link', type: 'button', onclick: () => go('detail', q.id) }, q.id), ' – ' + titleOf(q).slice(0, 80) + ' (' + ago(q.when || q.created) + ')')),
+        h('div', null, 'Jde o stejný problém? Pak nový QRAP nezakládejte. Rozepsaný koncept zůstane uložený.')) : null,
+      steps.slice(0, -1).map(st => h('div', { class: 'review-part' }, h('h3', null, st.title || st.name), st.el))] : steps[at].el);
     back.hidden = at === 0;
     next.hidden = last;
     send.hidden = !last;
     window.scrollTo(0, 0);
     const f = body.querySelector('input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select');
     if (f && !last && at !== 0) f.focus({ preventScroll: true });
+    keep();
   }
-  const page = h('div', null,
+  const cancel = h('button', { class: 'btn btn-muted', onclick: async () => {
+    if (DIRTY || draft) {
+      const ok = await ask({ title: 'Zahodit rozepsaný QRAP?', text: 'Vyplněné údaje i pořízené fotky se smažou. Tohle nejde vrátit.',
+        ok: 'Zahodit QRAP', cancel: 'Pokračovat ve vyplňování', danger: true });
+      if (!ok) return;
+    }
+    sent = true; // nothing more is kept
+    pf.photos.discard();
+    DRAFT.clear();
+    DIRTY = false;
+    go('board');
+  } }, 'Zrušit');
+  const restart = draft ? h('div', { class: 'draft-note', role: 'status' }, icon('clock'),
+    h('span', null, 'Pokračujete v rozepsaném QRAP (naposledy upraveno ' + fmtDT(new Date(draft.at).toISOString()) + ').'), h('div', { class: 'grow' }),
+    h('button', { class: 'btn small ghost', onclick: async () => {
+      if (!(await ask({ title: 'Začít nový QRAP od začátku?', text: 'Rozepsaný koncept včetně fotek se smaže.', ok: 'Smazat a začít znovu',
+        cancel: 'Pokračovat v konceptu', danger: true }))) return;
+      sent = true;
+      pf.photos.discard();
+      DRAFT.clear();
+      DIRTY = false;
+      render();
+    } }, 'Začít znovu')) : null;
+  page = h('div', null,
     pageHead('Nový QRAP', null, null, 'Nový QRAP'),
+    restart,
     h('div', { class: 'shell' },
       h('nav', { class: 'wiz-steps', 'aria-label': 'Kroky' }, bar),
       h('div', { class: 'shell-card' }, titleEl,
         h('div', { class: 'shell-body' }, h('div', { class: 'shell-inner form-rows' }, body)),
-        h('div', { class: 'shell-foot' }, back, h('div', { class: 'grow' }),
-          h('button', { class: 'btn btn-muted', onclick: () => go('board') }, 'Zrušit'), next, send))));
-  page.addEventListener('change', () => {
-    page.querySelector('.shell-card').classList.toggle('safety', pf.F.item('safety').get() === 'ANO');
-  });
-  show(0);
+        h('div', { class: 'shell-foot' }, back, h('div', { class: 'grow' }), cancel, next, send))));
+  const safetyFrame = () => page.querySelector('.shell-card').classList.toggle('safety', pf.F.item('safety').get() === 'ANO');
+  page.addEventListener('change', safetyFrame);
+  page.addEventListener('input', keep);
+  page.addEventListener('change', keep);
+  pf.photos.attach(page);
+  onLeave = keepNow; // leaving the form (menu, Back): the draft is written at once
+  show(Math.min(d0.step || 0, steps.length - 1));
+  safetyFrame();
   return page;
 }
 
@@ -1146,7 +1652,11 @@ function formButtons(label, onSave) {
   const b = h('button', { class: 'btn primary', onclick: () => onSave(b) }, label);
   return h('div', { class: 'form-btns' }, b, h('button', { class: 'btn ghost', onclick: () => edit(null) }, 'Zrušit'));
 }
-const saveSection = (q, part, read, n) => b => { const d = read(); if (d) submit(b, 'apiSave', [q.id, part, d], n); };
+/** Save one part of the QRAP. The fingerprint is taken when the form opens: what the person saw (see fpOf). */
+const saveSection = (q, part, read, n) => {
+  const base = FP_FIELDS[part] ? fpOf(q, part) : '';
+  return b => { const d = read(); if (d) { if (base) d._fp = base; submit(b, 'apiSave', [q.id, part, d], n); } };
+};
 const hasWhy = q => [1, 2, 3, 4, 5].some(i => q['o' + i] || q['n' + i]);
 
 /** CO je za problém (the "jiné" text when chosen) and a short title (CO + the wrong part). */
@@ -1293,9 +1803,14 @@ function paperBody(q, big, ed) {
   const actRow = a => {
     if (E.action && E.editNo === a.no) return editRow;
     const open = big && !S.edit && a.canEdit ? e => { e.stopPropagation(); edit('akce:' + a.no, 'paper'); } : null;
+    // one tap marks the action done; a tap by mistake is undone from the message ("Vrátit zpět")
     const doneBtn = big && !S.edit && a.canDone ? h('button', { class: 'btn small pp-done no-print', title: 'Označit jako hotovou',
       'aria-label': 'Označit akci ' + a.no + ' jako hotovou',
-      onclick: e => { e.stopPropagation(); submit(e.currentTarget, 'apiSaveAction', [q.id, { no: a.no, done: true }], 6); } }, '✓') : null;
+      onclick: e => {
+        e.stopPropagation();
+        submit(e.currentTarget, 'apiSaveAction', [q.id, { no: a.no, done: true }], 6, { done: 'Akce ' + a.no + ' je hotová ✓',
+          undo: { label: 'Vrátit zpět', run: () => submit(null, 'apiSaveAction', [q.id, { no: a.no, done: false }], 6, { done: 'Vráceno – akce ' + a.no + ' není hotová.' }) } });
+      } }, '✓') : null;
     return h('tr', { class: (open ? 'pp-click' : '') + (ed && E.editNo === a.no ? ' pp-sel' : ''), onclick: open, title: open ? 'Klikněte a upravte akci' : null },
       h('td', null, a.text, h('span', { class: 'sub' }, ' (' + whyLabel(a.kind) + ')')), h('td', null, a.owner),
       h('td', { class: actLate(a) ? 'pp-late' : '' }, dShort(a.due)), h('td', null, a.done ? dShort(a.done) : doneBtn));
@@ -1358,7 +1873,12 @@ const BLOCK_NAMES = { 1: '① Popis problému a ② Kdo byl upozorněn', 3: '③
 
 function detailPage() {
   const q = byId(S.id);
-  if (!q) return h('div', { class: 'card' }, 'Načítám ' + (S.id || '') + '…');
+  if (!q) { // an older QRAP that is not on the board: it is being fetched – show its outline meanwhile
+    return h('div', { 'aria-busy': 'true' },
+      h('div', { class: 'card' }, h('div', { class: 'wait-top' }, h('span', { class: 'spin' }), h('span', null, 'Načítám QRAP ' + (S.id || '') + '…'))),
+      h('div', { class: 'card' }, h('span', { class: 'skel', style: 'height:16px;width:40%' }), h('span', { class: 'skel', style: 'height:16px;width:65%;margin-top:10px' })),
+      h('span', { class: 'skel', style: 'height:340px;border-radius:14px' }));
+  }
   const ed = S.edit && S.editMode === 'paper' ? editorFor(q, S.edit) : null;
   return h('div', null,
     h('div', { class: 'crumbs no-print' }, h('button', { onclick: () => go('board') }, 'Tabule'), h('span', null, '/'), h('b', null, q.id)),
@@ -1416,8 +1936,7 @@ function nextBox(q) {
 function editorFor(q, key) {
   if (key === 'popis' && q.can.popis) {
     const pf = popisForm(q, false);
-    return { main: 1, cells: [1, 2], e: pf.parts,
-      bar: formButtons('Uložit ① a ②', b => { const d = pf.read(); if (d) submit(b, 'apiSave', [q.id, 'popis', d], 1); }) };
+    return { main: 1, cells: [1, 2], e: pf.parts, bar: formButtons('Uložit ① a ②', saveSection(q, 'popis', pf.read, 1)) };
   }
   if (key === 'opatreni' && q.can.opatreni) {
     const f = opatreniForm(q, actsOf(q.id, '③'), true);
@@ -1464,7 +1983,7 @@ function panelFor(q, key) {
     const pf = popisForm(q, false);
     title = '① Popis problému · ② Kdo byl upozorněn?';
     body = h('div', null, pf.one, h('div', { class: 'sub-h', style: 'margin-top:20px' }, '② Kdo byl upozorněn?'), pf.two,
-      formButtons('Uložit ① a ②', b => { const d = pf.read(); if (d) submit(b, 'apiSave', [q.id, 'popis', d], 1); }));
+      formButtons('Uložit ① a ②', saveSection(q, 'popis', pf.read, 1)));
   } else if (key === 'opatreni' && q.can.opatreni) {
     const f = opatreniForm(q, actsOf(q.id, '③'));
     title = '③ Okamžitá opatření <' + hours3() + 'h';
@@ -1530,14 +2049,25 @@ function decisionForm(q) {
     h('div', { style: 'margin-top:12px' }, pilots),
     h('div', { style: 'margin-top:12px' }, F.input('decisionNote', 'Komentář', { rows: 2, hint: 'Povinný u „Problém vyřešen“ a „Eskalace“.' })),
     signNote(),
-    formButtons('Podepsat', b => {
-      const d = F.read();
-      if (!d) return;
-      if (d.decision === 'POKRAČOVAT' && !d.pilots) { F.mark('pilots', 'Vyberte alespoň jednoho pilota.'); return; }
-      if ((d.decision === 'VYŘEŠENO' || d.decision === 'ESKALACE') && !d.decisionNote) { F.mark('decisionNote', 'Napište komentář.'); return; }
-      if (split(d.shifts).length < shiftsAll.length) toast('Upozornění: ne všechny směny byly informovány.');
-      submit(b, 'apiSave', [q.id, 'rozhodnuti', d], 4);
-    }));
+    formButtons('Podepsat', b => signDecision(b, q, F, shiftsAll)));
+}
+
+/** ④ "Podepsat": checks, then one clear question with everything that will happen – a signature cannot be undone here. */
+async function signDecision(b, q, F, shiftsAll) {
+  const d = F.read();
+  if (!d) return;
+  if (d.decision === 'POKRAČOVAT' && !d.pilots) { F.mark('pilots', 'Vyberte alespoň jednoho pilota.'); return; }
+  if ((d.decision === 'VYŘEŠENO' || d.decision === 'ESKALACE') && !d.decisionNote) { F.mark('decisionNote', 'Napište komentář.'); return; }
+  const dec = DECISIONS.filter(x => x.value === d.decision)[0];
+  const missing = shiftsAll.filter(s => !split(d.shifts).includes(s));
+  const ok = await ask({ title: 'Podepsat rozhodnutí ④?', ok: 'Podepsat', cancel: 'Zpět',
+    body: h('div', null,
+      h('p', null, h('b', null, dec ? dec.label : d.decision)),
+      d.decision === 'VYŘEŠENO' ? h('p', null, 'QRAP se tím hned uzavře.') : null,
+      d.pilots && d.decision !== 'VYŘEŠENO' ? h('p', null, 'Piloti (dostanou e-mail): ' + d.pilots) : null,
+      missing.length ? h('p', { class: 'note warn' }, 'Pozor: neinformované směny – ' + missing.join(', ') + '.') : null,
+      h('p', { class: 'sub' }, 'Podpis = váš účet a čas. Změnit ho pak může jen manažer (Odemknout ①–④).')) });
+  if (ok) submit(b, 'apiSave', [q.id, 'rozhodnuti', d], 4);
 }
 
 /** ⑤ PŘÍČINA 5 Proč? – two chains, root cause, lesson, standard. */
@@ -1549,14 +2079,14 @@ function pricinaForm(q) {
     roots[c] = [1, 2, 3, 4, 5].map(i => h('input', { type: 'radio', name, value: i, checked: Number(q['root' + c.toUpperCase()]) === i }));
     return h('div', null, h('div', { class: 'sub-h' }, title),
       [1, 2, 3, 4, 5].map(i => h('div', { class: 'why-row' },
-        F.input(c + i, c === 'o' ? i + ' PROČ ?' : 'N' + i + ' – PROČ nebylo zachyceno?', { ph: i === 1 ? first : 'Proč se stalo to předchozí?' }),
+        F.input(c + i, c === 'o' ? i + ' PROČ ?' : 'N' + i + ' – PROČ nebylo zachyceno?', { ph: i === 1 ? first : 'Proč se stalo to předchozí?', len: 1000 }),
         h('label', { class: 'why-root' }, roots[c][i - 1], 'kořenová příčina'))));
   };
   const nBox = showIf(h('div', null, chain('n', 'Proč to nebylo zachyceno?', 'Proč problém nebyl zachycen dříve?')),
     [1, 2, 3, 4, 5].some(i => q['n' + i]));
   const addN = h('button', { class: 'btn small ghost', type: 'button', hidden: !nBox.hidden,
     onclick: () => { nBox.hidden = false; addN.hidden = true; } }, '+ Přidat řetězec „Proč to nebylo zachyceno?“');
-  const stdRef = showIf(h('div', null, F.input('stdRef', 'Který standard', { req: true })), q.std === 'ANO');
+  const stdRef = showIf(h('div', null, F.input('stdRef', 'Který standard', { req: true, len: 300 })), q.std === 'ANO');
   return h('div', null,
     h('p', { class: 'sub' }, 'Ptejte se „proč?“ na fakta, dokud nedojdete k příčině v procesu, kterou lze odstranit (ne k osobě).'),
     chain('o', 'Proč to vzniklo?', 'Proč vznikl problém?'),
@@ -1567,14 +2097,22 @@ function pricinaForm(q) {
       F.yesno('std', 'Příležitost k aktualizaci STANDARDU?', { hint: 'ANO vytvoří akci „Aktualizovat standard“.',
         onchange: x => showIf(stdRef, x === 'ANO') }),
       stdRef),
-    formButtons('Uložit analýzu', b => {
-      const d = F.read();
-      if (!d) return;
-      ['o', 'n'].forEach(c => { const r = roots[c].find(x => x.checked); d['root' + c.toUpperCase()] = r ? r.value : ''; });
-      const filled = [1, 2, 3, 4, 5].filter(i => d['o' + i]).length;
-      if (filled < 3) toast('Upozornění: vyplněno jen ' + filled + ' Proč – obvykle je potřeba aspoň 3.');
-      submit(b, 'apiSave', [q.id, 'pricina', d], 5);
-    }));
+    formButtons('Uložit analýzu', savePricina(q, F, roots)));
+}
+
+/** ⑤ "Uložit analýzu" – fewer than 3 "Proč" is asked about before saving (not after), so it can still be completed. */
+function savePricina(q, F, roots) {
+  const base = fpOf(q, 'pricina'); // what the form showed when it opened
+  return async b => {
+    const d = F.read();
+    if (!d) return;
+    ['o', 'n'].forEach(c => { const r = roots[c].find(x => x.checked); d['root' + c.toUpperCase()] = r ? r.value : ''; });
+    const filled = [1, 2, 3, 4, 5].filter(i => d['o' + i]).length;
+    if (filled < 3 && !(await ask({ title: 'Jen ' + filled + '× Proč?', text: 'Ke skutečné příčině v procesu obvykle vedou aspoň 3 „Proč“. Uložit i tak? (Doplnit to můžete i později.)',
+      ok: 'Uložit i tak', cancel: 'Doplnit Proč' }))) return;
+    d._fp = base;
+    submit(b, 'apiSave', [q.id, 'pricina', d], 5);
+  };
 }
 
 /** ⑥ one definitive action (new or edit). */
@@ -1584,16 +2122,25 @@ function actionForm(q, a) {
   const done = a ? F.input('done', 'Hotovo', { type: 'date', max: today(), hint: 'Datum hotovo akci uzavře.' }) : null;
   return h('div', { class: 'act-form editing' },
     h('div', { class: 'grid' },
-      F.input('text', 'Konečná akce', { req: true, rows: 2, wide: true }),
+      F.input('text', 'Konečná akce', { req: true, rows: 2, wide: true, len: 500 }),
       F.select('kind', 'Odstraňuje krok 5 Proč', steps, { req: true }),
-      F.input('owner', 'Pilot', { req: true, list: 'people-list', ph: 'Začněte psát jméno' }),
+      F.input('owner', 'Pilot', { req: true, list: 'people-list', ph: 'Začněte psát jméno', len: 100 }),
       F.input('due', 'Plán', { req: true, type: 'date', min: a ? null : today() }),
       done,
-      F.input('evidence', 'Odkaz na důkaz', { ph: 'https://…' }),
-      F.input('note', 'Poznámka', { wide: true })),
-    formButtons(a ? 'Uložit akci' : 'Přidat akci', b => saveActionForm(b, q, a, F)),
-    a && a.canEdit ? h('button', { class: 'btn small danger', style: 'margin-top:8px',
-      onclick: e => submit(e.currentTarget, 'apiSaveAction', [q.id, { no: a.no, remove: true }], 6) }, 'Odebrat akci') : null);
+      F.input('evidence', 'Odkaz na důkaz', { ph: 'https://…', len: 500 }),
+      F.input('note', 'Poznámka', { wide: true, len: 500 })),
+    formButtons(a ? 'Uložit akci' : 'Přidat akci', saveActionForm(q, a, F)),
+    a && a.canEdit ? removeActionBtn(q, a, 'margin-top:8px') : null);
+}
+
+/** "Odebrat akci" – asked first: a removed action cannot be brought back on the page. */
+function removeActionBtn(q, a, style) {
+  return h('button', { class: 'btn small danger', style, onclick: async e => {
+    const b = e.currentTarget;
+    if (!(await ask({ title: 'Odebrat akci ' + a.no + '?', text: '„' + a.text + '“ zmizí z konečných akcí. Na stránce ji nepůjde vrátit.',
+      ok: 'Odebrat akci', cancel: 'Ponechat', danger: true }))) return;
+    submit(b, 'apiSaveAction', [q.id, { no: a.no, remove: true }], 6, { done: 'Akce ' + a.no + ' odebrána.' });
+  } }, 'Odebrat akci');
 }
 
 /** The 5 Proč steps an action can remove (both chains), plus STD for the standard action. */
@@ -1606,16 +2153,21 @@ function whySteps(q, a) {
   return steps;
 }
 
-function saveActionForm(b, q, a, F) {
-  const d = F.read();
-  if (!d) return;
-  if (d.evidence && !/^https?:\/\//i.test(d.evidence)) { F.mark('evidence', 'Odkaz musí začínat http:// nebo https://'); return; }
-  if (a) {
-    d.no = a.no;
-    if (!d.done) d.done = false; // empty = not done yet
-    else if (a.done && d.done === dayOf(a.done)) delete d.done; // unchanged: keep the original time
-  }
-  submit(b, 'apiSaveAction', [q.id, d], 6);
+/** The save of an action form. The fingerprint of an existing action is taken when the form opens. */
+function saveActionForm(q, a, F) {
+  const base = a ? fpAct(a) : '';
+  return b => {
+    const d = F.read();
+    if (!d) return;
+    if (d.evidence && !/^https?:\/\//i.test(d.evidence)) { F.mark('evidence', 'Odkaz musí začínat http:// nebo https://'); return; }
+    if (a) {
+      d.no = a.no;
+      d._fp = base;
+      if (!d.done) d.done = false; // empty = not done yet
+      else if (a.done && d.done === dayOf(a.done)) delete d.done; // unchanged: keep the original time
+    }
+    submit(b, 'apiSaveAction', [q.id, d], 6);
+  };
 }
 
 /** ⑦ HODNOCENÍ QRQC – 5 criteria OK / NOK / N/A, OJT and feedback. The hints help the assessor. */
@@ -1679,9 +2231,17 @@ function effectBox(q) {
     const result = h('select', { 'aria-label': 'Výsledek ' + n }, h('option', { value: '' }, '— výsledek —'),
       ['EFEKTIVNÍ', 'NEOVĚŘENO', 'NEEFEKTIVNÍ'].map(r => h('option', { value: r }, r)));
     result.value = cur ? cur.result : '';
-    const b = h('button', { class: 'btn small', onclick: () => {
-      if (result.value === 'NEEFEKTIVNÍ') toast('Chyba se znovu objevila → QRAP se vrátí do analýzy a počítání směn začne znovu.');
-      submit(b, 'apiSaveEffect', [q.id, { slot: n, date: date.value, shift: shift.value, result: result.value }], 6);
+    // a saved result cannot be changed later (an effective slot stays, "neefektivní" restarts the count): asked first
+    const b = h('button', { class: 'btn small', onclick: async () => {
+      const miss = [!date.value && [date, 'datum'], !shift.value && [shift, 'směnu'], !result.value && [result, 'výsledek']].filter(Boolean);
+      if (miss.length) { miss[0][0].focus(); toast('Vyplňte ' + miss.map(m => m[1]).join(', ') + ' (slot ' + n + ').', true); return; }
+      if (date.value > today() || (minDay && date.value < minDay)) { date.focus(); toast('Datum směny musí být od ' + (minDay ? fmtD(minDay) : '') + ' do dneška.', true); return; }
+      const bad = result.value === 'NEEFEKTIVNÍ';
+      const ok = await ask({ title: 'Uložit slot ' + n + ': ' + result.value + '?', ok: bad ? 'Ano, chyba se objevila' : 'Uložit', cancel: 'Zpět', danger: bad,
+        text: fmtD(date.value) + ', směna ' + shift.value + '. ' + (bad
+          ? 'QRAP se vrátí do analýzy 5 Proč a počítání 5 směn začne znovu. Piloti a manažeři dostanou e-mail.'
+          : result.value === 'EFEKTIVNÍ' ? 'Efektivní slot už pak nepůjde změnit.' : 'Slot půjde později přepsat.') });
+      if (ok) submit(b, 'apiSaveEffect', [q.id, { slot: n, date: date.value, shift: shift.value, result: result.value }], 6);
     } }, 'Uložit');
     return h('tr', null, h('td', null, n), h('td', null, date), h('td', null, shift), h('td', null, result),
       h('td', { class: 'sub' }, S.me.name), h('td', null, b));
@@ -1707,8 +2267,11 @@ function closureBox(q) {
   if (q.status !== 'OVĚŘENÍ' && q.status !== 'SCHVÁLENÍ') return null;
   const approve = q.status === 'SCHVÁLENÍ';
   const ok = approve || q.checklist.every(c => c.ok);
-  const b = h('button', { class: 'btn primary', disabled: !ok, onclick: () => submit(b, 'apiSave', [q.id, 'uzavreni', {}], approve ? 4 : 6) },
-    'Podepsat uzavření');
+  const b = h('button', { class: 'btn primary', disabled: !ok, onclick: async () => {
+    if (!(await ask({ title: 'Podepsat uzavření ' + q.id + '?', text: 'QRAP se uzavře a podpis (váš účet a čas) se uloží do historie. ' +
+      'Znovu otevřít ho pak může jen manažer.', ok: 'Podepsat uzavření', cancel: 'Zpět' }))) return;
+    submit(b, 'apiSave', [q.id, 'uzavreni', {}], approve ? 4 : 6, { done: 'QRAP ' + q.id + ' uzavřen ✓' });
+  } }, 'Podepsat uzavření');
   return h('div', { class: 'box' }, h('b', null, approve ? 'Uzavření' : 'Podmínky uzavření'),
     approve ? h('p', { class: 'sub' }, 'Rozhodnuto „Problém vyřešen: ŽÁDNÉ 5 Proč“ – zbývá podepsat uzavření.')
       : h('ul', { class: 'checklist' }, q.checklist.map(c => h('li', null, h('span', { class: c.ok ? 'ok' : 'no' }, c.ok ? '✓ ' : '✗ '), c.label))),
@@ -1718,9 +2281,10 @@ function closureBox(q) {
 function historyBox(q) {
   const box = h('div', { class: 'card no-print' });
   const load = async e => {
-    e.currentTarget.disabled = true;
-    e.currentTarget.textContent = 'Načítám…';
+    const w = waitStart(e.currentTarget, { lock: false, phases: PHASES.load });
+    box.append(h('div', { class: 'hist-skel' }, [70, 55, 62].map(p => h('span', { class: 'skel', style: 'height:14px;margin-top:12px;width:' + p + '%' }))));
     try { S.history[q.id] = await api('apiHistory', q.id); } catch (err) { toast(errText(err), true); }
+    w.end();
     draw();
   };
   const draw = () => {
@@ -1739,9 +2303,20 @@ function adminBox(q) {
   if (!isManager()) return null;
   const open = isOpen(q);
   const F = makeForm({});
-  const reason = F.input('reason', 'Důvod (uloží se do historie)', { req: true, wide: true });
+  const reason = F.input('reason', 'Důvod (uloží se do historie)', { req: true, wide: true, len: 300 });
+  const what = {
+    cancel: ['Zrušit QRAP ' + q.id + '?', 'QRAP zmizí z otevřených. Vrátit to jde jen přes „Znovu otevřít“.', true],
+    unlock: ['Odemknout ①–④?', 'Podepsané rozhodnutí ④ se zruší a bude potřeba ho podepsat znovu.', true],
+    reopen: ['Znovu otevřít ' + q.id + '?', 'QRAP se vrátí mezi otevřené.', false]
+  };
   const op = (label, code, cls) => {
-    const b = h('button', { class: 'btn ' + (cls || ''), onclick: () => { const d = F.read(); if (d) submit(b, 'apiAdmin', [q.id, code, d.reason], 1); } }, label);
+    const b = h('button', { class: 'btn ' + (cls || ''), onclick: async () => {
+      const d = F.read();
+      if (!d) return;
+      const [title, text, danger] = what[code];
+      if (!(await ask({ title, text: text + ' Důvod: „' + d.reason + '“.', ok: label, cancel: 'Zpět', danger }))) return;
+      submit(b, 'apiAdmin', [q.id, code, d.reason], 1);
+    } }, label);
     return b;
   };
   return h('details', { class: 'card no-print admin-box' },
@@ -1781,7 +2356,7 @@ function makeForm(values) {
     const el = h(o.group ? 'div' : 'label', { class: 'fld' + (o.wide ? ' wide' : ''), role: o.group ? 'group' : null },
       label ? h('span', { class: 'fld-l' }, label, o.req ? h('span', { class: 'req' }, ' *') : null,
         o.opt ? h('span', { class: 'opt' }, 'nepovinné') : null, info) : null,
-      control, tip);
+      control, o.extra || null, tip);
     items[key].box = el;
     const ok = () => el.classList.remove('invalid');
     el.addEventListener('input', ok);
@@ -1789,18 +2364,37 @@ function makeForm(values) {
     return el;
   };
   const F = {
+    /** o.len = the most characters the server keeps for this field – the field never takes more (nothing is cut off later). */
     input(key, label, o = {}) {
       const dt = o.type === 'datetime-local';
-      const el = o.rows ? h('textarea', { rows: o.rows, placeholder: o.ph, maxlength: 2000 })
+      const num = o.type === 'number';
+      const len = o.len || (o.rows ? 2000 : 200);
+      const el = o.rows ? h('textarea', { rows: o.rows, placeholder: o.ph, maxlength: len })
         : h('input', { type: o.type || 'text', placeholder: o.ph, min: o.min, max: o.max, list: o.list,
-          inputmode: o.type === 'number' ? 'numeric' : null, maxlength: o.type ? null : 200 });
+          inputmode: num ? 'numeric' : null, step: num ? 1 : null, maxlength: o.type ? null : len });
       el.value = dt && val(key) ? localInput(val(key)) : val(key);
       if (o.onchange) el.addEventListener('input', () => o.onchange(el.value));
+      // pieces are whole numbers: "e", "+", "-", "," and "." cannot be typed
+      if (num) el.addEventListener('keydown', e => { if (/^[eE+\-.,]$/.test(e.key)) e.preventDefault(); });
       items[key] = { label, req: o.req, focus: () => el.focus(),
-        get: () => (dt ? (el.value ? new Date(el.value).toISOString() : '') : el.value.trim()) };
+        get: () => (dt ? (el.value ? new Date(el.value).toISOString() : '') : el.value.trim()),
+        bad: () => !!(el.validity && el.validity.badInput) || (num && el.value !== '' && !/^\d{1,8}$/.test(el.value)) };
+      // longer texts: a counter appears at 80 % of the limit
+      let count = null;
+      if (o.rows) {
+        count = h('span', { class: 'count', hidden: true });
+        const upd = () => {
+          const n = el.value.length;
+          count.hidden = n < len * 0.8;
+          count.textContent = n + ' / ' + len + (n >= len ? ' – víc se nevejde' : '');
+          count.classList.toggle('near', n >= len * 0.95);
+        };
+        el.addEventListener('input', upd);
+        upd();
+      }
       const control = o.now ? h('div', { class: 'with-btn' }, el, h('button', { class: 'btn small', type: 'button',
         onclick: () => { el.value = localInput(); el.dispatchEvent(new Event('input', { bubbles: true })); } }, 'Teď')) : el;
-      return wrap(key, label, control, o);
+      return wrap(key, label, control, Object.assign({}, o, { extra: count }));
     },
     select(key, label, options, o = {}) {
       const opts = options.map(x => (typeof x === 'string' ? { value: x, label: x } : x));
@@ -1863,6 +2457,14 @@ function makeForm(values) {
     /** Returns all values, or null (and marks the missing fields red) when something required is empty. */
     read() {
       Object.values(items).forEach(i => i.box.classList.remove('invalid'));
+      // a number the browser could not read (e.g. "2,5") would arrive as empty – said clearly instead
+      const bad = Object.values(items).filter(i => i.bad && !hiddenNow(i) && i.bad());
+      if (bad.length) {
+        bad.forEach(i => i.box.classList.add('invalid'));
+        bad[0].focus();
+        toast('Zadejte celé číslo (bez čárky, tečky a mínusu): ' + bad.map(i => i.label.replace(/[?:]$/, '')).join(', '), true);
+        return null;
+      }
       const missing = Object.values(items).filter(i => i.req && !hiddenNow(i) && !i.get());
       if (missing.length) {
         missing.forEach(i => i.box.classList.add('invalid'));
@@ -1882,7 +2484,7 @@ function showIf(el, on) { el.hidden = !on; return el; }
 
 /** KOLIK špatných dílů? with its unit right next to the number (one row). */
 function qtyRow(F, L) {
-  const qty = F.input('qty', 'KOLIK špatných dílů?', { req: true, type: 'number', min: 0 });
+  const qty = F.input('qty', 'KOLIK špatných dílů?', { req: true, type: 'number', min: 0, max: 10000000 });
   const unit = F.select('unit', '', L.units || [], { group: true, ph: '— jednotka —' });
   const na = F.toggle('qtyNA', 'N/A', { onchange: on => setNA(on) });
   const input = qty.querySelector('input');
@@ -1904,19 +2506,19 @@ function qtyRow(F, L) {
 /**
  * ① POPIS PROBLÉMU and ② KDO BYL UPOZORNĚN? – the questions of the paper form QRAP V3.0.
  * Every question is made once (parts); the wizard puts them in its steps (groups, two),
- * the QRAP page puts them into the boxes of the paper.
+ * the QRAP page puts them into the boxes of the paper. photoState / onPhoto: a new QRAP's photos (draft, see newPage).
  */
-function popisForm(v, isNew) {
+function popisForm(v, isNew, photoState, onPhoto) {
   const F = makeForm(Object.assign({}, v, { qtyNA: v.nokSituation || '' }));
   const L = S.lists;
-  const howOther = showIf(F.input('howOther', 'JAK – jiné (napište)', { req: true, ph: 'napište jiné' }), isOther(v.how));
-  const whatOther = showIf(F.input('whatOther', 'CO – jiné (napište)', { req: true, ph: 'napište jiné' }), isOther(v.what));
+  const howOther = showIf(F.input('howOther', 'JAK – jiné (napište)', { req: true, ph: 'napište jiné', len: 200 }), isOther(v.how));
+  const whatOther = showIf(F.input('whatOther', 'CO – jiné (napište)', { req: true, ph: 'napište jiné', len: 200 }), isOther(v.what));
   const recent = S.qraps.filter(q => q.id !== v.id && Date.now() - new Date(q.when).getTime() < 7 * 864e5)
     .map(q => ({ value: q.id, label: q.id + ' – ' + titleOf(q).slice(0, 60) }));
   const repeat = showIf(F.select('repeatRef', 'N° QRAP', recent,
     { req: true, ph: recent.length ? '— vyberte —' : 'Žádný QRAP za posledních 7 dnů' }), v.repeat7 === 'ANO');
-  const otherBox = showIf(F.input('notifiedOther', 'Jiné – kdo', { req: true, ph: 'jiné – kdo' }), split(v.notified).some(isOther));
-  const photos = isNew ? photoPicker() : null;
+  const otherBox = showIf(F.input('notifiedOther', 'Jiné – kdo', { req: true, ph: 'jiné – kdo', len: 200 }), split(v.notified).some(isOther));
+  const photos = isNew ? photoPicker(photoState, onPhoto) : null;
   const parts = {
     safety: F.yesno('safety', 'SAFETY', { req: true, wide: true, hint: 'Jde o bezpečnost lidí (úraz, pád zboží, VZV…)? Vyberte vědomě.' }),
     what: h('div', { class: 'q-group wide' },
@@ -1928,10 +2530,10 @@ function popisForm(v, isNew) {
     qty: qtyRow(F, L),
     repeat: h('div', { class: 'q-group wide' },
       F.yesno('repeat7', 'Stejný problém v posledních 7 dnech?', { req: true, onchange: x => showIf(repeat, x === 'ANO') }), repeat),
-    finder: F.input('finder', 'JMÉNO (kdo vyplňuje formulář)', { req: true, hint: 'Vaše jméno' }),
-    descWrong: F.input('descWrong', 'ŠPATNÝ díl – popis', { req: true, rows: 4, hint: 'Co je špatně? Popište fakta.' }),
-    descRight: F.input('descRight', 'DOBRÝ díl – popis', { req: true, rows: 4, hint: 'Jak to má být správně?' }),
-    reference: F.input('reference', 'Reference', { opt: true }),
+    finder: F.input('finder', 'JMÉNO (kdo vyplňuje formulář)', { req: true, hint: 'Vaše jméno', len: 100 }),
+    descWrong: F.input('descWrong', 'ŠPATNÝ díl – popis', { req: true, rows: 4, hint: 'Co je špatně? Popište fakta.', len: 1000 }),
+    descRight: F.input('descRight', 'DOBRÝ díl – popis', { req: true, rows: 4, hint: 'Jak to má být správně?', len: 1000 }),
+    reference: F.input('reference', 'Reference', { opt: true, len: 200 }),
     notified: h('div', null,
       F.checks('notified', 'Kdo byl upozorněn?', S.lists.alert || [], { req: true, hint: 'Koho jste informovali? Vyberte alespoň jednoho.',
         onchange: list => showIf(otherBox, list.some(isOther)) }),
@@ -1960,7 +2562,8 @@ function popisForm(v, isNew) {
       if (new Date(d.when).getTime() > Date.now() + 5 * 60000) return F.mark('when', 'KDY nemůže být v budoucnosti.');
       if (photos) {
         const p = photos.get();
-        const own = k => !!(p[k] && p[k].full); // only photos taken on this device are uploaded now; phone photos are already in Drive
+        // only a photo whose background upload failed travels with the form; all others are already in Drive (token)
+        const own = k => !!(p[k] && p[k].state === 'local' && p[k].full);
         d.photoWrong = own('WRONG') ? p.WRONG.full : '';
         d.photoWrongThumb = own('WRONG') ? p.WRONG.thumb : '';
         d.photoRight = own('RIGHT') ? p.RIGHT.full : '';
@@ -2005,7 +2608,9 @@ function opatreniForm(v, ia, onPaper) {
       if (!list) return null;
       d.ia = list;
       return d;
-    }
+    },
+    /** Everything as typed, unchecked (the draft of a new QRAP). */
+    peek: () => Object.assign(F.peek(), { ia: rows.peek ? rows.peek() : [] })
   };
 }
 
@@ -2047,8 +2652,8 @@ function iaTable(existing, whenIso) {
     const it = { no: v.no, F, removed: false, orig: v.done || '', t0: v.done ? timeOf(v.done) : '' };
     it.time = h('input', { type: 'time', value: it.t0, 'aria-label': 'Čas' });
     it.tr = h('tr', null,
-      h('td', null, F.input('text', 'Okamžité opatření', { req: true, rows: 2, ph: 'co bylo uděláno' })),
-      h('td', null, F.input('owner', 'Kdo', { req: true, list: 'people-list', ph: 'kdo' })),
+      h('td', null, F.input('text', 'Okamžité opatření', { req: true, rows: 2, ph: 'co bylo uděláno', len: 500 })),
+      h('td', null, F.input('owner', 'Kdo', { req: true, list: 'people-list', ph: 'kdo', len: 100 })),
       h('td', null, it.time, h('div', { class: 'pp-rowbtns' },
         h('button', { class: 'link', type: 'button', onclick: () => { it.time.value = timeOf(new Date().toISOString()); } }, 'teď'),
         h('button', { class: 'link pp-del', type: 'button', title: 'Odebrat opatření', 'aria-label': 'Odebrat opatření',
@@ -2090,8 +2695,8 @@ function iaList(existing) {
       h('div', { class: 'ia-head' }, h('b', null, 'Okamžité opatření'),
         h('button', { class: 'link', type: 'button', onclick: () => { item.removed = true; item.el.remove(); } }, 'Odebrat')),
       h('div', { class: 'grid' },
-        F.input('text', 'Co bylo uděláno', { req: true, wide: true, ph: 'např. paleta zablokována, zboží přetříděno' }),
-        F.input('owner', 'Kdo', { req: true, list: 'people-list' }),
+        F.input('text', 'Co bylo uděláno', { req: true, wide: true, ph: 'např. paleta zablokována, zboží přetříděno', len: 500 }),
+        F.input('owner', 'Kdo', { req: true, list: 'people-list', len: 100 }),
         F.input('done', 'Čas', { type: 'datetime-local', now: true, hint: 'Kdy bylo hotovo. Prázdné = ještě probíhá.' })));
     items.push(item);
     box.append(item.el);
@@ -2112,7 +2717,8 @@ function iaList(existing) {
         out.push(Object.assign({ no: it.no || '' }, d));
       }
       return out;
-    }
+    },
+    peek: () => items.filter(it => !it.removed).map(it => Object.assign({ no: it.no || '' }, it.F.peek()))
   };
 }
 
@@ -2139,14 +2745,7 @@ function decisionEditor(q) {
     decisionExtra: h('div', null, warn, pilots),
     decisionNote: F.input('decisionNote', 'Komentář', { rows: 2, hint: 'Povinný u „Problém vyřešen“ a „Eskalace“.' })
   };
-  const bar = h('div', null, signNote(), formButtons('Podepsat', b => {
-    const d = F.read();
-    if (!d) return;
-    if (d.decision === 'POKRAČOVAT' && !d.pilots) { F.mark('pilots', 'Vyberte alespoň jednoho pilota.'); return; }
-    if ((d.decision === 'VYŘEŠENO' || d.decision === 'ESKALACE') && !d.decisionNote) { F.mark('decisionNote', 'Napište komentář.'); return; }
-    if (split(d.shifts).length < shiftsAll.length) toast('Upozornění: ne všechny směny byly informovány.');
-    submit(b, 'apiSave', [q.id, 'rozhodnuti', d], 4);
-  }));
+  const bar = h('div', null, signNote(), formButtons('Podepsat', b => signDecision(b, q, F, shiftsAll)));
   return { parts, bar };
 }
 
@@ -2158,7 +2757,7 @@ function pricinaEditor(q) {
     const name = 'root' + c + Math.random().toString(36).slice(2);
     roots[c] = [1, 2, 3, 4, 5].map(i => h('input', { type: 'radio', name, value: i, checked: Number(q['root' + c.toUpperCase()]) === i }));
     return [1, 2, 3, 4, 5].map(i => ({
-      input: F.input(c + i, c === 'o' ? i + ' PROČ ?' : 'N' + i + ' – proč nezachyceno?', { rows: 2, ph: i === 1 ? first : 'Proč se stalo to předchozí?' }),
+      input: F.input(c + i, c === 'o' ? i + ' PROČ ?' : 'N' + i + ' – proč nezachyceno?', { rows: 2, ph: i === 1 ? first : 'Proč se stalo to předchozí?', len: 1000 }),
       root: h('label', { class: 'why-root' }, roots[c][i - 1], 'kořenová příčina')
     }));
   };
@@ -2168,7 +2767,7 @@ function pricinaEditor(q) {
     [1, 2, 3, 4, 5].some(i => q['n' + i]));
   const addN = h('button', { class: 'btn small ghost', type: 'button', hidden: !nBox.hidden,
     onclick: () => { nBox.hidden = false; addN.hidden = true; } }, '+ Proč nebylo zachyceno?');
-  const stdRef = showIf(h('div', null, F.input('stdRef', 'Který standard', { req: true })), q.std === 'ANO');
+  const stdRef = showIf(h('div', null, F.input('stdRef', 'Který standard', { req: true, len: 300 })), q.std === 'ANO');
   const parts = {
     o,
     nChain: h('div', null, nBox, addN),
@@ -2176,14 +2775,7 @@ function pricinaEditor(q) {
     std: h('div', null, F.yesno('std', 'Příležitost k aktualizaci STANDARDU?', { hint: 'ANO vytvoří akci „Aktualizovat standard“.',
       onchange: x => showIf(stdRef, x === 'ANO') }), stdRef)
   };
-  const bar = formButtons('Uložit analýzu', b => {
-    const d = F.read();
-    if (!d) return;
-    ['o', 'n'].forEach(c => { const r = roots[c].find(x => x.checked); d['root' + c.toUpperCase()] = r ? r.value : ''; });
-    const filled = [1, 2, 3, 4, 5].filter(i => d['o' + i]).length;
-    if (filled < 3) toast('Upozornění: vyplněno jen ' + filled + ' Proč – obvykle je potřeba aspoň 3.');
-    submit(b, 'apiSave', [q.id, 'pricina', d], 5);
-  });
+  const bar = formButtons('Uložit analýzu', savePricina(q, F, roots));
   return { parts, bar };
 }
 
@@ -2191,17 +2783,16 @@ function pricinaEditor(q) {
 function actionEditor(q, a) {
   const F = makeForm(a ? Object.assign({}, a, { done: a.done ? dayOf(a.done) : '' }) : {});
   const el = h('div', { class: 'grid' },
-    F.input('text', 'Konečná akce', { req: true, rows: 2, wide: true }),
+    F.input('text', 'Konečná akce', { req: true, rows: 2, wide: true, len: 500 }),
     F.select('kind', 'Odstraňuje krok 5 Proč', whySteps(q, a), { req: true }),
-    F.input('owner', 'Pilot', { req: true, list: 'people-list', ph: 'Začněte psát jméno' }),
+    F.input('owner', 'Pilot', { req: true, list: 'people-list', ph: 'Začněte psát jméno', len: 100 }),
     F.input('due', 'Plán', { req: true, type: 'date', min: a ? null : today() }),
     a ? F.input('done', 'Hotovo', { type: 'date', max: today(), hint: 'Datum hotovo akci uzavře.' }) : null,
-    F.input('evidence', 'Odkaz na důkaz', { ph: 'https://…' }),
-    F.input('note', 'Poznámka', { wide: true }));
+    F.input('evidence', 'Odkaz na důkaz', { ph: 'https://…', len: 500 }),
+    F.input('note', 'Poznámka', { wide: true, len: 500 }));
   const bar = h('div', null,
-    formButtons(a ? 'Uložit akci' : 'Přidat akci', b => saveActionForm(b, q, a, F)),
-    a && a.canEdit ? h('button', { class: 'btn small danger', style: 'margin-top:6px',
-      onclick: e => submit(e.currentTarget, 'apiSaveAction', [q.id, { no: a.no, remove: true }], 6) }, 'Odebrat akci') : null);
+    formButtons(a ? 'Uložit akci' : 'Přidat akci', saveActionForm(q, a, F)),
+    a && a.canEdit ? removeActionBtn(q, a, 'margin-top:6px') : null);
   return { el, bar };
 }
 
@@ -2221,42 +2812,76 @@ function assessEditor(q) {
 }
 
 // ------------------------------------------------------------------ 8. PHOTOS
-/** file ID → Promise of the image: each photo is downloaded once, also when two places ask for it at the same time. */
+/**
+ * file ID → { p: Promise of the image, url: the image once known }. Each photo is downloaded once, also when two places
+ * ask for it at the same time. Photos taken or received on this page are put in at once (photoPut), so they are never
+ * downloaded again. At most PHOTO_MAX are kept (a kiosk page stays open for days).
+ */
 const PHOTOS = new Map();
+const PHOTO_MAX = 60;
+function photoKeep(fileId, entry) {
+  PHOTOS.delete(fileId);
+  PHOTOS.set(fileId, entry);
+  while (PHOTOS.size > PHOTO_MAX) PHOTOS.delete(PHOTOS.keys().next().value);
+  return entry;
+}
+function photoPut(fileId, url) { if (fileId && url) photoKeep(fileId, { p: Promise.resolve(url), url }); }
+const photoNow = fileId => { const e = fileId ? PHOTOS.get(fileId) : null; return e ? e.url : null; };
 function loadPhoto(qid, fileId) {
-  if (!PHOTOS.has(fileId)) {
-    const p = api('apiPhoto', qid, fileId);
-    PHOTOS.set(fileId, p);
-    p.catch(() => PHOTOS.delete(fileId)); // a failed download may be tried again
-  }
-  return PHOTOS.get(fileId);
+  const hit = PHOTOS.get(fileId);
+  if (hit) return photoKeep(fileId, hit).p;
+  const e = { p: null, url: null };
+  e.p = api('apiPhoto', qid, fileId).then(url => { e.url = url; return url; });
+  e.p.catch(() => { if (PHOTOS.get(fileId) === e) PHOTOS.delete(fileId); }); // a failed download may be tried again
+  return photoKeep(fileId, e).p;
 }
 
+/** A photo cell holds "fullId|previewId" (older QRAPs: only fullId). */
+const photoIds = v => String(v || '').split('|').filter(Boolean);
+
 /**
- * One photo on the paper (QRAP page): the small preview loads first, a tap opens the full photo.
- * A photo cell holds "fullId|previewId" (older QRAPs: only fullId). While ① can be changed, "Vyfotit" opens
- * the camera on a tablet / phone (capture), or the file picker on a PC.
+ * One photo on the paper (QRAP page): the preview (at once from memory, else a shimmer until it is loaded),
+ * a tap opens the full photo. While ① can be changed, "Vyfotit" opens the camera on a tablet / phone (capture),
+ * or the file picker on a PC; the new photo is shown at once while it is being uploaded.
  */
 function photoSlot(q, kind, key, title) {
-  const ids = String(q[key] || '').split('|').filter(Boolean);
-  const tile = ids.length ? h('button', { class: 'pp-ph', type: 'button', title: title, 'aria-label': title + ' – zvětšit fotku' }, 'Načítám…') : null;
-  if (tile) {
-    loadPhoto(q.id, ids[1] || ids[0]).then(url => fill(tile, h('img', { src: url, alt: title })))
-      .catch(() => { tile.textContent = 'Fotku nelze načíst'; });
-    tile.addEventListener('click', e => { e.stopPropagation(); zoom(q.id, ids[0], title); });
+  const ids = photoIds(q[key]);
+  const pic = (url, busy) => [h('img', { src: url, alt: title }), busy ? h('div', { class: 'ph-busy' }, h('span', { class: 'spin' }), busy) : null];
+  const tile = ids.length ? h('button', { class: 'pp-ph', type: 'button', title: title, 'aria-label': title + ' – zvětšit fotku' })
+    : h('div', { class: 'pp-ph', hidden: true });
+  if (ids.length) {
+    const tid = ids[1] || ids[0];
+    if (photoNow(tid)) fill(tile, pic(photoNow(tid)));
+    else {
+      fill(tile, h('span', { class: 'skel', 'aria-hidden': 'true' }));
+      loadPhoto(q.id, tid).then(url => fill(tile, pic(url))).catch(() => { fill(tile, 'Fotku nelze načíst'); });
+    }
+    tile.addEventListener('click', e => { e.stopPropagation(); zoom(q.id, ids[0], title, ids[1]); });
   }
-  if (!q.can.popis) return tile;
-  const input = h('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true, onchange: async e => {
+  if (!q.can.popis) return ids.length ? tile : null;
+  const input = h('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true, 'data-free': '', onchange: async e => {
     const file = e.target.files[0];
+    input.value = '';
     if (!file) return;
-    button.textContent = 'Nahrávám…';
-    button.disabled = true;
+    const w = waitStart(button, { phases: PHASES.photo, short: 'Zpracovávám…' });
     try {
       const p = await shrink(file);
-      store(await api('apiSetPhoto', q.id, kind, p.full, p.thumb));
+      tile.hidden = false;
+      fill(tile, pic(p.thumb, 'Nahrávám…')); // the new photo is visible at once
+      w.say('Nahrávám fotku…');
+      const res = await api('apiSetPhoto', q.id, kind, p.full, p.thumb);
+      const nids = photoIds(res.qrap && res.qrap[key]);
+      photoPut(nids[1], p.thumb); // already here – never downloaded again
+      photoPut(nids[0], p.full);
+      store(res);
+      w.end();
       toast('Fotka uložena ✓');
-    } catch (err) { toast(errText(err), true); }
-    input.value = '';
+    } catch (err) {
+      w.end();
+      toast(errText(err), true);
+      if (S.view === 'detail' && !S.edit) render(); // back to the photo that is really saved
+      return;
+    }
     if (S.edit) { button.disabled = false; button.textContent = '📷 Vyfotit znovu'; } else render(); // never throw away a block being filled in
   } });
   const button = h('button', { class: 'btn small pp-cam no-print', type: 'button', onclick: e => { e.stopPropagation(); input.click(); } },
@@ -2265,143 +2890,304 @@ function photoSlot(q, kind, key, title) {
 }
 
 /**
- * Optional photos in the new-QRAP form. A photo is { full, thumb } when it was taken on this device (shrunk in the
- * browser so the upload is quick), or { thumb } when it arrived from a phone (the full photo is already in Drive;
- * only the token is sent). "📱 Fotit telefonem" shows a QR code; the phone uploads, this page polls every 3 s.
+ * Optional photos in the new-QRAP form, one per kind. Per kind: null or { thumb, full?, value?, state }:
+ *   'up'      taken here and being uploaded in the background – the operator goes on filling in the form
+ *   'staged'  taken here and already in Drive (value = the photo cell) – "Odeslat" sends only the token
+ *   'phone'   arrived from the phone hand-off (only the preview is here, the photo is in Drive)
+ *   'local'   taken here, but the background upload failed – it travels with "Odeslat" (slower, never lost)
+ * The uploads of one kind run one after another, so the photo taken last is the one the server keeps.
+ * "📱 Fotit telefonem" shows a QR code; the page then asks every few seconds what arrived (photoPoll_).
  * The server side is in PhotoHandoff.gs, the page the phone opens is Upload.html.
+ * init = the photos of a draft ({ session, pics }); onChange = called after every change (the draft is saved).
  */
-function photoPicker() {
+function photoPicker(init, onChange) {
   const KINDS = ['WRONG', 'RIGHT'];
   const NAMES = { WRONG: 'ŠPATNÝ', RIGHT: 'DOBRÝ' };
+  const keyOf = k => (k === 'RIGHT' ? 'photoRight' : 'photoWrong');
   const pics = { WRONG: null, RIGHT: null };
+  const prep = { WRONG: null, RIGHT: null };   // the picture being shrunk (a Promise), so "Odeslat" can wait for it
+  const chain = { WRONG: Promise.resolve(), RIGHT: Promise.resolve() };
+  const have = {};                              // per kind: the value the server has (the poll sends only what is new)
+  let session = (init && init.session) || null;
+  KINDS.forEach(k => {
+    const p = init && init.pics && init.pics[k];
+    if (p && p.value && p.thumb) { pics[k] = { thumb: p.thumb, value: p.value, state: p.state === 'phone' ? 'phone' : 'staged' }; have[k] = p.value; }
+  });
+  let root = null; // the form this belongs to: background work stops when it is gone
+  let dlg = null, polling = false, seen = false;
+  const alive = () => !root || root.isConnected;
   const redraws = [];
-  const redrawAll = () => redraws.forEach(f => f());
-  const have = {};   // per kind: the value the server already gave us (so the poll sends only what is new)
-  let session = null;
+  const changed = () => { redraws.forEach(f => f()); sayDlg(); if (onChange) onChange(); };
+
+  let sessionP = null;
+  const ensureSession = () => {
+    if (session) return Promise.resolve(session);
+    if (!sessionP) sessionP = api('apiPhotoSession').then(s => { session = s; sessionP = null; return s; }, e => { sessionP = null; throw e; });
+    return sessionP;
+  };
+  /** The hand-off expired (6 h): photos taken here go with "Odeslat" instead; phone photos are gone and are said to be. */
+  const sessionLost = () => {
+    session = null;
+    let gone = 0;
+    KINDS.forEach(k => {
+      delete have[k];
+      const p = pics[k];
+      if (!p) return;
+      if (p.full) { if (p.state === 'staged') p.state = 'local'; } else { pics[k] = null; gone++; }
+    });
+    if (gone) toast('Fotky z telefonu vypršely (po 6 h) – vyfoťte je prosím znovu.', true);
+    changed();
+  };
+
+  /** Uploads a photo taken here in the background. A failed upload keeps the photo – it then goes with "Odeslat". */
+  const stage = (kind, p) => {
+    p.state = 'up';
+    pics[kind] = p;
+    changed();
+    chain[kind] = chain[kind]
+      .then(() => ensureSession())
+      .then(s => api('apiStagePhoto', s.token, kind, p.full, p.thumb))
+      .then(r => {
+        if (pics[kind] === p) { p.value = r.value; p.state = 'staged'; have[kind] = r.value; }
+        else delete have[kind]; // replaced meanwhile – the next poll says what the server really has
+      }, e => {
+        if (pics[kind] === p) p.state = 'local';
+        if (/neplatí/.test(errText(e))) sessionLost();
+      })
+      .then(changed);
+    return chain[kind];
+  };
 
   const slot = (kind, title) => {
     const box = h('div', { class: 'pslot ' + (kind === 'RIGHT' ? 'right' : 'wrong') });
-    const input = h('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true, onchange: async e => {
+    const input = h('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true, onchange: e => {
       const file = e.target.files[0];
-      if (!file) return;
-      try { pics[kind] = await shrink(file); } catch (err) { toast(errText(err), true); }
       input.value = '';
+      if (!file) return;
+      prep[kind] = shrink(file).then(p => { prep[kind] = null; return stage(kind, p); },
+        err => { prep[kind] = null; draw(); toast(errText(err), true); });
       draw();
     } });
-    const draw = () => fill(box,
-      pics[kind] ? h('button', { class: 'ph', type: 'button', 'aria-label': title + ' – vyfotit znovu', onclick: () => input.click() },
-        h('img', { src: pics[kind].thumb, alt: title })) : null,
-      h('div', { class: 'inline-form' },
-        h('button', { class: 'btn small', type: 'button', onclick: () => input.click() }, pics[kind] ? '📷 Vyfotit znovu' : '📷 Přidat foto'),
-        pics[kind] ? null : h('span', { class: 'opt' }, 'nepovinné'),
-        pics[kind] ? h('button', { class: 'btn small ghost', type: 'button', onclick: () => { pics[kind] = null; draw(); } }, 'Odebrat') : null),
-      input);
+    const note = p => (p.state === 'up' ? [h('span', { class: 'spin' }), 'Nahrávám na pozadí – můžete pokračovat']
+      : p.state === 'local' ? 'Nahraje se při odeslání' : p.state === 'phone' ? '📱 Z telefonu ✓' : 'Nahráno ✓');
+    const draw = () => {
+      const p = pics[kind];
+      fill(box,
+        prep[kind] ? h('div', { class: 'ph' }, h('span', { class: 'skel' }), h('div', { class: 'ph-busy' }, h('span', { class: 'spin' }), 'Zpracovávám fotku…'))
+          : p ? h('button', { class: 'ph', type: 'button', 'aria-label': title + ' – vyfotit znovu', onclick: () => input.click() },
+            h('img', { src: p.thumb, alt: title }), h('div', { class: 'ph-busy' + (p.state === 'up' || p.state === 'local' ? '' : ' ok') }, note(p))) : null,
+        h('div', { class: 'inline-form' },
+          h('button', { class: 'btn small', type: 'button', disabled: !!prep[kind], onclick: () => input.click() }, p ? '📷 Vyfotit znovu' : '📷 Přidat foto'),
+          p ? null : h('span', { class: 'opt' }, 'nepovinné'),
+          p ? h('button', { class: 'btn small ghost', type: 'button', onclick: () => { pics[kind] = null; DIRTY = true; changed(); } }, 'Odebrat') : null),
+        input);
+    };
     redraws.push(draw);
     draw();
     return box;
   };
 
-  async function phoneDialog() {
-    if (!session) {
-      try {
-        session = await api('apiPhotoSession');
-        KINDS.forEach(k => { delete have[k]; });
-      } catch (e) { toast(errText(e), true); return; }
-    }
-    let alive = true;
-    const status = h('p', { class: 'sub', role: 'status' }, 'Čekám na fotku…');
-    const close = () => { alive = false; box.remove(); };
-    let qrEl;
+  /** While the form is open and the phone was used: what arrived? (fast while the QR dialog is open, slower after). */
+  async function poll() {
+    if (polling) return;
+    polling = true;
+    let fails = 0, quiet = Date.now();
     try {
-      if (typeof qrcode !== 'function') throw new Error('QR library not loaded');
-      const qr = qrcode(0, 'M');
-      qr.addData(session.url);
-      qr.make();
-      qrEl = h('img', { src: qr.createDataURL(5, 4), alt: 'QR kód', width: 220, height: 220, style: 'image-rendering:pixelated' });
-    } catch (e) {
-      qrEl = h('p', { class: 'sub', style: 'overflow-wrap:anywhere' }, 'QR kód se nepodařilo vytvořit. Otevřete na telefonu tento odkaz: ', h('br'), session.url);
-    }
-    const box = h('div', { class: 'lightbox', role: 'dialog', 'aria-label': 'Vyfoťte telefonem', style: 'cursor:default' },
-      h('div', { class: 'card', style: 'text-align:center;max-width:340px;margin:0' },
-        h('h2', null, 'Vyfoťte telefonem'),
-        h('p', null, 'Naskenujte QR kód firemním telefonem a vyfoťte oba díly.'),
-        qrEl, status,
-        h('div', { class: 'form-btns', style: 'justify-content:center' }, h('button', { class: 'btn primary', type: 'button', onclick: close }, 'Hotovo'))));
-    document.body.append(box);
-
-    const say = () => {
-      const got = KINDS.filter(k => have[k]).map(k => NAMES[k]);
-      status.textContent = got.length ? 'Přijato: ' + got.join(', ') + ' ✓' : 'Čekám na fotku…';
-    };
-    say();
-    let fails = 0;
-    while (alive) {
-      await new Promise(r => setTimeout(r, 3000));
-      if (!alive) break;
-      try {
-        const r = await api('apiPhotoPoll', session.token, have);
-        fails = 0;
-        const got = KINDS.filter(k => r[k]);
-        got.forEach(k => { have[k] = r[k].value; pics[k] = { thumb: r[k].thumb }; });
-        if (got.length) { redrawAll(); say(); }
-      } catch (e) {
-        fails++;
-        if (/neplatí/.test(String((e && e.message) || ''))) {
-          // the session is gone: phone photos that were only shown here are gone with it – say so instead of sending without them
-          session = null;
-          KINDS.forEach(k => { delete have[k]; if (pics[k] && !pics[k].full) pics[k] = null; });
-          redrawAll();
-          status.textContent = errText(e);
-          alive = false;
-        } else if (fails >= 5) {
-          status.textContent = errText(e);
-          alive = false;
+      while (session && alive() && Date.now() - quiet < 20 * 60000) {
+        await sleep(dlg ? 2500 : 6000);
+        if (!session || !alive()) break;
+        try {
+          const r = await api('apiPhotoPoll', session.token, have);
+          fails = 0;
+          if (r.seen && !seen) { seen = true; quiet = Date.now(); sayDlg(); }
+          const got = KINDS.filter(k => r[k]);
+          got.forEach(k => {
+            have[k] = r[k].value;
+            pics[k] = { thumb: r[k].thumb, value: r[k].value, state: 'phone' };
+            photoPut(photoIds(r[k].value)[1], r[k].thumb);
+          });
+          if (got.length) { quiet = Date.now(); DIRTY = true; changed(); }
+        } catch (e) {
+          if (/neplatí/.test(errText(e))) { sessionLost(); sayDlg(errText(e)); break; }
+          if (++fails >= 5) { sayDlg('Spojení se nedaří: ' + errText(e)); break; }
         }
       }
+    } finally {
+      polling = false;
     }
+  }
+
+  async function phoneDialog() {
+    if (dlg) return;
+    const status = h('p', { class: 'sub', role: 'status', style: 'min-height:1.5em' });
+    const qrBox = h('div', { class: 'qr-box' }, h('span', { class: 'skel', style: 'width:220px;height:220px' }));
+    const thumbs = h('div', { class: 'qr-thumbs' });
+    const done = h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Hotovo');
+    const box = h('div', { class: 'modal no-print', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Vyfoťte telefonem' },
+      h('div', { class: 'modal-card', style: 'text-align:center;max-width:380px' },
+        h('h2', null, 'Vyfoťte telefonem'),
+        h('ol', { class: 'qr-how' }, h('li', null, 'Naskenujte QR kód firemním telefonem.'),
+          h('li', null, 'Na telefonu vyfoťte ŠPATNÝ a DOBRÝ díl.'), h('li', null, 'Fotky se objeví tady i ve formuláři.')),
+        qrBox, status, thumbs,
+        h('div', { class: 'form-btns', style: 'justify-content:center' }, done)));
+    const esc = e => { if (e.key === 'Escape') close(); };
+    const close = () => { if (!dlg) return; dlg = null; box.remove(); document.removeEventListener('keydown', esc, true); };
+    dlg = { status, thumbs };
+    document.body.append(box);
+    document.addEventListener('keydown', esc, true);
+    done.focus();
+    sayDlg('Připravuji QR kód…');
+    try {
+      const s = await ensureSession();
+      await qrLib().catch(() => null); // without the library the link is shown as text
+      if (!dlg) return;
+      fill(qrBox, qrImage(s.url));
+      sayDlg();
+      poll();
+    } catch (e) {
+      fill(qrBox);
+      sayDlg(errText(e));
+    }
+  }
+  function sayDlg(msg) {
+    if (!dlg) return;
+    const got = KINDS.filter(k => pics[k] && pics[k].state === 'phone');
+    fill(dlg.status, msg || (got.length === 2 ? '✓ Obě fotky jsou tady. Stiskněte Hotovo.'
+      : got.length ? 'Přijato: ' + got.map(k => NAMES[k]).join(', ') + ' ✓ – čekám na další…'
+      : [h('span', { class: 'pulse' }), seen ? ' 📱 Telefon je připojený – čekám na fotku…' : ' Čekám, až naskenujete QR kód…']));
+    fill(dlg.thumbs, got.map(k => h('img', { src: pics[k].thumb, alt: NAMES[k] + ' díl' })));
   }
 
   return {
     slot,
+    attach: el => { root = el; },
     get: () => Object.assign({}, pics),
+    count: () => KINDS.filter(k => pics[k]).length,
+    pending: () => KINDS.some(k => prep[k] || (pics[k] && pics[k].state === 'up')),
+    /** Resolves when every photo taken so far is shrunk and uploaded (or failed and will go with the form). */
+    settle: () => Promise.all(KINDS.map(k => Promise.resolve(prep[k]).then(() => chain[k]))),
     token: () => (session ? session.token : ''),
-    // kinds whose phone photo must NOT be attached: removed here, or replaced by a photo taken on this device
-    drop: () => KINDS.filter(k => !(pics[k] && !pics[k].full)),
+    // kinds whose photo in the hand-off must NOT be attached: removed here, or a photo that goes with the form instead
+    drop: () => KINDS.filter(k => !(pics[k] && (pics[k].state === 'staged' || pics[k].state === 'phone'))),
+    /** For the draft: only what is safely on the server (value) – with its preview. */
+    state: () => ({ session, pics: KINDS.reduce((o, k) => {
+      const p = pics[k];
+      o[k] = p && p.value && (p.state === 'staged' || p.state === 'phone') ? { thumb: p.thumb, value: p.value, state: p.state } : null;
+      return o;
+    }, {}) }),
+    /** After "Odeslat": the previews of the new QRAP are already here – the QRAP page shows them without downloading. */
+    seed(q) {
+      KINDS.forEach(k => {
+        const p = pics[k];
+        const ids = photoIds(q[keyOf(k)]);
+        if (!p || !ids.length || !(p.state === 'local' || p.value === q[keyOf(k)])) return;
+        photoPut(ids[1], p.thumb);
+        if (p.full) photoPut(ids[0], p.full);
+      });
+    },
+    /** The hand-off had expired: photos taken here are attached now; phone photos are lost – the returned text says so. */
+    afterCreate(res) {
+      if (!res.phoneExpired) return '';
+      const q = res.qrap;
+      const redo = KINDS.filter(k => pics[k] && pics[k].full && !q[keyOf(k)]);
+      const lost = KINDS.filter(k => pics[k] && !pics[k].full);
+      if (redo.length) {
+        redo.reduce((p, k) => p.then(() => api('apiSetPhoto', q.id, k, pics[k].full, pics[k].thumb).then(store)), Promise.resolve())
+          .then(() => { toast('Fotky připojeny k ' + q.id + ' ✓'); if (S.view === 'board' && redrawBoard) redrawBoard(); },
+            () => toast('Fotky se nepodařilo připojit – přidejte je na stránce ' + q.id + ' (Přidat foto).', true));
+      }
+      return lost.length ? ' Fotky z telefonu se nepodařilo připojit (odkaz vypršel) – přidejte je na stránce QRAP (Přidat foto).' : '';
+    },
+    /** The form was thrown away: its uploaded photos go to the Drive trash. */
+    discard() {
+      const t = session && session.token;
+      session = null;
+      KINDS.forEach(k => { pics[k] = null; });
+      if (t) api('apiPhotoDiscard', t).catch(() => { /* expired anyway */ });
+    },
     phoneBtn: () => h('button', { class: 'btn', type: 'button', onclick: phoneDialog }, '📱 Fotit telefonem')
   };
 }
 
-/** Decodes the picture once and returns it twice as JPEG: the photo (max 1280 px) and a preview (max 480 px). */
+/**
+ * The QR code library is loaded only when it is needed (prefetched when the new-QRAP form opens), so it never slows
+ * down the start of the app. First jsDelivr with a fixed fingerprint (a changed file is refused), cdnjs as a fallback.
+ */
+let QR_LIB = null;
+function qrLib() {
+  if (typeof qrcode === 'function') return Promise.resolve();
+  if (QR_LIB) return QR_LIB;
+  const load = (src, sri) => new Promise((ok, bad) => {
+    const s = h('script', { src: src, integrity: sri || null, crossorigin: sri ? 'anonymous' : null });
+    s.onload = ok;
+    s.onerror = () => { s.remove(); bad(new Error('Knihovnu pro QR kód se nepodařilo načíst.')); };
+    document.head.append(s);
+  });
+  QR_LIB = load('https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js',
+    'sha384-8FWZA6BGMXhsfO+BLtrJK0We6gg5o1JyO8xQm6peWDEUs17ACA5ziE/NIAkl9z2k')
+    .catch(() => load('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js'))
+    .catch(e => { QR_LIB = null; throw e; });
+  return QR_LIB;
+}
+
+/** The QR code as a picture – or, when the library is not there, the link as text to type in. */
+function qrImage(url) {
+  try {
+    if (typeof qrcode !== 'function') throw new Error('QR library not loaded');
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    return h('img', { src: qr.createDataURL(5, 4), alt: 'QR kód', width: 220, height: 220, style: 'image-rendering:pixelated' });
+  } catch (e) {
+    return h('p', { class: 'sub', style: 'overflow-wrap:anywhere' }, 'QR kód se nepodařilo vytvořit. Otevřete na telefonu tento odkaz: ', h('br'), url);
+  }
+}
+
+/**
+ * Decodes the picture once and returns it twice as JPEG: the photo (max 1280 px) and a preview (max 480 px).
+ * The preview is made from the 1280 px copy – much faster than from a 12-megapixel camera original.
+ */
 function shrink(file) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const src = URL.createObjectURL(file);
-    const jpeg = (max, quality) => {
-      const scale = Math.min(1, max / Math.max(img.width, img.height));
+    const draw = (from, w0, h0, max) => {
+      const scale = Math.min(1, max / Math.max(w0, h0));
       const c = document.createElement('canvas');
-      c.width = Math.max(1, Math.round(img.width * scale));
-      c.height = Math.max(1, Math.round(img.height * scale));
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      return c.toDataURL('image/jpeg', quality);
+      c.width = Math.max(1, Math.round(w0 * scale));
+      c.height = Math.max(1, Math.round(h0 * scale));
+      const g = c.getContext('2d');
+      g.imageSmoothingQuality = 'high';
+      g.drawImage(from, 0, 0, c.width, c.height);
+      return c;
     };
     img.onload = () => {
       URL.revokeObjectURL(src);
-      try { resolve({ full: jpeg(1280, 0.8), thumb: jpeg(480, 0.7) }); } catch (e) { reject(e); }
+      try {
+        const big = draw(img, img.width, img.height, 1280);
+        const small = draw(big, big.width, big.height, 480);
+        resolve({ full: big.toDataURL('image/jpeg', 0.8), thumb: small.toDataURL('image/jpeg', 0.7) });
+      } catch (e) { reject(e); }
     };
     img.onerror = () => { URL.revokeObjectURL(src); reject(new Error('Soubor není obrázek.')); };
     img.src = src;
   });
 }
 
-/** The full photo over the page; a click or Esc closes it. */
-function zoom(qid, fileId, title) {
+/** The full photo over the page; a click or Esc closes it. The preview shows at once while the full photo loads. */
+function zoom(qid, fileId, title, thumbId) {
   const close = () => { lb.remove(); document.removeEventListener('keydown', esc); };
   const esc = e => { if (e.key === 'Escape') close(); };
+  const full = photoNow(fileId);
+  const quick = full || photoNow(thumbId);
   const lb = h('div', { class: 'lightbox', role: 'dialog', 'aria-label': title || 'Fotka', tabindex: -1, onclick: close },
-    h('span', { class: 'lb-wait' }, 'Načítám…'));
+    quick ? h('img', { src: quick, alt: title || 'Fotka', class: full ? null : 'lb-soft' })
+      : h('span', { class: 'lb-wait' }, h('span', { class: 'spin' }), ' Načítám fotku…'),
+    full ? null : h('span', { class: 'lb-note' }, h('span', { class: 'spin' }), quick ? 'Načítám plné rozlišení…' : 'Chvilku…'));
   document.body.append(lb);
   document.addEventListener('keydown', esc);
   lb.focus();
+  if (full) return;
   loadPhoto(qid, fileId).then(url => { if (lb.isConnected) fill(lb, h('img', { src: url, alt: title || 'Fotka' })); })
     .catch(err => { close(); toast(errText(err), true); });
 }
@@ -2530,39 +3316,47 @@ function fillPeopleList() {
 }
 
 function adminPage() {
-  const box = h('div', null, note('Načítám…'));
-  const draw = () => fill(box, peopleCard(), listsCard(), settingsCard());
+  const box = h('div', { 'aria-busy': 'true' }, [1, 2].map(() => h('div', { class: 'card' },
+    h('span', { class: 'skel', style: 'height:18px;width:30%' }), h('span', { class: 'skel', style: 'height:120px;margin-top:14px' }))));
+  const draw = () => { box.removeAttribute('aria-busy'); fill(box, peopleCard(), listsCard(), settingsCard()); };
+  // opening another form throws away what was typed in this one – asked first
+  const open = edit => leaveOk().then(ok => { if (!ok) return; DIRTY = false; S.edit = edit; draw(); });
   const saved = res => {
     S.adm = res;
     Object.assign(S, { people: res.boot.people, lists: res.boot.lists, cfg: res.boot.cfg });
     fillPeopleList();
     S.edit = null;
+    DIRTY = false;
     draw();
     toast('Uloženo ✓');
   };
   const call = async (btn, fn, args) => {
-    const label = btn.textContent;
-    btn.disabled = true; btn.textContent = 'Ukládám…';
-    try { saved(await api(fn, ...args)); } catch (e) { toast(errText(e), true); btn.disabled = false; btn.textContent = label; }
+    const w = waitStart(btn);
+    try { const res = await api(fn, ...args); w.end(); saved(res); } catch (e) { w.end(); toast(errText(e), true); }
   };
   function personForm(p) {
     const F = makeForm(p ? Object.assign({}, p, { active: p.active ? 'ANO' : '' }) : { active: 'ANO' });
-    const b = h('button', { class: 'btn primary', onclick: () => {
+    const b = h('button', { class: 'btn primary', onclick: async () => {
       const d = F.read(); if (!d) return;
+      const off = p && p.active && d.active !== 'ANO';
+      const demote = p && p.role && p.role !== d.role;
+      if ((off || demote) && !(await ask({ title: off ? 'Deaktivovat ' + p.name + '?' : 'Změnit roli ' + p.name + '?', ok: 'Ano, uložit', cancel: 'Zpět',
+        text: (off ? 'Osoba přestane dostávat e-maily a nebude ji možné vybrat jako pilota. ' : '') +
+          (demote ? 'Role ' + roleName(p.role) + ' → ' + (roleName(d.role) || 'uživatel') + '. ' : '') + 'V historii zůstane vše, jak bylo.', danger: true }))) return;
       call(b, 'apiSavePerson', [{ row: p ? p.row : '', name: d.name, email: d.email, role: d.role, area: d.area, active: d.active === 'ANO' }]);
     } }, p ? 'Uložit' : 'Přidat osobu');
     return h('div', { class: 'act-form' }, h('div', { class: 'grid' },
-      F.input('name', 'Jméno', { req: true }), F.input('email', 'E-mail (firemní účet Google)', { req: true, type: 'email' }),
+      F.input('name', 'Jméno', { req: true, len: 100 }), F.input('email', 'E-mail (firemní účet Google)', { req: true, type: 'email' }),
       F.select('role', 'Role', S.adm.roles.map(r => ({ value: r, label: r + ' – ' + ROLE_HELP[r] })), { ph: '— bez role (uživatel) —' }),
       F.select('area', 'Zóna', S.lists.zones || [], { ph: '— všechny zóny —' }),
       F.toggle('active', 'Aktivní (neaktivní osoba je dál v historii, ale nemá roli)', { wide: true })),
-    h('div', { class: 'form-btns' }, b, h('button', { class: 'btn ghost', onclick: () => { S.edit = null; draw(); } }, 'Zrušit')));
+    h('div', { class: 'form-btns' }, b, h('button', { class: 'btn ghost', onclick: () => open(null) }, 'Zrušit')));
   }
   function peopleCard() {
     const people = S.adm.people.slice().sort((a, b) => (b.active - a.active) || a.name.localeCompare(b.name, 'cs'));
     return h('div', { class: 'card' },
       h('div', { class: 'p-head' }, h('h2', null, 'Lidé a role (' + people.length + ')'), h('div', { class: 'grow' }),
-        S.edit === 'person:new' ? null : h('button', { class: 'btn small primary', onclick: () => { S.edit = 'person:new'; draw(); } }, '+ Přidat osobu')),
+        S.edit === 'person:new' ? null : h('button', { class: 'btn small primary', onclick: () => open('person:new') }, '+ Přidat osobu')),
       S.edit === 'person:new' ? personForm(null) : null,
       h('div', { class: 'slots-wrap' }, h('table', { class: 'people' },
         h('tr', null, ['Jméno', 'E-mail', 'Role', 'Zóna', 'Stav', ''].map(x => h('th', null, x))),
@@ -2570,7 +3364,7 @@ function adminPage() {
           : h('tr', { class: p.active ? '' : 'inactive' }, h('td', null, h('b', null, p.name)), h('td', null, p.email),
             h('td', null, p.role ? h('span', { class: 'tag' }, roleName(p.role)) : h('span', { class: 'sub' }, 'uživatel')),
             h('td', null, p.area || h('span', { class: 'sub' }, 'všechny')), h('td', null, p.active ? 'aktivní' : 'neaktivní'),
-            h('td', null, h('button', { class: 'btn small ghost', onclick: () => { S.edit = 'person:' + p.row; draw(); } }, 'Upravit'))))))),
+            h('td', null, h('button', { class: 'btn small ghost', onclick: () => open('person:' + p.row) }, 'Upravit'))))))),
       h('p', { class: 'sub' }, 'Lidé se nemažou – nastavte „neaktivní“. Role: prázdná = uživatel (může vyplnit a podepsat každý krok QRAP), MANAŽER (navíc ' +
         'zrušit / znovu otevřít / odemknout QRAP, Přehled manažera a e-maily o nových problémech ve své zóně), ADMIN (navíc Správa). Adminů může být víc – aspoň jeden by měl ve firmě zůstat. ' +
         'Kdo není na seznamu, může aplikaci používat jako uživatel.'));
@@ -2581,21 +3375,37 @@ function adminPage() {
       h('div', { class: 'cols3' }, S.adm.lists.map(l => {
         const ta = h('textarea', { rows: Math.max(4, l.values.length + 1), 'aria-label': l.title });
         ta.value = l.values.join('\n');
-        const b = h('button', { class: 'btn small', onclick: () => call(b, 'apiSaveList', [l.key, ta.value.split('\n')]) }, 'Uložit');
+        const b = h('button', { class: 'btn small', onclick: async () => {
+          const vals = ta.value.split('\n').map(x => x.trim()).filter(Boolean);
+          if (!vals.length) { ta.focus(); toast('Seznam nesmí být prázdný.', true); return; }
+          const gone = l.values.filter(x => !vals.includes(x));
+          if (gone.length && !(await ask({ title: 'Odebrat ze seznamu „' + l.title + '“?', text: gone.join(', ') + ' – ve formuláři to už nepůjde vybrat. ' +
+            'Staré QRAP si hodnotu ponechají.', ok: 'Odebrat a uložit', cancel: 'Zpět', danger: true }))) return;
+          call(b, 'apiSaveList', [l.key, vals]);
+        } }, 'Uložit');
         return h('div', { class: 'fld' }, h('span', { class: 'fld-l' }, l.title), ta, h('div', { style: 'margin-top:6px' }, b));
       })));
   }
   function settingsCard() {
     const inputs = {};
-    const b = h('button', { class: 'btn primary', onclick: () => {
+    const was = {};
+    S.adm.settings.forEach(x => { was[x.key] = String(x.value === undefined ? '' : x.value); });
+    const b = h('button', { class: 'btn primary', onclick: async () => {
       const o = {};
       Object.keys(inputs).forEach(k => { o[k] = inputs[k].value.trim(); });
+      // the settings that can silently break the app for everybody are asked about
+      const risky = [];
+      if (o.EMAILY === 'NE' && was.EMAILY !== 'NE') risky.push('Vypínáte VŠECHNY e-maily – nikdo nedostane upozornění na nové problémy ani SAFETY.');
+      if (o.ODKAZ_APLIKACE && o.ODKAZ_APLIKACE !== was.ODKAZ_APLIKACE && !/^https:\/\/script\.google\.com\/.+\/exec$/.test(o.ODKAZ_APLIKACE)) {
+        risky.push('Odkaz aplikace nevypadá jako adresa webové aplikace (https://script.google.com/…/exec). Špatný odkaz rozbije odkazy v e-mailech i QR kód pro telefon.');
+      }
+      if (risky.length && !(await ask({ title: 'Opravdu uložit?', text: risky.join(' '), ok: 'Přesto uložit', cancel: 'Zpět', danger: true }))) return;
       call(b, 'apiSaveSettings', [o]);
     } }, 'Uložit nastavení');
     return h('div', { class: 'card' }, h('h2', null, 'Nastavení'),
       h('div', { class: 'grid' }, S.adm.settings.map(x => {
         const el = x.key === 'EMAILY' ? h('select', null, h('option', { value: 'ANO' }, 'ANO'), h('option', { value: 'NE' }, 'NE'))
-          : h('input', { type: /^(LHUTA|ZOBRAZIT)/.test(x.key) ? 'number' : 'text', min: 1 });
+          : h('input', { type: /^(LHUTA|ZOBRAZIT)/.test(x.key) ? 'number' : 'text', min: 1, max: x.key === 'LHUTA_OPATRENI_HODIN' ? 720 : x.key === 'ZOBRAZIT_UZAVRENE_DNI' ? 365 : null });
         el.value = x.value === undefined ? '' : x.value;
         inputs[x.key] = el;
         return h('label', { class: 'fld' }, h('span', { class: 'fld-l' }, SETTING_LABELS[x.key] || x.key), el, h('small', null, x.help));
@@ -2603,7 +3413,7 @@ function adminPage() {
       h('div', { class: 'form-btns' }, b));
   }
   if (S.adm) draw();
-  else api('apiAdminData').then(res => { S.adm = res; draw(); }).catch(e => { fill(box, note(errText(e))); });
+  else api('apiAdminData').then(res => { S.adm = res; draw(); }).catch(e => { box.removeAttribute('aria-busy'); fill(box, note(errText(e))); });
   return h('div', null,
     pageHead('Správa', 'Lidé, seznamy a nastavení aplikace. Změny platí hned (ostatní uživatelé po obnovení stránky).', null, 'Správa'),
     box);
@@ -2666,17 +3476,19 @@ let refreshing = false;
 async function refresh(quiet, btn, all) {
   if (quiet && refreshing) return;
   refreshing = true;
-  if (btn) { btn.disabled = true; btn.textContent = 'Načítám…'; }
+  const w = quiet ? null : waitStart(btn || null, { lock: false, phases: PHASES.load });
   let changed = false;
   try {
     const res = await api('apiRefresh', all || S.all, quiet ? S.ver : '');
     if (res.unchanged) S.loadedAt = Date.now();
     else { loadLists(res); changed = true; }
+    if (res.build && BOOT.build && res.build !== BOOT.build && !S.newBuild) { S.newBuild = true; drawBanners(); } // redeployed
     if (!quiet) toast('Aktualizováno ✓');
   } catch (e) {
     if (!quiet) toast(errText(e), true);
   } finally {
     refreshing = false;
+    if (w) w.end();
   }
   if (btn || all) render(); // on any page – also "Načíst všechna data" on Přehled manažera
   else if (changed && S.view === 'board' && redrawBoard) redrawBoard();
@@ -2690,7 +3502,7 @@ function refreshOne(id) {
     if (!res || res.unchanged) return;
     const before = snap();
     store(res);
-    if (before !== snap() && S.view === 'detail' && S.id === id && !S.edit) render();
+    if (before !== snap() && S.view === 'detail' && S.id === id && !S.edit && !DIRTY && !WAIT.list.length) render(); // never under the hands of somebody typing
   }).catch(e => {
     if (!byId(id)) { toast(errText(e), true); go('board'); }
   });
@@ -2700,7 +3512,8 @@ function start() {
   if (BOOT.error) {
     fill(document.getElementById('app'), h('main', null, h('div', { class: 'card' },
       h('h1', null, 'Aplikaci se nepodařilo spustit'), h('p', null, BOOT.error),
-      h('p', { class: 'muted' }, 'Kontaktujte správce aplikace.'))));
+      BOOT.url ? h('p', null, h('a', { class: 'btn primary', href: BOOT.url, target: '_top' }, 'Zkusit znovu')) : null,
+      h('p', { class: 'muted' }, 'Když to nepomůže, kontaktujte správce aplikace (a pošlete mu text výše).'))));
     return;
   }
   loadLists(BOOT);
@@ -2712,19 +3525,42 @@ function start() {
     google.script.history.setChangeHandler(e => {
       const st = (e && e.state) || {};
       const prm = (e && e.location && e.location.parameter) || {};
-      S.view = st.view || (prm.id ? 'detail' : (prm.view || 'board'));
-      S.id = st.id || prm.id || null;
-      S.edit = null;
-      render();
+      const apply = () => {
+        leaving();
+        DIRTY = false;
+        S.view = st.view || (prm.id ? 'detail' : (prm.view || 'board'));
+        S.id = st.id || prm.id || null;
+        S.edit = null;
+        render();
+      };
+      if (!DIRTY || (S.view === 'new' && DRAFT.works && !S.edit)) { apply(); return; }
+      // the browser's Back button with unsaved work: asked; "stay" puts the address back
+      leaveOk().then(ok => {
+        if (ok) apply();
+        else try { google.script.history.push({ view: S.view, id: S.id }, S.id ? { id: S.id } : S.view !== 'board' ? { view: S.view } : {}); } catch (x) { /* ignore */ }
+      });
     });
   } catch (e) { /* ignore */ }
   document.addEventListener('click', e => {
     const t = e.target;
     if (t.matches && t.matches('.pp-edit input[type=date], .pp-edit input[type=time]') && t.showPicker) { try { t.showPicker(); } catch (err) { /* not allowed here */ } }
   });
+  document.addEventListener('input', markDirty, true);
+  document.addEventListener('change', markDirty, true);
+  // closing the tab or reloading: the draft is written; unsaved work or a save in progress makes the browser ask
+  window.addEventListener('beforeunload', e => {
+    if (onLeave) onLeave();
+    if (WAIT.list.some(w => w.lock) || (DIRTY && !(S.view === 'new' && DRAFT.works && !S.edit))) { e.preventDefault(); e.returnValue = ''; }
+  });
+  window.addEventListener('offline', () => { drawBanners(); toast('Připojení k internetu se ztratilo – vyplněné údaje zůstávají, uložte je po připojení.', true); });
+  window.addEventListener('online', () => { drawBanners(); toast('Připojení je zpět ✓'); if (S.view === 'board') refresh(true); });
   render();
   if (S.view === 'detail') refreshOne(S.id);
-  setInterval(() => { if (S.view === 'board' && !document.hidden) refresh(true); }, 90000);
+  setInterval(() => {
+    if (document.hidden) return;
+    if (S.view === 'board') refresh(true);
+    else if (S.view === 'detail' && S.id && !S.edit && !DIRTY && !WAIT.list.length) refreshOne(S.id); // the open QRAP stays current too
+  }, 90000);
   document.addEventListener('visibilitychange', () => { // back on the tab after a while: catch up at once
     if (!document.hidden && S.view === 'board' && Date.now() - S.loadedAt > 60000) refresh(true);
   });

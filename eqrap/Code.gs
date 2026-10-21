@@ -18,14 +18,21 @@
  *   - The list every page needs is built once per DATA VERSION and kept gzipped in CacheService (listCached_).
  *     Page loads and refreshes after that read no sheet at all. Every save makes a new version.
  *   - A save reads only the rows of its own QRAP: a small tab in one call, a big tab by its ID column plus the
- *     matching rows (rowsBy_). History lines are written once at the end, SpreadsheetApp.flush() runs once before
- *     the lock is released, e-mails are sent after the lock, slow photo uploads happen outside the lock.
+ *     matching rows (rowsBy_). History lines are written in one call at the end, SpreadsheetApp.flush() runs once
+ *     before the lock is released, slow photo uploads happen outside the lock.
+ *   - E-mails do not hold up the person who saves: they are parked in Script Properties and the page asks for them
+ *     with a second, background call (apiMail). If the page is closed first, the next refresh sends them (sweepMail_).
+ *   - Photos taken on the kiosk are uploaded in the background while the form is still being filled in
+ *     (PhotoHandoff.gs, apiStagePhoto), so "Odeslat" sends only text. Small previews are cached (dataUrl_).
  *
  * SAFETY
  *   - Everything a browser can call (google.script.run) is listed in section 3a and goes through run_():
  *     known problems (UserError) come back as a clear message, anything else is logged with a short code.
  *   - Inputs are checked on the server (lists from the Sheet, lengths, counts, dates); text is stored as text
  *     ("'" prefix) so nothing typed runs as a formula; photos are checked by their first bytes.
+ *   - Two people editing the same part of a QRAP cannot overwrite each other: the page sends a fingerprint of what
+ *     it showed (_fp, see FP_FIELDS); if somebody saved that part meanwhile, nothing is written and the page asks.
+ *   - An admin cannot take the ADMIN role away from themselves (no lock-out); settings have sane limits.
  *   - E-mails go only to people in Lidé, the Kvalita / BOZP addresses or the company's own domain.
  *   - Only the columns the page needs are sent to it (Q_PUB …); the photo folder ID lives in Script Properties.
  *
@@ -193,6 +200,23 @@ const QK = Q_PUB.concat(['s3Missing', 'eff', 'ck', 'can']); // column names of t
 const CAN_KEYS = ['popis', 'opatreni', 'shifts', 'decide', 'analyze', 'pilots', 'effect', 'close', 'assess'];
 const AK = A_PUB.concat(['canEdit', 'canDone']);
 
+/**
+ * The fields of each part of the form. The page sends a fingerprint of them as it showed them (_fp, see fp_);
+ * when the fingerprint of the row now differs, somebody else saved that part meanwhile → the save is refused.
+ * The same function runs on the page (Index.html, fpOf), so both sides compute the same value.
+ */
+const FP_FIELDS = {
+  popis: ['safety', 'what', 'whatOther', 'how', 'howOther', 'when', 'zone', 'qty', 'unit', 'nokSituation', 'repeat7',
+    'repeatRef', 'finder', 'descWrong', 'descRight', 'reference', 'notified', 'notifiedOther'],
+  opatreni: ['risk', 'checked', 'wrong', 'restoredAt'], // + the ③ actions (fpQ_)
+  smeny: ['shifts'],
+  pricina: ['o1', 'o2', 'o3', 'o4', 'o5', 'rootO', 'n1', 'n2', 'n3', 'n4', 'n5', 'rootN', 'learned', 'std', 'stdRef'],
+  akce: ['text', 'kind', 'owner', 'due', 'done', 'evidence', 'note']
+};
+
+/** Change this text whenever you deploy a new version: open pages then offer "Obnovit stránku". */
+const APP_BUILD = '2026-10-21';
+
 const PERF = {
   FULL_READ_CELLS: 15000, // a tab up to this size is read in one call; a bigger one by ID column + matching rows
   RUN_GAP: 40,            // matching rows closer than this are read together as one block
@@ -200,7 +224,8 @@ const PERF = {
   CHUNK: 95000,           // characters per cache entry (CacheService limit: 100 KB per entry)
   MAX_CHUNKS: 40
 };
-const LIMIT = { ROWS: 30, ITEMS: 200, PHOTO_CHARS: 7000000, PHOTO_BYTES: 5 * 1024 * 1024 };
+const LIMIT = { ROWS: 30, ITEMS: 200, PHOTO_CHARS: 7000000, PHOTO_BYTES: 5 * 1024 * 1024, DEADLINE_H: 720, CLOSED_DAYS: 365 };
+const MAIL = { PREFIX: 'MAIL:', LATE: 120000 }; // parked e-mails (Script Properties); older than LATE ms = page gone
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 // Per-request memory (each server call starts with empty values).
@@ -216,6 +241,8 @@ let LOG_ = [];       // history lines waiting until the end of the save
 let IN_LOCK_ = false;
 let WROTE_ = false;  // something was written → SpreadsheetApp.flush() before the lock is released
 let BUMP_ = false;   // QRAP data changed → new data version, open pages reload
+let DEFER_MAIL_ = false; // a call from the page: park the e-mails, the page sends them in the background
+let MAIL_KEYS_ = [];     // the parked e-mails of this call (returned to the page as mailKeys)
 
 /** A problem the user can fix (wrong input, wrong state). Its message is shown to the user as it is. */
 class UserError extends Error {}
@@ -233,7 +260,7 @@ function doGet(e) {
   try {
     boot = startData_((e && e.parameter) || {});
   } catch (err) {
-    boot = { error: publicError_('doGet', err) };
+    boot = { error: publicError_('doGet', err), url: appUrl_() };
   }
   // "<" is escaped, so nothing in the data can close the <script> tag it is printed into.
   page.boot = JSON.stringify(boot).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
@@ -251,6 +278,8 @@ function startData_(params) {
   return Object.assign(listCached_(false, ver), {
     me: me,
     ver: ver,
+    build: APP_BUILD,
+    url: appUrl_(),
     cfg: publicSettings_(c.settings),
     lists: c.lists,
     people: activePeople_(c),
@@ -281,12 +310,23 @@ function apiAdminData() { return run_('apiAdminData', () => adminData_()); }
 function apiSavePerson(p) { return run_('apiSavePerson', () => savePerson_(p)); }
 function apiSaveList(key, values) { return run_('apiSaveList', () => saveList_(key, values)); }
 function apiSaveSettings(obj) { return run_('apiSaveSettings', () => saveSettings_(obj)); }
-// (the phone photo hand-off – apiPhotoSession, apiPhotoPoll, apiPhoneUpload – is in PhotoHandoff.gs)
+function apiMail(keys) { return run_('apiMail', () => mailOut_(keys)); }
+// (the photo hand-off – apiPhotoSession, apiPhotoPoll, apiPhoneUpload, apiStagePhoto, apiPhotoDiscard – is in PhotoHandoff.gs)
 
-/** Runs one browser call: a UserError keeps its message, anything else is logged and shown only as a code. */
+/**
+ * Runs one browser call: a UserError keeps its message, anything else is logged and shown only as a code.
+ * E-mails of the call are parked; their keys go back to the page (mailKeys), which sends them with apiMail.
+ */
 function run_(name, fn) {
+  DEFER_MAIL_ = true;
   try {
-    return fn();
+    const res = fn();
+    if (MAIL_KEYS_.length) {
+      if (res && typeof res === 'object' && !Array.isArray(res)) res.mailKeys = MAIL_KEYS_.slice();
+      else sendParked_(MAIL_KEYS_); // nowhere to put the keys: send now
+      MAIL_KEYS_ = [];
+    }
+    return res;
   } catch (e) {
     throw new Error(publicError_(name, e));
   }
@@ -307,9 +347,10 @@ function publicError_(name, e) {
 /** Reload the list. known = the version the page has: unchanged → answered without reading anything. */
 function refresh_(all, known) {
   me_();
+  sweepMail_(); // e-mails a closed page never asked for (one cache read when there are none)
   const ver = dataVersion_();
-  if (known && String(known) === ver) return { unchanged: true, ver: ver }; // the page already has this version
-  return Object.assign(listCached_(!!all, ver), { ver: ver });
+  if (known && String(known) === ver) return { unchanged: true, ver: ver, build: APP_BUILD }; // the page has this version
+  return Object.assign(listCached_(!!all, ver), { ver: ver, build: APP_BUILD });
 }
 
 /** One problem with everything that belongs to it. known = the page's data version (sent only if it has the QRAP). */
@@ -378,10 +419,14 @@ function save_(id, part, f) {
   id = idOf_(id);
   f = obj_(f);
   need_(PARTS.indexOf(part) >= 0, 'Neznámá část formuláře.');
+  let conflict = null;
   lock_(() => {
     const me = me_();
     const q = find_(id);
-    q.status = statusOf_(q, actionsOf_(id), effectsFor_(q));
+    const acts = actionsOf_(id);
+    q.status = statusOf_(q, acts, effectsFor_(q));
+    // somebody saved this part after the page showed it: write nothing, the page asks what to do
+    if (FP_FIELDS[part] && f._fp && String(f._fp) !== fpQ_(q, part, acts)) { conflict = conflictOf_(q); return; }
     let text;
 
     if (part === 'popis') {
@@ -455,7 +500,36 @@ function save_(id, part, f) {
     }
     finish_(q, text);
   });
-  return pack_(id);
+  const res = pack_(id);
+  if (conflict) res.conflict = conflict;
+  return res;
+}
+
+/** Fingerprint of one part of a QRAP as it is in the Sheet now (see FP_FIELDS). */
+function fpQ_(q, part, acts) {
+  const vals = FP_FIELDS[part].map(k => q[k]);
+  if (part === 'opatreni') iaActions_(acts).forEach(a => vals.push(a.no, a.text, a.owner, a.done));
+  return fp_(vals);
+}
+
+/**
+ * A short fingerprint of a list of values (FNV-1a). Times count to the minute, so a time read back from the Sheet
+ * equals the one the page got right after saving. Index.html has the same function (fpOf) – keep them equal.
+ */
+function fp_(vals) {
+  const s = vals.map(v => {
+    v = String(v === null || v === undefined ? '' : v);
+    return /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(v) ? v.slice(0, 16) : v;
+  }).join('\u001f');
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(36);
+}
+
+/** Who saved the QRAP last and when – told to the person whose save was refused. */
+function conflictOf_(q) {
+  const p = cfg_().people.filter(x => x.email === q.updatedBy)[0];
+  return { by: p ? p.name : String(q.updatedBy || 'někdo jiný'), at: q.updated || '' };
 }
 
 /**
@@ -465,6 +539,7 @@ function save_(id, part, f) {
 function saveAction_(id, a) {
   id = idOf_(id);
   a = obj_(a);
+  let conflict = null;
   lock_(() => {
     me_();
     const q = find_(id);
@@ -474,7 +549,8 @@ function saveAction_(id, a) {
     let text;
     if (a.no) {
       const act = acts.filter(x => x.no === Number(a.no) && x.part === '⑥')[0];
-      need_(act && !act.removed, 'Akce nenalezena.');
+      need_(act && !act.removed, 'Akce nenalezena (možná ji mezitím někdo odebral).');
+      if (a._fp && String(a._fp) !== fp_(FP_FIELDS.akce.map(k => act[k]))) { conflict = conflictOf_(q); return; }
       if (a.text !== undefined) {
         const before = act.ownerEmail;
         Object.assign(act, defActionFields_(a, q));
@@ -503,7 +579,9 @@ function saveAction_(id, a) {
     }
     finish_(q, text);
   });
-  return pack_(id);
+  const res = pack_(id);
+  if (conflict) res.conflict = conflict;
+  return res;
 }
 
 /** ⑥ Efektivita – one slot {slot, date, shift, result}. "NEEFEKTIVNÍ" sends the QRAP back to analysis. */
@@ -590,17 +668,21 @@ function setPhoto_(id, kind, full, thumb) {
   return pack_(id);
 }
 
-/** One photo as a data URL. Only files stored in this QRAP's photo columns can be read. */
+/**
+ * One photo as a data URL. Only files stored in this QRAP's photo columns can be read (the app runs as its deployer,
+ * so this check is what keeps every other Drive file out of reach). A preview that was already checked and cached
+ * (dataUrl_) is answered straight from the cache – no Sheet and no Drive read.
+ */
 function photo_(id, fileId) {
   me_();
   id = idOf_(id);
   fileId = String(fileId || '');
+  need_(/^[\w-]{10,100}$/.test(fileId), 'Fotka k tomuto problému nepatří.');
+  const hit = CacheService.getScriptCache().get('img:' + fileId);
+  if (hit) return hit;
   const q = find_(id);
-  need_(fileId && photoIds_(q.photoWrong).concat(photoIds_(q.photoRight)).indexOf(fileId) >= 0, 'Fotka k tomuto problému nepatří.');
-  const blob = DriveApp.getFileById(fileId).getBlob();
-  const type = String(blob.getContentType());
-  need_(/^image\/(jpeg|png|webp|gif)$/.test(type), 'Soubor není obrázek.');
-  return 'data:' + type + ';base64,' + Utilities.base64Encode(blob.getBytes());
+  need_(photoIds_(q.photoWrong).concat(photoIds_(q.photoRight)).indexOf(fileId) >= 0, 'Fotka k tomuto problému nepatří.');
+  return dataUrl_(fileId);
 }
 
 /** Change history of one problem, newest first (reads only that QRAP's history rows). */
@@ -671,7 +753,8 @@ function adminData_() {
 /** Add a person (no row) or change one (row = row number in Lidé). People are never deleted – set active false. */
 function savePerson_(p) {
   p = obj_(p);
-  need_(me_().admin, 'Správa je jen pro admina.');
+  const me = me_();
+  need_(me.admin, 'Správa je jen pro admina.');
   return lock_(() => {
     clearCache_();
     const people = cfg_().people;
@@ -681,6 +764,10 @@ function savePerson_(p) {
     need_(EMAIL_RE.test(v[1]), 'Vyplňte platný e-mail.');
     const row = Number(p.row) || 0;
     need_(!people.some(x => x.email === v[1] && x.row !== row), 'Tento e-mail už v seznamu je.');
+    // nobody locks themselves out: your own row keeps ADMIN, active and your e-mail (another admin can change it)
+    const self = row && people.filter(x => x.row === row && x.email === me.email)[0];
+    need_(!self || (v[2] === 'ADMIN' && v[4] === 'ANO' && v[1] === me.email),
+      'Sami sobě nemůžete odebrat roli ADMIN, změnit e-mail ani se deaktivovat – tím byste přišli o Správu. Požádejte jiného admina.');
     const sh = sheet_(TAB.people);
     // Role and Aktivní have a dropdown check in the Sheet: written plain; text columns as text.
     const cells = [v[0] ? "'" + v[0] : '', "'" + v[1], v[2], v[3] ? "'" + v[3] : '', v[4]];
@@ -734,7 +821,12 @@ function saveSettings_(obj) {
   Object.keys(obj).forEach(k => {
     need_(SETTINGS.some(x => x[0] === k), 'Neznámé nastavení ' + k);
     let v = txt_(obj[k], 300);
-    if (numbers.indexOf(k) >= 0) { need_(/^\d+$/.test(v) && Number(v) > 0, k + ': zadejte kladné číslo.'); v = Number(v); }
+    if (numbers.indexOf(k) >= 0) {
+      // upper limits: a typo like 99999 days would make every page load slow (all closed QRAPs on the board)
+      const max = k === 'LHUTA_OPATRENI_HODIN' ? LIMIT.DEADLINE_H : LIMIT.CLOSED_DAYS;
+      need_(/^\d+$/.test(v) && Number(v) > 0 && Number(v) <= max, k + ': zadejte celé číslo od 1 do ' + max + '.');
+      v = Number(v);
+    }
     if (k === 'EMAILY') v = oneOf_(v, ['ANO', 'NE'], 'EMAILY: ANO nebo NE.');
     if (k === 'EMAIL_KVALITA' || k === 'EMAIL_BOZP') need_(!v || EMAIL_RE.test(v), k + ': neplatný e-mail.');
     if (k === 'ODKAZ_APLIKACE') need_(!v || /^https:\/\/\S+$/.test(v), 'Odkaz aplikace musí začínat https://');
@@ -950,7 +1042,8 @@ function pack_(id) {
  * Callers check the user (me_) first. The result is the same for every user, which is what makes it cacheable.
  */
 function listData_(all) {
-  const since = Date.now() - (Number(setting_('ZOBRAZIT_UZAVRENE_DNI')) || 60) * 864e5;
+  // capped: a huge number typed into the Sheet by hand must not slow down every page load
+  const since = Date.now() - Math.min(Number(setting_('ZOBRAZIT_UZAVRENE_DNI')) || 60, LIMIT.CLOSED_DAYS) * 864e5;
   const acts = groupBy_(table_(TAB.actions).all);
   const effs = groupBy_(table_(TAB.effects).all);
   const assess = groupBy_(table_(TAB.assess).all);
@@ -1213,7 +1306,15 @@ function flushLog_() {
   LOG_ = [];
   if (!list.length) return;
   const t = head_(memo_(TAB.log));
-  list.forEach(o => t.sheet().appendRow(rowOf_(t, o)));
+  const sh = t.sheet();
+  const rows = list.map(o => rowOf_(t, o));
+  if (rows.length === 1) sh.appendRow(rows[0]);
+  else { // several lines (only a save writes several, and it holds the lock): one write instead of one per line
+    const start = sh.getLastRow() + 1;
+    const missing = start + rows.length - 1 - sh.getMaxRows();
+    if (missing > 0) sh.insertRowsAfter(sh.getMaxRows(), missing);
+    sh.getRange(start, 1, rows.length, t.last + 1).setValues(rows);
+  }
   Object.assign(t, { lastRow: null, range: null, all: null, by: {}, keys: null, objs: {} }); // read fresh if needed later
   WROTE_ = true;
 }
@@ -1224,7 +1325,9 @@ function who_() { return me_().email; }
 /**
  * Runs fn while nobody else is saving (no duplicate numbers, no lost updates). Inside the lock everything is read
  * fresh. Before the lock is released the history is written and SpreadsheetApp.flush() commits all writes – without
- * it the next caller could read the Sheet without them. Then the data version changes; e-mails go out after the lock.
+ * it the next caller could read the Sheet without them. Then the data version changes; e-mails are handled after the
+ * lock (parked for the page, see mailAfterSave_). If the lock is not free, nothing has been written – the page may
+ * safely try again (it does so once by itself, it recognises the word "zaneprázdněná").
  */
 function lock_(fn) {
   const lock = LockService.getScriptLock();
@@ -1247,7 +1350,7 @@ function lock_(fn) {
     try { if (BUMP_ || WROTE_) bumpVersion_(); } catch (e) { console.error('version: ' + e); } // also a half-done save
     lock.releaseLock();
   }
-  sendMail_();
+  mailAfterSave_();
   return result;
 }
 
@@ -1309,14 +1412,17 @@ function rate_(bucket, max, seconds) {
   cache.put(key, String(n + 1), seconds);
 }
 
-/** Settings, lists and people – read from the Sheet, remembered for 5 minutes. */
+/**
+ * Settings, lists and people – read from the Sheet, remembered for 30 minutes. A change in Správa, a hand edit in the
+ * Sheet (onEdit) or the menu "Použít změny v nastavení hned" clears it at once.
+ */
 function cfg_() {
   if (CFG_) return CFG_;
   const cache = CacheService.getScriptCache();
   const hit = cache.get('cfg');
   if (hit) { CFG_ = JSON.parse(hit); return CFG_; }
   CFG_ = { settings: readSettings_(), lists: readLists_(), people: readPeople_() };
-  try { cache.put('cfg', JSON.stringify(CFG_), 300); } catch (e) { /* too big for the cache – fine */ }
+  try { cache.put('cfg', JSON.stringify(CFG_), 1800); } catch (e) { /* too big for the cache – fine */ }
   return CFG_;
 }
 
@@ -1684,6 +1790,22 @@ function photoFolderId_() {
   return id;
 }
 
+/**
+ * One checked photo file as a data URL (only an image of an allowed type). Callers check first that the file belongs
+ * to a QRAP or to the caller's own hand-off. Small ones (the previews) are cached 1 h: a Drive file never changes
+ * (a new photo is a new file), so the cache can never show an outdated picture; 1 h keeps the cache free for the list.
+ */
+function dataUrl_(fileId) {
+  const blob = DriveApp.getFileById(fileId).getBlob();
+  const type = String(blob.getContentType());
+  need_(/^image\/(jpeg|png|webp|gif)$/.test(type), 'Soubor není obrázek.');
+  const url = 'data:' + type + ';base64,' + Utilities.base64Encode(blob.getBytes());
+  if (url.length < 95000) {
+    try { CacheService.getScriptCache().put('img:' + fileId, url, 3600); } catch (e) { /* cache full – fine */ }
+  }
+  return url;
+}
+
 /** Moves files to the Drive trash (recoverable for 30 days) – used when a save with new photos fails. */
 function trash_(ids) {
   ids.forEach(id => {
@@ -1787,10 +1909,95 @@ function mailAllowed_(email) {
   return MAILOK_.has(email) || sameDomain_(email);
 }
 
-/** Sends the queued e-mails within the daily MailApp quota. A failed e-mail never undoes a save. */
+/** Sends the queued e-mails now (daily reminder, menu functions). */
 function sendMail_() {
   const box = OUTBOX_;
   OUTBOX_ = [];
+  deliver_(box);
+}
+
+/**
+ * After a save. A call from the page parks its e-mails in Script Properties (durable, unlike the cache) and the page
+ * sends them with apiMail as soon as it has shown the result – nobody waits for MailApp. Anything else sends at once.
+ * If parking fails (e.g. an unusually long e-mail), the e-mails are sent at once – they are never lost.
+ */
+function mailAfterSave_() {
+  if (!DEFER_MAIL_) { sendMail_(); return; }
+  const box = OUTBOX_;
+  OUTBOX_ = [];
+  if (!box.length) return;
+  const parked = {};
+  const now = Date.now();
+  box.forEach((m, i) => { parked[MAIL.PREFIX + now + ':' + i + Utilities.getUuid().slice(0, 8)] = JSON.stringify(m); });
+  const props = PropertiesService.getScriptProperties();
+  try {
+    props.setProperties(parked);
+    MAIL_KEYS_ = MAIL_KEYS_.concat(Object.keys(parked));
+    const cache = CacheService.getScriptCache();
+    if (!cache.get('mailq')) cache.put('mailq', String(now), PERF.CACHE_TTL); // "something is waiting since …"
+  } catch (e) {
+    console.warn('mail park: ' + e.message);
+    Object.keys(parked).forEach(k => { try { props.deleteProperty(k); } catch (x) { /* was not written */ } });
+    deliver_(box);
+  }
+}
+
+/** apiMail: the page sends the e-mails of its last save. Only parked e-mails can be sent this way – nothing else. */
+function mailOut_(keys) {
+  me_();
+  rate_('mail', 60, 600);
+  sendParked_((Array.isArray(keys) ? keys : []).map(String).filter(k => k.indexOf(MAIL.PREFIX) === 0).slice(0, 20));
+  return { ok: true };
+}
+
+/** Takes parked e-mails out of Script Properties and sends them; an e-mail already taken is skipped. */
+function sendParked_(keys) {
+  if (!keys.length) return;
+  const props = PropertiesService.getScriptProperties();
+  const box = [];
+  keys.forEach(k => {
+    const v = props.getProperty(k);
+    if (!v) return; // already sent
+    props.deleteProperty(k);
+    try { box.push(JSON.parse(v)); } catch (e) { console.warn('mail ' + k + ': ' + e.message); }
+  });
+  deliver_(box);
+}
+
+/**
+ * E-mails a page never asked for (closed right after saving) go out with the next refresh once they are MAIL.LATE
+ * old – or all of them (all = true, daily reminder). Costs one cache read when nothing waits. Sweeps take turns
+ * through the lock, so two of them never send the same e-mail; a save in progress just means "next time".
+ */
+function sweepMail_(all) {
+  const cache = CacheService.getScriptCache();
+  const since = Number(cache.get('mailq')) || 0;
+  if (!all && (!since || Date.now() - since < MAIL.LATE)) return;
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(all ? 20000 : 1)) return;
+  const box = [];
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const stored = props.getProperties();
+    const now = Date.now();
+    const age = k => now - (Number(k.split(':')[1]) || 0);
+    const keys = Object.keys(stored).filter(k => k.indexOf(MAIL.PREFIX) === 0);
+    const rest = [];
+    keys.forEach(k => {
+      if (!all && age(k) < MAIL.LATE) { rest.push(k); return; }
+      props.deleteProperty(k);
+      try { box.push(JSON.parse(stored[k])); } catch (e) { console.warn('mail ' + k + ': ' + e.message); }
+    });
+    if (rest.length) cache.put('mailq', String(now - Math.max.apply(null, rest.map(age))), PERF.CACHE_TTL);
+    else cache.remove('mailq');
+  } finally {
+    lock.releaseLock();
+  }
+  deliver_(box);
+}
+
+/** Sends e-mails within the daily MailApp quota. A failed e-mail never undoes a save. */
+function deliver_(box) {
   if (!box.length) return;
   let left = Infinity;
   try { left = MailApp.getRemainingDailyQuota(); } catch (e) { /* unknown – try to send */ }
@@ -1807,10 +2014,17 @@ function link_(id) {
   return url + (id ? '?id=' + encodeURIComponent(id) : '');
 }
 
+/** The app's address for the page itself ("Obnovit stránku"); never throws – also used when the start failed. */
+function appUrl_() {
+  try { return link_(''); } catch (e) { /* settings not readable */ }
+  try { return ScriptApp.getService().getUrl() || ''; } catch (e) { return ''; }
+}
+
 /** Every morning (if switched on in the menu): managers and admins get the open problems of their zone. */
 function dailyReminder(e) {
   const fromTrigger = !!(e && e.triggerUid) && ScriptApp.getProjectTriggers().some(t => t.getUniqueId() === String(e.triggerUid));
   if (!fromTrigger) menuOnly_();
+  sweepMail_(true); // e-mails of pages that were closed before they sent them
   const actRows = table_(TAB.actions).all;
   const acts = groupBy_(actRows);
   const effs = groupBy_(table_(TAB.effects).all);
@@ -2013,6 +2227,14 @@ function removeReminder_() {
 /** Three example problems in different stages, to see how the app works. No e-mails are sent. */
 function exampleData() {
   menuOnly_();
+  // the menu item sits next to everyday ones: one wrong click must not put example QRAPs into real data
+  let ui = null;
+  try { ui = SpreadsheetApp.getUi(); } catch (e) { /* run from the script editor – the developer knows */ }
+  if (ui && ui.alert('Vložit ukázková data?', 'Do tabulky se vloží 3 ukázkové QRAP. Při ostrém provozu je nevkládejte ' +
+    '(pak je musí manažer v aplikaci zrušit).\n\nOpravdu vložit?', ui.ButtonSet.YES_NO) !== ui.Button.YES) {
+    toast_('Nic se nevložilo.');
+    return;
+  }
   NO_MAIL_ = true;
   let b = '', c = '';
   try {
