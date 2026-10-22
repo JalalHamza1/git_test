@@ -62,32 +62,77 @@ function h(tag, attrs, ...kids) {
   return el;
 }
 
-/** Decodes the picture once and returns it twice as JPEG: the photo (max 1280 px) and a preview (max 480 px). Same as on the kiosk. */
-function shrink(file) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const src = URL.createObjectURL(file);
-    const draw = (from, w0, h0, max) => {
-      const scale = Math.min(1, max / Math.max(w0, h0));
-      const c = document.createElement('canvas');
-      c.width = Math.max(1, Math.round(w0 * scale));
-      c.height = Math.max(1, Math.round(h0 * scale));
-      const g = c.getContext('2d');
-      g.imageSmoothingQuality = 'high';
-      g.drawImage(from, 0, 0, c.width, c.height);
-      return c;
-    };
-    img.onload = () => {
-      URL.revokeObjectURL(src);
-      try {
-        const big = draw(img, img.width, img.height, 1280);
-        const small = draw(big, big.width, big.height, 480); // from the 1280 px copy: much faster than from the camera original
-        resolve({ full: big.toDataURL('image/jpeg', 0.8), thumb: small.toDataURL('image/jpeg', 0.7) });
-      } catch (e) { reject(e); }
-    };
-    img.onerror = () => { URL.revokeObjectURL(src); reject(new Error('Soubor není obrázek.')); };
-    img.src = src;
-  });
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/**
+ * A photo from the camera or the gallery → { full, thumb } as JPEG (max 1280 px / 480 px), small and quick to upload.
+ * Made to work on real phones and tablets (Index.html has the same function – keep them equal):
+ *   - the file is copied into memory first: a camera file on some phones disappears once the input lets go of it
+ *   - three ways to read it: an <img> (follows the camera's rotation), createImageBitmap, and – for a JPEG / PNG that
+ *     no browser can draw – the original file as it is, when it is small enough
+ *   - a time limit, so a phone that never finishes decoding does not hang the form
+ *   - a canvas that silently failed (out of memory on a big photo) is noticed and drawn again smaller
+ * Errors are in Czech and say what to do.
+ */
+async function readPhoto(file) {
+  if (!file || !file.size) throw new Error('Fotka je prázdná – vyfoťte ji prosím znovu.');
+  if (file.size > 40 * 1024 * 1024) throw new Error('Soubor je příliš velký (víc než 40 MB). Vyberte menší fotku.');
+  let buf;
+  try { buf = await file.arrayBuffer(); } catch (e) { throw new Error('Fotku se nepodařilo přečíst – vyfoťte ji prosím znovu.'); }
+  const head = new Uint8Array(buf.slice(0, 12));
+  const kind = head[0] === 0xFF && head[1] === 0xD8 ? 'jpeg' : head[0] === 0x89 && head[1] === 0x50 ? 'png'
+    : head[0] === 0x47 && head[1] === 0x49 ? 'gif' : head[8] === 0x57 && head[9] === 0x45 ? 'webp' : '';
+  const blob = new Blob([buf], { type: kind ? 'image/' + kind : (file.type || 'application/octet-stream') });
+  const timed = (p, ms) => Promise.race([p, sleep(ms).then(() => { throw new Error('timeout'); })]);
+  let src = null;
+  try {
+    src = await timed(new Promise((ok, bad) => {
+      const img = new Image();
+      const url = URL.createObjectURL(blob);
+      img.onload = () => { URL.revokeObjectURL(url); ok({ el: img, w: img.naturalWidth || img.width, h: img.naturalHeight || img.height }); };
+      img.onerror = () => { URL.revokeObjectURL(url); bad(new Error('img')); };
+      img.src = url;
+    }), 25000);
+  } catch (e) {
+    try {
+      const bmp = await timed(createImageBitmap(blob, { imageOrientation: 'from-image' }), 25000);
+      src = { el: bmp, w: bmp.width, h: bmp.height, close: () => bmp.close && bmp.close() };
+    } catch (e2) { src = null; }
+  }
+  if (!src || !src.w || !src.h) {
+    // nothing could draw it: a JPEG / PNG small enough goes as it is (the server checks it again)
+    if ((kind === 'jpeg' || kind === 'png') && buf.byteLength <= 4.5 * 1024 * 1024) {
+      const full = await new Promise((ok, bad) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => bad(r.error); r.readAsDataURL(blob); });
+      return { full, thumb: '' };
+    }
+    throw new Error(kind ? 'Fotku se nepodařilo zpracovat. Zkuste ji vyfotit znovu.'
+      : 'Tento formát fotky neumíme přečíst (např. HEIC). Vyfoťte ji tlačítkem „📷 Vyfotit“, nebo na iPhonu nastavte ' +
+        'Nastavení → Fotoaparát → Formáty → Nejkompatibilnější.');
+  }
+  const draw = (from, w0, h0, max, quality) => {
+    const scale = Math.min(1, max / Math.max(w0, h0));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(w0 * scale));
+    c.height = Math.max(1, Math.round(h0 * scale));
+    const g = c.getContext('2d');
+    g.imageSmoothingQuality = 'high';
+    g.fillStyle = '#fff'; // a transparent PNG gets a white background instead of black
+    g.fillRect(0, 0, c.width, c.height);
+    g.drawImage(from, 0, 0, c.width, c.height);
+    const url = c.toDataURL('image/jpeg', quality);
+    return { c, url, ok: /^data:image\/jpeg;base64,/.test(url) && url.length > 200 };
+  };
+  try {
+    let big = draw(src.el, src.w, src.h, 1280, 0.8);
+    if (!big.ok) big = draw(src.el, src.w, src.h, 960, 0.75); // not enough memory for 1280 px: smaller
+    if (!big.ok) throw new Error('canvas');
+    const small = draw(big.c, big.c.width, big.c.height, 480, 0.7); // from the 1280 px copy: quick
+    return { full: big.url, thumb: small.ok ? small.url : '' };
+  } catch (e) {
+    throw new Error('Fotku se nepodařilo zmenšit (málo paměti v zařízení?). Zavřete jiné aplikace a zkuste to znovu.');
+  } finally {
+    if (src.close) src.close();
+  }
 }
 
 const errText = e => String((e && e.message) || e || '').replace(/^(ScriptError|Exception|Error|Výjimka):\s*/, '') || 'Nastala chyba. Zkuste to znovu.';
@@ -131,7 +176,7 @@ if (BOOT.error || !BOOT.token) {
       retry.hidden = true;
       box.classList.remove('done', 'fail');
       const bar = h('i', { class: 'bar' });
-      shot.replaceChildren(h('img', { src: p.thumb, alt: label }), bar); // the photo shows at once
+      shot.replaceChildren(h('img', { src: p.thumb || p.full, alt: label }), bar); // the photo shows at once
       shot.hidden = false;
       shot.classList.add('busy');
       msg.textContent = '';
@@ -172,12 +217,22 @@ if (BOOT.error || !BOOT.token) {
     }
 
     const picked = async input => {
-      const file = input.files[0];
-      input.value = '';
+      const file = input.files && input.files[0];
       if (!file) return;
       btn.disabled = true;
-      say('zmenšuji fotku…', true);
-      try { await upload(await shrink(file)); } catch (e) { msg.textContent = errText(e); say('tohle není fotka – zkuste to znovu'); btn.disabled = false; }
+      say('načítám fotku…', true);
+      let p;
+      try {
+        p = await readPhoto(file); // copies the file first – only then may the input let go of it
+      } catch (e) {
+        msg.textContent = errText(e);
+        say('fotku se nepodařilo načíst – zkuste to znovu');
+        btn.disabled = gone;
+        return;
+      } finally {
+        input.value = '';
+      }
+      await upload(p);
     };
     cam.addEventListener('change', () => picked(cam));
     gal.addEventListener('change', () => picked(gal));

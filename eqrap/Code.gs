@@ -368,7 +368,7 @@ function get_(id, known) {
 /**
  * ① ② ③ – report a new problem. ③ needs only the risk answer now. Sending the same form twice gives one QRAP.
  * Photos: taken on the kiosk (f.photoWrong …) or handed over from a phone (f.photoToken, see PhotoHandoff.gs).
- * An expired phone session never blocks the save – the answer then carries phoneExpired = true.
+ * Photos never block the save: kinds that could not be attached come back in photoLost (the page uploads them again).
  */
 function create_(f) {
   f = obj_(f);
@@ -378,7 +378,7 @@ function create_(f) {
   const known = token && cache.get(token);
   if (known) return pack_(known); // double click or a lost answer: the QRAP already exists
   rate_('create', 30, 600);
-  const phone = phonePhotos_(f.photoToken, f.photoDrop); // photos from the phone hand-off; never throws
+  const phone = phonePhotos_(f.photoToken, f.photoKeep, f.photoDrop); // uploaded / phone photos; never throws
   const s3in = obj_(f.s3);
   const q = popisFrom_(f, {});
   Object.assign(q, opatreniFrom_(s3in, q.when));
@@ -411,6 +411,8 @@ function create_(f) {
   else { trash_(phone.unused); phoneDone_(f.photoToken); } // phone photos that were removed on the kiosk go to the trash
   const out = pack_(res.id);
   if (phone.expired) out.phoneExpired = true;
+  const lost = phone.lost.filter(k => !out.qrap[k === 'RIGHT' ? 'photoRight' : 'photoWrong']);
+  if (lost.length) out.photoLost = lost;
   return out;
 }
 

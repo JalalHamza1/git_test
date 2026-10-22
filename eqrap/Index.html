@@ -398,6 +398,14 @@ details.more-stats > summary { padding: var(--s3) 0; }
   background: var(--soft); color: var(--ink-3); font-size: 12px; cursor: zoom-in; }
 .pp-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pp-cam { margin-top: 4px; }
+.ph-btns { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.on-desk { display: none; }
+/* a mouse on a PC: no camera button (it would only open the file dialog as well) */
+@media (hover: hover) and (pointer: fine) {
+  .ph-cam { display: none; }
+  .on-touch { display: none; }
+  .on-desk { display: inline; }
+}
 .pp-flag { font-size: .9em; color: var(--ink-2); }
 /* ③ ⑥ tables */
 .pp-t { width: 100%; border-collapse: collapse; background: #fff; table-layout: fixed; }
@@ -627,6 +635,80 @@ body.busy #app { pointer-events: none; }
   .wait { bottom: 12px; }
   .modal-card .form-btns .btn { flex: 1 1 100%; }
 }
+/* ---------- tablets and phones (narrower than 1180 px): no sideways scrolling ----------
+   The board shows one card per QRAP (paperList → qrapCards). The QRAP page stacks the seven blocks of the paper
+   ① … ⑦ under each other, each with its own heading (.pp-mh); the column headers of the paper are hidden. */
+.pp-mh { display: none; }
+.qcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 12px; }
+.qcard { display: flex; flex-direction: column; gap: 6px; text-align: left; width: 100%; padding: 14px 16px; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); color: var(--ink); font: inherit; cursor: pointer; }
+.qcard:hover, .qcard:focus-visible { border-color: var(--accent); }
+.qcard.safety { border: 3px solid var(--bad); }
+.qc-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.qc-top b { font-size: 16px; }
+.qc-top .sub { margin-left: auto; }
+.qc-title { font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.qc-meta { font-size: 13.5px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 2px 14px; }
+.qc-next { font-size: 13.5px; color: var(--ink-3); }
+.qc-next .late-txt { color: var(--bad); }
+@media screen and (max-width: 1179px) {
+  .paper, .paper.big, .paper.compact { min-width: 0; font-size: 14px; }
+  .pp-wrap { overflow-x: visible; padding: 8px; }
+  .pp-bands, .pp-heads { display: none; }
+  .pp-row.pp-body { grid-template-columns: minmax(0, 1fr); row-gap: 14px; }
+  .pp-body > .pp-g { grid-column: 1 / -1; } /* the paper's column positions (.g1 … .g4) no longer apply */
+  .pp-g.g1, .pp-g.g3 { grid-template-columns: minmax(0, 1fr); row-gap: 14px; }
+  .pp-g.g4 { padding: 8px; }
+  .pp-mh { display: block; margin: -2px -2px 2px; padding: 8px 12px; border-radius: 6px; background: var(--slate); color: #fff;
+    font-weight: 700; font-size: 15px; }
+  .p1 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .p1-co { grid-column: auto; }
+  .p1-rep, .p1-popis { grid-column: 1 / -1; }
+  .pp-ph { height: 180px; }
+  .float-bar { left: 12px; right: 12px; transform: none; max-width: none; }
+}
+@media screen and (max-width: 560px) {
+  .p1, .p1-pair, .p6-bottom { grid-template-columns: minmax(0, 1fr); }
+  .p1 > * { grid-column: 1 / -1; }
+  .stats.three { grid-template-columns: minmax(0, 1fr); }
+}
+/* ---------- very large screens (kiosk seen from a distance) ---------- */
+@media screen and (min-width: 1800px) {
+  body { font-size: 16px; }
+  .paper.compact { font-size: 13px; }
+  .paper.big { font-size: 14px; }
+}
+/* ---------- fingers (touch screens): everything big enough to hit, no zoom when a field gets the focus ---------- */
+button, .btn, [role=button], .strip, .qcard, label.check, label.choice, .wiz-step, summary { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.btn, .nav, .wiz-step, .link, .qcard { -webkit-user-select: none; user-select: none; }
+@media (pointer: coarse) {
+  .btn { min-height: 46px; }
+  .btn.small, .btn.pp-done { min-height: 42px; padding: 0 14px; }
+  .btn.pp-done { min-width: 46px; font-size: 16px; }
+  .link { min-height: 40px; padding: 6px 4px; }
+  .link.pp-add, .pp-rowbtns button { min-height: 42px; padding: 8px 10px; }
+  .pp-rowbtns { gap: 4px; font-size: 14px; }
+  input, select, textarea { font-size: 16px; } /* below 16 px an iPhone zooms the page in */
+  input:not([type=checkbox]):not([type=radio]):not([type=file]), select { min-height: 46px; height: auto; }
+  input[type=checkbox], input[type=radio] { width: 24px; height: 24px; }
+  .checks .check, .choice { min-height: 46px; }
+  .checks { gap: 10px; }
+  .info { width: 40px; height: 40px; margin: -10px 0 -10px 2px; }
+  .info .ico { width: 18px; height: 18px; }
+  .toolbar { gap: 8px; }
+  .toolbar select, .toolbar .btn, .toolbar .search input { height: 46px; min-height: 46px; font-size: 16px; }
+  .search input { height: 46px; }
+  .tbl-foot select, .view-as { height: 44px; }
+  .pager .btn { min-width: 46px; }
+  .nav { padding: 0 16px; }
+  .wiz-step { min-height: 58px; }
+  .slots input, .slots select { height: 46px; }
+  .hbar { padding: 10px 0; }
+  .pp-cell.can-edit:hover { outline: none; } /* a finger leaves a "hover" behind */
+  .modal-card .btn { min-height: 52px; }
+  details.admin-box > summary, details.more-stats > summary, details.roles-more > summary { min-height: 46px; }
+}
+
 @media print {
   @page { size: A4 landscape; margin: 7mm; }
   .pp-wrap { overflow: visible; border: 0; box-shadow: none; padding: 0; }
@@ -1213,6 +1295,10 @@ function icon(name) {
 const ibox = name => h('span', { class: 'ibox' }, icon(name));
 
 // ------------------------------------------------------------------ 3. HEADER AND ROUTING
+/** Screen classes: NARROW = the paper is stacked and the board shows cards; PAPER_EDIT = typing straight into the paper. */
+const NARROW = window.matchMedia('(max-width: 1179px)');
+const PAPER_EDIT = window.matchMedia('(min-width: 1180px) and (pointer: fine)');
+
 /**
  * Show another page. replace = true: do not keep the current page in the browser's Back history.
  * Unsaved work is asked about first (leaveOk); a new QRAP keeps its draft.
@@ -1245,7 +1331,8 @@ function edit(key, mode) {
     return;
   }
   S.edit = key;
-  S.editMode = key && mode === 'paper' ? 'paper' : 'panel';
+  // typing into the small boxes of the paper only with a mouse on a wide screen; fingers and small screens get the full form
+  S.editMode = key && mode === 'paper' && PAPER_EDIT.matches ? 'paper' : 'panel';
   render();
   const form = document.querySelector('.editing');
   if (form) {
@@ -1668,6 +1755,10 @@ const titleOf = q => coText(q) + (q.descWrong ? ' – ' + q.descWrong : '');
 const timeOf = iso => { if (!iso) return ''; const d = new Date(iso); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
 const dateOf = iso => (iso ? fmtD(iso) : '');
 
+/** The heading of each block when the paper is stacked on a narrow screen (.pp-mh). */
+const CELL_TITLES = { 1: '① Popis problému', 2: '② Kdo byl upozorněn?', 3: '③ Okamžitá opatření <24h', 4: '④ Rozhodnutí OJT (Supervizor)',
+  5: '⑤ Příčina 5 Proč?', 6: '⑥ Konečné akce', 7: '⑦ Hodnocení QRQC (Supervizor / manažer)' };
+
 /** Which block of the paper is next (highlighted). */
 const NOW_CELL = { 'OPATŘENÍ': 3, 'ROZHODNUTÍ': 4, 'ANALÝZA': 5, 'AKCE': 6, 'OVĚŘENÍ': 6, 'SCHVÁLENÍ': 6 };
 
@@ -1721,13 +1812,14 @@ function paperBody(q, big, ed) {
   const boxE = (label, ctrl, cls) => h('div', { class: 'pp-box lbl-paper' + (cls ? ' ' + cls : '') }, h('span', { class: 'pp-l' }, label), ctrl);
   const cell = (n, ...kids) => {
     const id = big ? 'sec' + n : null;
+    const mh = h('div', { class: 'pp-mh', 'aria-hidden': 'true' }, CELL_TITLES[n]); // shown only when the paper is stacked
     if (ed && ed.cells.includes(n)) {
-      return h('div', { class: 'pp-cell c' + n + ' pp-edit' + (ed.main === n ? ' editing' : ''), id }, kids);
+      return h('div', { class: 'pp-cell c' + n + ' pp-edit' + (ed.main === n ? ' editing' : ''), id }, mh, kids);
     }
     const click = keys[n];
     return h('div', { class: 'pp-cell c' + n + (now === n && !ed ? ' now' : '') + (click ? ' can-edit' : ''), id,
       title: click ? 'Klikněte a pište přímo do formuláře' : null, onclick: click ? () => edit(keys[n], 'paper') : null },
-      edits[n] ? h('div', { class: 'pp-ed' }, edits[n]) : null, kids);
+      mh, edits[n] ? h('div', { class: 'pp-ed' }, edits[n]) : null, kids);
   };
   const dShort = v => (big ? fmtD(v) : v ? fmtD(v).replace(/ \d{4}$/, '') : '');
 
@@ -1853,8 +1945,9 @@ function paperBody(q, big, ed) {
 /** O3 → "3. Proč", N1 → "N1 nezachyceno", STD → standard. */
 const whyLabel = k => (k === 'STD' ? 'standard' : /^O\d$/.test(k) ? k[1] + '. Proč' : /^N\d$/.test(k) ? k[1] + '. Proč nezachyceno' : k || '');
 
-/** The board: the paper header once, then one paper strip per QRAP. */
+/** The board: the paper header once, then one paper strip per QRAP – on a narrow screen one card per QRAP instead. */
 function paperList(rows) {
+  if (NARROW.matches) return qrapCards(rows);
   return h('div', { class: 'pp-wrap' }, h('div', { class: 'paper compact' }, paperHead(),
     rows.map(q => {
       const st = STATUS[q.status] || {};
@@ -1867,6 +1960,23 @@ function paperList(rows) {
           h('span', { class: 'grow' }), h('span', { class: 'sub' }, ago(q.when || q.created)), h('span', { class: 'open-l' }, 'Otevřít →')),
         paperBody(q, false));
     })));
+}
+
+/** Tablets and phones: one card per QRAP – number, state, what, where, when, what is next. A tap opens it. */
+function qrapCards(rows) {
+  return h('div', { class: 'qcards' }, rows.map(q => {
+    const st = STATUS[q.status] || {};
+    const late = isLate(q);
+    return h('button', { class: 'qcard' + (q.safety === 'ANO' ? ' safety' : ''), type: 'button', 'aria-label': 'Otevřít ' + q.id,
+      onclick: () => go('detail', q.id) },
+      h('div', { class: 'qc-top' }, h('b', null, q.id), badge(q), q.safety === 'ANO' ? h('span', { class: 'tag bad' }, 'SAFETY') : null,
+        q.decision === 'ESKALACE' ? h('span', { class: 'tag' }, 'ESKALACE') : null, h('span', { class: 'sub' }, ago(q.when || q.created))),
+      h('div', { class: 'qc-title' }, titleOf(q) || '—'),
+      h('div', { class: 'qc-meta' }, h('span', null, '📍 ' + (q.zone || '–')), h('span', null, '🕒 ' + fmtDT(q.when || q.created)),
+        q.nokSituation ? h('span', null, 'KOLIK: N/A') : q.qty === '' || q.qty === undefined ? null : h('span', null, 'KOLIK: ' + q.qty + ' ' + (q.unit || '')),
+        q.photoWrong || q.photoRight ? h('span', null, '📷 foto') : null),
+      st.next ? h('div', { class: 'qc-next' }, 'Další krok: ' + st.next, late ? h('b', { class: 'late-txt' }, ' – po termínu!') : null) : null);
+  }));
 }
 
 // ------------------------------------------------------------------ 6b. THE QRAP PAGE: the paper form + what to do next
@@ -2571,6 +2681,7 @@ function popisForm(v, isNew, photoState, onPhoto) {
         d.photoRight = own('RIGHT') ? p.RIGHT.full : '';
         d.photoRightThumb = own('RIGHT') ? p.RIGHT.thumb : '';
         d.photoToken = photos.token();
+        d.photoKeep = photos.keep(); // exactly the photos shown here are attached (see photoPicker)
         d.photoDrop = photos.drop();
       }
       return d;
@@ -2842,9 +2953,40 @@ function loadPhoto(qid, fileId) {
 const photoIds = v => String(v || '').split('|').filter(Boolean);
 
 /**
+ * Two ways to add a photo – the same everywhere (new QRAP, QRAP page; the phone page has its own copy):
+ *   "📷 Vyfotit"     opens the camera straight away on phones and tablets (newer Android phones offer only the
+ *                    gallery without it); hidden on a PC with a mouse, where it would only open the file dialog too
+ *   "🖼️ Z galerie"   picks a photo that is already there (on a PC: "📷 Přidat foto" – the file dialog)
+ * The inputs are made once and live as long as the buttons, so a redraw while the camera is open loses nothing.
+ * onFile(file) is called with the chosen file; free = changes here are saved at once (not "unsaved work").
+ */
+function photoInputs(onFile, o) {
+  o = o || {};
+  const mk = capture => {
+    const input = h('input', { type: 'file', accept: 'image/*', capture: capture ? 'environment' : null, hidden: true, 'data-free': o.free ? '' : null });
+    input.addEventListener('change', () => {
+      const file = input.files && input.files[0];
+      // the input is emptied only after the file was read (readPhoto copies it first): on some phones a camera
+      // file disappears as soon as the input lets go of it
+      Promise.resolve(file ? onFile(file) : null).catch(() => { /* reported by onFile */ }).then(() => { input.value = ''; });
+    });
+    return input;
+  };
+  const cam = mk(true), gal = mk(false);
+  const camBtn = h('button', { class: 'btn small ph-cam', type: 'button', onclick: e => { e.stopPropagation(); cam.click(); } });
+  const galBtn = h('button', { class: 'btn small', type: 'button', onclick: e => { e.stopPropagation(); gal.click(); } });
+  const label = has => {
+    fill(camBtn, has ? '📷 Vyfotit znovu' : '📷 Vyfotit');
+    fill(galBtn, h('span', { class: 'on-touch' }, '🖼️ Z galerie'), h('span', { class: 'on-desk' }, has ? '📷 Vyměnit fotku' : '📷 Přidat foto'));
+  };
+  label(o.has);
+  return { camBtn, galBtn, inputs: [cam, gal], label, set disabled(v) { camBtn.disabled = galBtn.disabled = v; } };
+}
+
+/**
  * One photo on the paper (QRAP page): the preview (at once from memory, else a shimmer until it is loaded),
- * a tap opens the full photo. While ① can be changed, "Vyfotit" opens the camera on a tablet / phone (capture),
- * or the file picker on a PC; the new photo is shown at once while it is being uploaded.
+ * a tap opens the full photo. While ① can be changed, a new photo can be taken or picked (photoInputs); it is shown
+ * at once while it is being uploaded, and the page is locked until the upload is done.
  */
 function photoSlot(q, kind, key, title) {
   const ids = photoIds(q[key]);
@@ -2861,15 +3003,12 @@ function photoSlot(q, kind, key, title) {
     tile.addEventListener('click', e => { e.stopPropagation(); zoom(q.id, ids[0], title, ids[1]); });
   }
   if (!q.can.popis) return ids.length ? tile : null;
-  const input = h('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true, 'data-free': '', onchange: async e => {
-    const file = e.target.files[0];
-    input.value = '';
-    if (!file) return;
-    const w = waitStart(button, { phases: PHASES.photo, short: 'Zpracovávám…' });
+  const btns = photoInputs(async file => {
+    const w = waitStart(null, { phases: PHASES.photo });
     try {
-      const p = await shrink(file);
+      const p = await readPhoto(file);
       tile.hidden = false;
-      fill(tile, pic(p.thumb, 'Nahrávám…')); // the new photo is visible at once
+      fill(tile, pic(p.thumb || p.full, 'Nahrávám…')); // the new photo is visible at once
       w.say('Nahrávám fotku…');
       const res = await api('apiSetPhoto', q.id, kind, p.full, p.thumb);
       const nids = photoIds(res.qrap && res.qrap[key]);
@@ -2881,23 +3020,24 @@ function photoSlot(q, kind, key, title) {
     } catch (err) {
       w.end();
       toast(errText(err), true);
-      if (S.view === 'detail' && !S.edit) render(); // back to the photo that is really saved
+      if (S.view === 'detail' && !S.edit && !DIRTY) render(); // back to the photo that is really saved
       return;
     }
-    if (S.edit) { button.disabled = false; button.textContent = '📷 Vyfotit znovu'; } else render(); // never throw away a block being filled in
-  } });
-  const button = h('button', { class: 'btn small pp-cam no-print', type: 'button', onclick: e => { e.stopPropagation(); input.click(); } },
-    ids.length ? '📷 Vyfotit znovu' : '📷 Přidat foto');
-  return h('div', null, tile, button, input);
+    if (S.edit || DIRTY) { tile.querySelector('.ph-busy') && tile.querySelector('.ph-busy').remove(); btns.label(true); }
+    else render(); // never throw away a block being filled in
+  }, { free: true, has: ids.length > 0 });
+  return h('div', null, tile, h('div', { class: 'pp-cam no-print ph-btns' }, btns.camBtn, btns.galBtn), btns.inputs);
 }
 
 /**
  * Optional photos in the new-QRAP form, one per kind. Per kind: null or { thumb, full?, value?, state }:
  *   'up'      taken here and being uploaded in the background – the operator goes on filling in the form
- *   'staged'  taken here and already in Drive (value = the photo cell) – "Odeslat" sends only the token
+ *   'staged'  taken here and already in Drive (value = the photo cell)
  *   'phone'   arrived from the phone hand-off (only the preview is here, the photo is in Drive)
- *   'local'   taken here, but the background upload failed – it travels with "Odeslat" (slower, never lost)
- * The uploads of one kind run one after another, so the photo taken last is the one the server keeps.
+ *   'local'   taken here, but the background upload failed or took too long – it travels with "Odeslat" (slower,
+ *             never lost)
+ * "Odeslat" sends the cells it SHOWS (photoKeep): the server attaches exactly those (create_ → phonePhotos_), so
+ * the order in which uploads finish, a phone retake or a lost cache can never swap or drop a photo silently.
  * "📱 Fotit telefonem" shows a QR code; the page then asks every few seconds what arrived (photoPoll_).
  * The server side is in PhotoHandoff.gs, the page the phone opens is Upload.html.
  * init = the photos of a draft ({ session, pics }); onChange = called after every change (the draft is saved).
@@ -2905,9 +3045,10 @@ function photoSlot(q, kind, key, title) {
 function photoPicker(init, onChange) {
   const KINDS = ['WRONG', 'RIGHT'];
   const NAMES = { WRONG: 'ŠPATNÝ', RIGHT: 'DOBRÝ' };
+  const STAGE_MS = 60000; // a background upload that takes longer goes with "Odeslat" instead
   const keyOf = k => (k === 'RIGHT' ? 'photoRight' : 'photoWrong');
   const pics = { WRONG: null, RIGHT: null };
-  const prep = { WRONG: null, RIGHT: null };   // the picture being shrunk (a Promise), so "Odeslat" can wait for it
+  const prep = { WRONG: null, RIGHT: null };   // the photo being read (a Promise), so "Odeslat" can wait for it
   const chain = { WRONG: Promise.resolve(), RIGHT: Promise.resolve() };
   const have = {};                              // per kind: the value the server has (the poll sends only what is new)
   let session = (init && init.session) || null;
@@ -2930,33 +3071,26 @@ function photoPicker(init, onChange) {
     if (!sessionP) sessionP = api('apiPhotoSession').then(s => { session = s; sessionP = null; return s; }, e => { sessionP = null; throw e; });
     return sessionP;
   };
-  /** The hand-off expired (6 h): photos taken here go with "Odeslat" instead; phone photos are gone and are said to be. */
-  const sessionLost = () => {
-    session = null;
-    let gone = 0;
-    KINDS.forEach(k => {
-      delete have[k];
-      const p = pics[k];
-      if (!p) return;
-      if (p.full) { if (p.state === 'staged') p.state = 'local'; } else { pics[k] = null; gone++; }
-    });
-    if (gone) toast('Fotky z telefonu vypršely (po 6 h) – vyfoťte je prosím znovu.', true);
-    changed();
-  };
+  /**
+   * The hand-off ended (6 h, or the server's cache was cleared). Nothing shown is lost: photos already uploaded keep
+   * their cell and are checked again on "Odeslat"; the next photo opens a new hand-off.
+   */
+  const sessionLost = () => { session = null; KINDS.forEach(k => { delete have[k]; }); };
 
-  /** Uploads a photo taken here in the background. A failed upload keeps the photo – it then goes with "Odeslat". */
+  /** Uploads a photo taken here in the background. A failed or slow upload keeps the photo – it then goes with "Odeslat". */
   const stage = (kind, p) => {
     p.state = 'up';
     pics[kind] = p;
     changed();
     chain[kind] = chain[kind]
       .then(() => ensureSession())
-      .then(s => api('apiStagePhoto', s.token, kind, p.full, p.thumb))
+      .then(s => Promise.race([api('apiStagePhoto', s.token, kind, p.full, p.thumb),
+        sleep(STAGE_MS).then(() => { throw new Error('Nahrávání fotky trvá příliš dlouho – fotka se odešle s formulářem.'); })]))
       .then(r => {
-        if (pics[kind] === p) { p.value = r.value; p.state = 'staged'; have[kind] = r.value; }
+        if (pics[kind] === p && p.state === 'up') { p.value = r.value; p.state = 'staged'; have[kind] = r.value; }
         else delete have[kind]; // replaced meanwhile – the next poll says what the server really has
       }, e => {
-        if (pics[kind] === p) p.state = 'local';
+        if (pics[kind] === p && p.state === 'up') p.state = 'local';
         if (/neplatí/.test(errText(e)) && !stopped) sessionLost();
       })
       .then(changed);
@@ -2965,29 +3099,31 @@ function photoPicker(init, onChange) {
 
   const slot = (kind, title) => {
     const box = h('div', { class: 'pslot ' + (kind === 'RIGHT' ? 'right' : 'wrong') });
-    const input = h('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true, onchange: e => {
-      const file = e.target.files[0];
-      input.value = '';
-      if (!file) return;
-      prep[kind] = shrink(file).then(p => { prep[kind] = null; return stage(kind, p); },
+    const view = h('div');
+    const note = p => (p.state === 'up' ? [h('span', { class: 'spin' }), 'Nahrávám na pozadí – můžete pokračovat']
+      : p.state === 'local' ? 'Odešle se s formulářem' : p.state === 'phone' ? '📱 Z telefonu ✓' : 'Nahráno ✓');
+    const btns = photoInputs(file => {
+      if (stopped) return null;
+      prep[kind] = readPhoto(file).then(p => { prep[kind] = null; draw(); return stage(kind, p); },
         err => { prep[kind] = null; draw(); toast(errText(err), true); });
       draw();
-    } });
-    const note = p => (p.state === 'up' ? [h('span', { class: 'spin' }), 'Nahrávám na pozadí – můžete pokračovat']
-      : p.state === 'local' ? 'Nahraje se při odeslání' : p.state === 'phone' ? '📱 Z telefonu ✓' : 'Nahráno ✓');
+      return prep[kind];
+    });
+    const remove = h('button', { class: 'btn small ghost', type: 'button', onclick: () => { pics[kind] = null; DIRTY = true; changed(); } }, 'Odebrat');
+    const opt = h('span', { class: 'opt' }, 'nepovinné');
     const draw = () => {
       const p = pics[kind];
-      fill(box,
-        prep[kind] ? h('div', { class: 'ph' }, h('span', { class: 'skel' }), h('div', { class: 'ph-busy' }, h('span', { class: 'spin' }), 'Zpracovávám fotku…'))
-          : p ? h('button', { class: 'ph', type: 'button', 'aria-label': title + ' – vyfotit znovu', onclick: () => input.click() },
-            h('img', { src: p.thumb, alt: title }), h('div', { class: 'ph-busy' + (p.state === 'up' || p.state === 'local' ? '' : ' ok') }, note(p))) : null,
-        h('div', { class: 'inline-form' },
-          h('button', { class: 'btn small', type: 'button', disabled: !!prep[kind], onclick: () => input.click() }, p ? '📷 Vyfotit znovu' : '📷 Přidat foto'),
-          p ? null : h('span', { class: 'opt' }, 'nepovinné'),
-          p ? h('button', { class: 'btn small ghost', type: 'button', onclick: () => { pics[kind] = null; DIRTY = true; changed(); } }, 'Odebrat') : null),
-        input);
+      fill(view,
+        prep[kind] ? h('div', { class: 'ph' }, h('span', { class: 'skel' }), h('div', { class: 'ph-busy' }, h('span', { class: 'spin' }), 'Načítám fotku…'))
+          : p ? h('button', { class: 'ph', type: 'button', 'aria-label': title + ' – zvětšit', onclick: () => zoomUrl(p.full || p.thumb, title) },
+            h('img', { src: p.thumb || p.full, alt: title }), h('div', { class: 'ph-busy' + (p.state === 'up' || p.state === 'local' ? '' : ' ok') }, note(p))) : null);
+      btns.label(!!p);
+      btns.disabled = !!prep[kind];
+      remove.hidden = !p;
+      opt.hidden = !!p;
     };
     redraws.push(draw);
+    fill(box, view, h('div', { class: 'inline-form ph-btns' }, btns.camBtn, btns.galBtn, remove, opt), btns.inputs);
     draw();
     return box;
   };
@@ -3003,6 +3139,7 @@ function photoPicker(init, onChange) {
         if (!session || !alive() || stopped) break;
         try {
           const r = await api('apiPhotoPoll', session.token, have);
+          if (stopped) break;
           fails = 0;
           if (r.seen && !seen) { seen = true; quiet = Date.now(); sayDlg(); }
           const got = KINDS.filter(k => r[k]);
@@ -3014,7 +3151,7 @@ function photoPicker(init, onChange) {
           if (got.length) { quiet = Date.now(); DIRTY = true; changed(); }
         } catch (e) {
           if (stopped || !alive()) break; // the QRAP was sent meanwhile (or the form left) – nothing to report
-          if (/neplatí/.test(errText(e))) { sessionLost(); sayDlg(errText(e)); break; }
+          if (/neplatí/.test(errText(e))) { sessionLost(); sayDlg('Odkaz vypršel – zavřete okno a zobrazte nový QR kód. Fotky, které už dorazily, zůstávají.'); break; }
           if (++fails >= 5) { sayDlg('Spojení se nedaří: ' + errText(e)); break; }
         }
       }
@@ -3033,8 +3170,8 @@ function photoPicker(init, onChange) {
     const box = h('div', { class: 'modal no-print', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Vyfoťte telefonem' },
       h('div', { class: 'modal-card', style: 'text-align:center;max-width:380px' },
         h('h2', null, 'Vyfoťte telefonem'),
-        h('ol', { class: 'qr-how' }, h('li', null, 'Naskenujte QR kód firemním telefonem.'),
-          h('li', null, 'Na telefonu vyfoťte ŠPATNÝ a DOBRÝ díl.'), h('li', null, 'Fotky se objeví tady i ve formuláři.')),
+        h('ol', { class: 'qr-how' }, h('li', null, 'Naskenujte QR kód firemním telefonem (přihlášeným firemním účtem Google).'),
+          h('li', null, 'Na telefonu klepněte na „📷 Vyfotit“ u ŠPATNÉHO a DOBRÉHO dílu.'), h('li', null, 'Fotky se objeví tady i ve formuláři.')),
         qrBox, status, thumbs,
         h('div', { class: 'form-btns', style: 'justify-content:center' }, done)));
     const esc = e => { if (e.key === 'Escape') close(); };
@@ -3045,6 +3182,7 @@ function photoPicker(init, onChange) {
     done.focus();
     sayDlg('Připravuji QR kód…');
     try {
+      if (!session) seen = false;
       const s = await ensureSession();
       await qrLib().catch(() => null); // without the library the link is shown as text
       if (!dlg) return;
@@ -3071,14 +3209,20 @@ function photoPicker(init, onChange) {
     get: () => Object.assign({}, pics),
     count: () => KINDS.filter(k => pics[k]).length,
     pending: () => KINDS.some(k => prep[k] || (pics[k] && pics[k].state === 'up')),
-    /** Resolves when every photo taken so far is shrunk and uploaded (or failed and will go with the form). */
+    /** Resolves when every photo taken so far is read and uploaded (or failed / too slow and goes with the form). */
     settle: () => Promise.all(KINDS.map(k => Promise.resolve(prep[k]).then(() => chain[k]))),
     token: () => (session ? session.token : ''),
+    /** The cells "Odeslat" asks to attach: every photo shown that is already in Drive. */
+    keep: () => KINDS.reduce((o, k) => {
+      const p = pics[k];
+      if (p && p.value && (p.state === 'staged' || p.state === 'phone')) o[k] = p.value;
+      return o;
+    }, {}),
+    // for a server of the previous version: kinds whose hand-off photo must NOT be attached
+    drop: () => KINDS.filter(k => !(pics[k] && (pics[k].state === 'staged' || pics[k].state === 'phone'))),
     /** "Odeslat" starts: no more checks of the hand-off (see stopped). resume() after a failed send. */
     pause: () => { stopped = true; },
     resume: () => { stopped = false; if (session && used) poll(); },
-    // kinds whose photo in the hand-off must NOT be attached: removed here, or a photo that goes with the form instead
-    drop: () => KINDS.filter(k => !(pics[k] && (pics[k].state === 'staged' || pics[k].state === 'phone'))),
     /** For the draft: only what is safely on the server (value) – with its preview. */
     state: () => ({ session, pics: KINDS.reduce((o, k) => {
       const p = pics[k];
@@ -3095,18 +3239,21 @@ function photoPicker(init, onChange) {
         if (p.full) photoPut(ids[0], p.full);
       });
     },
-    /** The hand-off had expired: photos taken here are attached now; phone photos are lost – the returned text says so. */
+    /**
+     * After "Odeslat": photos the server could not attach (res.photoLost) are uploaded again from memory when they
+     * were taken here; a lost phone photo is reported in the returned text (it has to be taken again).
+     */
     afterCreate(res) {
-      if (!res.phoneExpired) return '';
       const q = res.qrap;
-      const redo = KINDS.filter(k => pics[k] && pics[k].full && !q[keyOf(k)]);
-      const lost = KINDS.filter(k => pics[k] && !pics[k].full);
+      const lost = (res.photoLost || []).filter(k => pics[k] && !q[keyOf(k)]);
+      const redo = lost.filter(k => pics[k].full);
+      const gone = lost.filter(k => !pics[k].full);
       if (redo.length) {
         redo.reduce((p, k) => p.then(() => api('apiSetPhoto', q.id, k, pics[k].full, pics[k].thumb).then(store)), Promise.resolve())
           .then(() => { toast('Fotky připojeny k ' + q.id + ' ✓'); if (S.view === 'board' && redrawBoard) redrawBoard(); },
             () => toast('Fotky se nepodařilo připojit – přidejte je na stránce ' + q.id + ' (Přidat foto).', true));
       }
-      return lost.length ? ' Fotky z telefonu se nepodařilo připojit (odkaz vypršel) – přidejte je na stránce QRAP (Přidat foto).' : '';
+      return gone.length ? ' Fotku z telefonu (' + gone.map(k => NAMES[k]).join(', ') + ') se nepodařilo připojit – přidejte ji na stránce QRAP.' : '';
     },
     /** The form was thrown away: its uploaded photos go to the Drive trash. */
     discard() {
@@ -3130,7 +3277,7 @@ function qrLib() {
   if (QR_LIB) return QR_LIB;
   const load = (src, sri) => new Promise((ok, bad) => {
     const s = h('script', { src: src, integrity: sri || null, crossorigin: sri ? 'anonymous' : null });
-    s.onload = ok;
+    s.onload = () => (typeof qrcode === 'function' ? ok() : bad(new Error('QR')));
     s.onerror = () => { s.remove(); bad(new Error('Knihovnu pro QR kód se nepodařilo načíst.')); };
     document.head.append(s);
   });
@@ -3155,34 +3302,84 @@ function qrImage(url) {
 }
 
 /**
- * Decodes the picture once and returns it twice as JPEG: the photo (max 1280 px) and a preview (max 480 px).
- * The preview is made from the 1280 px copy – much faster than from a 12-megapixel camera original.
+ * A photo from the camera or the gallery → { full, thumb } as JPEG (max 1280 px / 480 px), small and quick to upload.
+ * Made to work on real phones and tablets (Upload.html has the same function – keep them equal):
+ *   - the file is copied into memory first: a camera file on some phones disappears once the input lets go of it
+ *   - three ways to read it: an <img> (follows the camera's rotation), createImageBitmap, and – for a JPEG / PNG that
+ *     no browser can draw – the original file as it is, when it is small enough
+ *   - a time limit, so a phone that never finishes decoding does not hang the form
+ *   - a canvas that silently failed (out of memory on a big photo) is noticed and drawn again smaller
+ * Errors are in Czech and say what to do.
  */
-function shrink(file) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const src = URL.createObjectURL(file);
-    const draw = (from, w0, h0, max) => {
-      const scale = Math.min(1, max / Math.max(w0, h0));
-      const c = document.createElement('canvas');
-      c.width = Math.max(1, Math.round(w0 * scale));
-      c.height = Math.max(1, Math.round(h0 * scale));
-      const g = c.getContext('2d');
-      g.imageSmoothingQuality = 'high';
-      g.drawImage(from, 0, 0, c.width, c.height);
-      return c;
-    };
-    img.onload = () => {
-      URL.revokeObjectURL(src);
-      try {
-        const big = draw(img, img.width, img.height, 1280);
-        const small = draw(big, big.width, big.height, 480);
-        resolve({ full: big.toDataURL('image/jpeg', 0.8), thumb: small.toDataURL('image/jpeg', 0.7) });
-      } catch (e) { reject(e); }
-    };
-    img.onerror = () => { URL.revokeObjectURL(src); reject(new Error('Soubor není obrázek.')); };
-    img.src = src;
-  });
+async function readPhoto(file) {
+  if (!file || !file.size) throw new Error('Fotka je prázdná – vyfoťte ji prosím znovu.');
+  if (file.size > 40 * 1024 * 1024) throw new Error('Soubor je příliš velký (víc než 40 MB). Vyberte menší fotku.');
+  let buf;
+  try { buf = await file.arrayBuffer(); } catch (e) { throw new Error('Fotku se nepodařilo přečíst – vyfoťte ji prosím znovu.'); }
+  const head = new Uint8Array(buf.slice(0, 12));
+  const kind = head[0] === 0xFF && head[1] === 0xD8 ? 'jpeg' : head[0] === 0x89 && head[1] === 0x50 ? 'png'
+    : head[0] === 0x47 && head[1] === 0x49 ? 'gif' : head[8] === 0x57 && head[9] === 0x45 ? 'webp' : '';
+  const blob = new Blob([buf], { type: kind ? 'image/' + kind : (file.type || 'application/octet-stream') });
+  const timed = (p, ms) => Promise.race([p, sleep(ms).then(() => { throw new Error('timeout'); })]);
+  let src = null;
+  try {
+    src = await timed(new Promise((ok, bad) => {
+      const img = new Image();
+      const url = URL.createObjectURL(blob);
+      img.onload = () => { URL.revokeObjectURL(url); ok({ el: img, w: img.naturalWidth || img.width, h: img.naturalHeight || img.height }); };
+      img.onerror = () => { URL.revokeObjectURL(url); bad(new Error('img')); };
+      img.src = url;
+    }), 25000);
+  } catch (e) {
+    try {
+      const bmp = await timed(createImageBitmap(blob, { imageOrientation: 'from-image' }), 25000);
+      src = { el: bmp, w: bmp.width, h: bmp.height, close: () => bmp.close && bmp.close() };
+    } catch (e2) { src = null; }
+  }
+  if (!src || !src.w || !src.h) {
+    // nothing could draw it: a JPEG / PNG small enough goes as it is (the server checks it again)
+    if ((kind === 'jpeg' || kind === 'png') && buf.byteLength <= 4.5 * 1024 * 1024) {
+      const full = await new Promise((ok, bad) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => bad(r.error); r.readAsDataURL(blob); });
+      return { full, thumb: '' };
+    }
+    throw new Error(kind ? 'Fotku se nepodařilo zpracovat. Zkuste ji vyfotit znovu.'
+      : 'Tento formát fotky neumíme přečíst (např. HEIC). Vyfoťte ji tlačítkem „📷 Vyfotit“, nebo na iPhonu nastavte ' +
+        'Nastavení → Fotoaparát → Formáty → Nejkompatibilnější.');
+  }
+  const draw = (from, w0, h0, max, quality) => {
+    const scale = Math.min(1, max / Math.max(w0, h0));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(w0 * scale));
+    c.height = Math.max(1, Math.round(h0 * scale));
+    const g = c.getContext('2d');
+    g.imageSmoothingQuality = 'high';
+    g.fillStyle = '#fff'; // a transparent PNG gets a white background instead of black
+    g.fillRect(0, 0, c.width, c.height);
+    g.drawImage(from, 0, 0, c.width, c.height);
+    const url = c.toDataURL('image/jpeg', quality);
+    return { c, url, ok: /^data:image\/jpeg;base64,/.test(url) && url.length > 200 };
+  };
+  try {
+    let big = draw(src.el, src.w, src.h, 1280, 0.8);
+    if (!big.ok) big = draw(src.el, src.w, src.h, 960, 0.75); // not enough memory for 1280 px: smaller
+    if (!big.ok) throw new Error('canvas');
+    const small = draw(big.c, big.c.width, big.c.height, 480, 0.7); // from the 1280 px copy: quick
+    return { full: big.url, thumb: small.ok ? small.url : '' };
+  } catch (e) {
+    throw new Error('Fotku se nepodařilo zmenšit (málo paměti v zařízení?). Zavřete jiné aplikace a zkuste to znovu.');
+  } finally {
+    if (src.close) src.close();
+  }
+}
+
+/** A photo that is only on this page (new QRAP) over the page; a click or Esc closes it. */
+function zoomUrl(url, title) {
+  const close = () => { lb.remove(); document.removeEventListener('keydown', esc); };
+  const esc = e => { if (e.key === 'Escape') close(); };
+  const lb = h('div', { class: 'lightbox', role: 'dialog', 'aria-label': title || 'Fotka', tabindex: -1, onclick: close }, h('img', { src: url, alt: title || 'Fotka' }));
+  document.body.append(lb);
+  document.addEventListener('keydown', esc);
+  lb.focus();
 }
 
 /** The full photo over the page; a click or Esc closes it. The preview shows at once while the full photo loads. */
@@ -3571,6 +3768,10 @@ function start() {
     if (onLeave) onLeave();
     if (WAIT.list.some(w => w.lock) || (DIRTY && !(S.view === 'new' && DRAFT.works && !S.edit))) { e.preventDefault(); e.returnValue = ''; }
   });
+  // the screen crossed 1180 px (tablet turned, window resized): the board switches between strips and cards –
+  // never while somebody is typing or saving
+  const relayout = () => { if (!DIRTY && !S.edit && !WAIT.list.length && (S.view === 'board' || S.view === 'dash')) render(); };
+  if (NARROW.addEventListener) NARROW.addEventListener('change', relayout); else NARROW.addListener(relayout);
   window.addEventListener('offline', () => { drawBanners(); toast('Připojení k internetu se ztratilo – vyplněné údaje zůstávají, uložte je po připojení.', true); });
   window.addEventListener('online', () => { drawBanners(); toast('Připojení je zpět ✓'); if (S.view === 'board') refresh(true); });
   render();

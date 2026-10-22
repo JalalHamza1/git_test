@@ -13,7 +13,7 @@
  *   kiosk  apiStagePhoto    → a photo taken on the kiosk: saved to Drive at once, remembered under the token
  *   phone  ?up=TOKEN        → Upload.html (marks the token "phone connected") → apiPhoneUpload: the same from the phone
  *   kiosk  apiPhotoPoll     → every few seconds: "what arrived?" – only new photos come back (as a small preview)
- *   kiosk  apiCreate        → sends the token; create_ attaches the photos (see phonePhotos_ / phoneDone_)
+ *   kiosk  apiCreate        → sends the token + the photos it shows; create_ attaches them (see phonePhotos_ / phoneDone_)
  *   kiosk  apiPhotoDiscard  → the form was thrown away: its photos go to the Drive trash
  *
  * SAFETY
@@ -138,25 +138,58 @@ function photoDiscard_(token) {
 }
 
 /**
- * Called by create_. Returns the photo cells that arrived (phone or kiosk) and are wanted, the files that are not
- * wanted (removed on the kiosk, or replaced by a photo sent with the form – `drop` lists the kinds) and whether the
- * session is gone. It never throws: a session that expired must not block sending the ticket.
+ * Called by create_ – which photos go into the new QRAP. keep = { WRONG, RIGHT }: the photo cells the page SHOWS
+ * (uploaded from the kiosk or arrived from the phone), so exactly what the operator saw is attached. A value is
+ * accepted when the hand-off still has it, or – when the cache lost it (6 h, or Google evicted it) – when its files
+ * are recent images in the photo folder (ownUpload_). Kinds the page showed but that cannot be attached are in
+ * `lost` (the page then uploads them again from memory or says so). Every other file of the hand-off is `unused`
+ * (removed or replaced on the kiosk) and goes to the trash. Never throws: photos must not block sending the ticket.
+ * A page from before this version sends no `keep`, only the kinds to drop – handled the old way.
  */
-function phonePhotos_(token, drop) {
-  const out = { WRONG: '', RIGHT: '', unused: [], expired: false };
-  token = String(token || '');
-  if (!token) return out;
-  const meta = /^[0-9a-f]{32}$/.test(token) ? psMeta_(token) : null;
-  if (!meta || meta.owner !== me_().email) { out.expired = true; return out; }
-  const got = CacheService.getScriptCache().getAll(PS_KINDS.map(k => psKey_(token, k)));
+function phonePhotos_(token, keep, drop) {
+  const out = { WRONG: '', RIGHT: '', unused: [], lost: [], expired: false };
+  token = /^[0-9a-f]{32}$/.test(String(token || '')) ? String(token) : '';
+  const meta = token ? psMeta_(token) : null;
+  const mine = !!(meta && meta.owner === me_().email);
+  if (token && !mine) out.expired = true;
+  const got = mine ? CacheService.getScriptCache().getAll(PS_KINDS.map(k => psKey_(token, k))) : {};
+  const legacy = keep === undefined || keep === null;
+  const want = obj_(keep);
   const dropped = Array.isArray(drop) ? drop : [];
   PS_KINDS.forEach(k => {
-    const v = got[psKey_(token, k)];
-    if (!v) return;
-    if (dropped.indexOf(k) >= 0) out.unused = out.unused.concat(photoIds_(v));
-    else out[k] = v;
+    const have = String(got[psKey_(token, k)] || '');
+    const w = legacy ? (dropped.indexOf(k) >= 0 ? '' : have) : txt_(want[k], 200);
+    if (w) {
+      if (w === have || ownUpload_(w)) out[k] = w;
+      else if (have) out[k] = have; // the shown photo was replaced meanwhile (phone retake): the newest one
+      else out.lost.push(k);
+    }
+    if (have && have !== out[k]) out.unused = out.unused.concat(photoIds_(have));
   });
   return out;
+}
+
+/**
+ * A photo cell the page says it uploaded, when the hand-off no longer knows it: accepted only when each file is an
+ * image created in the last 24 h in the eQRAP photo folder and not in the trash – so nothing else in Drive can be
+ * attached (and then read through photo_) this way.
+ */
+function ownUpload_(value) {
+  const ids = photoIds_(value);
+  if (!ids.length || ids.length > 2 || ids.some(id => !/^[\w-]{10,100}$/.test(id))) return false;
+  let folder = '';
+  try { folder = photoFolderId_(); } catch (e) { return false; }
+  return ids.every(id => {
+    try {
+      const f = DriveApp.getFileById(id);
+      if (f.isTrashed() || !/^image\//.test(String(f.getMimeType())) || Date.now() - f.getDateCreated().getTime() > 864e5) return false;
+      const parents = f.getParents();
+      while (parents.hasNext()) if (parents.next().getId() === folder) return true;
+      return false;
+    } catch (e) {
+      return false;
+    }
+  });
 }
 
 /** After the QRAP is saved: the token cannot be used for a second QRAP. */
