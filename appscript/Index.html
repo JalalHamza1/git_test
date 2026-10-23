@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; max-width: 520px; margin-inline: auto; }
+    h1 { font-size: 20px; }
+    .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    button, label.btn { flex: 1; padding: 12px; border: 0; border-radius: 8px; background: #1a73e8; color: #fff;
+      font-size: 15px; text-align: center; cursor: pointer; }
+    button.secondary { background: #5f6368; }
+    #paste { margin-top: 12px; border: 2px dashed #bbb; border-radius: 8px; padding: 20px; text-align: center; color: #666; }
+    #paste:focus { outline: none; border-color: #1a73e8; }
+    video { width: 100%; border-radius: 8px; margin-top: 12px; display: none; background: #000; }
+    #status { margin-top: 12px; padding: 12px; border-radius: 8px; background: #f1f3f4; word-break: break-all; }
+    .ok { background: #e6f4ea !important; color: #137333; }
+    .err { background: #fce8e6 !important; color: #c5221f; }
+  </style>
+</head>
+<body>
+  <h1>QR Scanner</h1>
+  <div class="btns">
+    <button id="camBtn">📷 Scan with camera</button>
+    <label class="btn">🖼️ Upload / take photo
+      <input id="file" type="file" accept="image/*" capture="environment" hidden>
+    </label>
+  </div>
+  <div id="paste" tabindex="0">Click here and press Ctrl+V / ⌘+V to paste a QR image</div>
+  <video id="video" playsinline muted></video>
+  <div id="status">Ready.</div>
+
+<script>
+const video = document.getElementById('video');
+const camBtn = document.getElementById('camBtn');
+const statusEl = document.getElementById('status');
+const canvas = document.createElement('canvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+let stream = null, busy = false;
+
+function setStatus(msg, cls) { statusEl.textContent = msg; statusEl.className = cls || ''; }
+
+// Decode from any drawable source. Downscales big photos (jsQR is slow/unreliable on huge images).
+function decode(src, w, h) {
+  const MAX = 1000, scale = Math.min(1, MAX / Math.max(w, h));
+  canvas.width = Math.round(w * scale);
+  canvas.height = Math.round(h * scale);
+  ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+  const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  return jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
+}
+
+function handleResult(text, source) {
+  if (busy) return;
+  busy = true;
+  stopCamera();
+  if (navigator.vibrate) navigator.vibrate(100);
+  setStatus('Found: ' + text + ' — saving…');
+  google.script.run
+    .withSuccessHandler(() => { setStatus('✅ Saved: ' + text, 'ok'); busy = false; })
+    .withFailureHandler(e => { setStatus('❌ Save failed: ' + e.message, 'err'); busy = false; })
+    .saveScan(text, source);
+}
+
+// ---------- Camera ----------
+async function startCamera() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return setStatus('Camera not supported here. Use Upload / Paste instead.', 'err');
+  }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    video.srcObject = stream;
+    await video.play();
+    video.style.display = 'block';
+    camBtn.textContent = '⏹ Stop camera';
+    camBtn.classList.add('secondary');
+    setStatus('Point the camera at a QR code…');
+    requestAnimationFrame(tick);
+  } catch (e) {
+    const hint = e.name === 'NotAllowedError'
+      ? 'Camera permission denied. Allow it in browser settings, and open the /exec URL directly.'
+      : 'Could not open camera (' + e.name + '). Use Upload / Paste instead.';
+    setStatus(hint, 'err');
+  }
+}
+
+function stopCamera() {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null;
+  video.style.display = 'none';
+  camBtn.textContent = '📷 Scan with camera';
+  camBtn.classList.remove('secondary');
+}
+
+let lastScan = 0;
+function tick(t) {
+  if (!stream) return;
+  if (video.readyState === video.HAVE_ENOUGH_DATA && t - lastScan > 150) { // ~6 scans/sec, saves battery
+    lastScan = t;
+    const code = decode(video, video.videoWidth, video.videoHeight);
+    if (code && code.data) return handleResult(code.data, 'camera');
+  }
+  requestAnimationFrame(tick);
+}
+
+camBtn.onclick = () => (stream ? stopCamera() : startCamera());
+
+// ---------- Image file / paste ----------
+function decodeFile(file, source) {
+  if (!file || !file.type.startsWith('image/')) return setStatus('That is not an image.', 'err');
+  setStatus('Reading image…');
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    const code = decode(img, img.naturalWidth, img.naturalHeight);
+    URL.revokeObjectURL(url);
+    code && code.data ? handleResult(code.data, source)
+                      : setStatus('No QR code found. Try a sharper, closer, well-lit image.', 'err');
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); setStatus('Could not load image (HEIC? try JPG/PNG).', 'err'); };
+  img.src = url;
+}
+
+document.getElementById('file').onchange = e => {
+  decodeFile(e.target.files[0], 'upload');
+  e.target.value = ''; // allow same file again
+};
+
+document.addEventListener('paste', e => {
+  const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
+  if (item) { e.preventDefault(); decodeFile(item.getAsFile(), 'paste'); }
+  else {
+    const text = e.clipboardData?.getData('text');
+    if (text) setStatus('Pasted text, not an image. Copy the QR image itself.', 'err');
+  }
+});
+
+// Drag & drop onto the paste box too
+const pasteBox = document.getElementById('paste');
+pasteBox.ondragover = e => e.preventDefault();
+pasteBox.ondrop = e => { e.preventDefault(); decodeFile(e.dataTransfer.files[0], 'drop'); };
+</script>
+</body>
+</html>
