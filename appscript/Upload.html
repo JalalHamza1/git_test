@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+:root { --ink: #151B1F; --ink-3: #6b757e; --line: #cbd3cf; --page: #ecf2e8; --accent: #66B539; --accent-ink: #3f7d1f; --accent-soft: #E8F7DD; --bad: #b8322a; --panel: #fff; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 17px/1.45 "Segoe UI", -apple-system, Roboto, Arial, sans-serif; }
+main { max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; }
+h1 { font-size: 22px; margin: 0 0 6px; }
+p { margin: 0 0 14px; color: var(--ink-3); }
+.pic { display: block; width: 100%; margin: 0 0 14px; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.pic.done { border-color: var(--accent); background: var(--accent-soft); }
+.pic.fail { border-color: var(--bad); }
+.pic-head { padding: 14px 16px 10px; font-weight: 650; }
+.pic-btns { display: flex; gap: 10px; padding: 0 16px 14px; }
+.pic-btns button { flex: 1; min-height: 56px; border-radius: 10px; font: inherit; font-weight: 650; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+.pic-btns button.cam { flex: 1.4; background: var(--accent); border-color: var(--accent); color: #fff; }
+.pic-btns button:disabled { opacity: .5; }
+.pic .state { display: flex; align-items: center; gap: 8px; font-weight: 400; font-size: 14px; color: var(--ink-3); }
+.pic.done .state { color: var(--accent-ink); }
+.pic.fail .state { color: var(--bad); font-weight: 600; }
+.shot { position: relative; }
+.shot img { display: block; width: 100%; max-height: 240px; object-fit: cover; }
+.shot.busy img { opacity: .55; }
+.bar { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--accent); width: 0; transition: width .3s ease-out; }
+.pic > button.retry { display: block; width: calc(100% - 32px); margin: 0 16px 14px; min-height: 48px; border: 0; border-radius: 10px; background: var(--bad); color: #fff; font: inherit; font-weight: 650; }
+.pic > button.retry:disabled { opacity: .5; }
+.spin { display: inline-block; width: 15px; height: 15px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#msg { color: var(--bad); font-weight: 600; min-height: 1.4em; }
+.all-done, .restored { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px; padding: 16px; color: var(--accent-ink); font-weight: 650; margin-bottom: 14px; }
+.restored { font-weight: 400; }
+.error { background: var(--panel); border: 1px solid var(--bad); border-radius: 12px; padding: 16px; color: var(--bad); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } .bar { transition: none; } }
+@media (prefers-color-scheme: dark) {
+  :root { --ink: #e6ecee; --ink-3: #9aa6ad; --line: #3a464d; --page: #151B1F; --accent-soft: #22361a; --accent-ink: #8fd16a; --panel: #1d252a; }
+}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script type="application/json" id="boot"><?!= boot ?></script>
+<script>
+'use strict';
+/* The page a company phone opens after scanning the QR code on the kiosk (PhotoHandoff.gs).
+   NO EMPTY WAITING: the photo shows at once, a bar and a short text say what is happening, a slow upload says so.
+   SAFETY: an upload that fails keeps the photo – one tap sends it again (no new photo needed); a hiccup in the network
+   or a busy server is retried twice by itself; an upload that never answers is given up after SEND_MS, so the page
+   can never hang; leaving the page during an upload asks first.
+   ONE PHOTO AT A TIME: while a photo is being read or sent, the camera buttons wait. Opening the camera during an
+   upload is what makes many Android phones close the browser to free memory – the upload and the photo were lost.
+   If the phone closes the page anyway, the photos already on the kiosk are shown again (sessionStorage). */
+const BOOT = (() => { try { return JSON.parse(document.getElementById('boot').textContent) || {}; } catch (e) { return { error: 'Stránku se nepodařilo načíst.' }; } })();
+const app = document.getElementById('app');
+const SEND_MS = 60000; // one try of an upload; then it counts as failed (and is tried again)
+
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  Object.entries(attrs || {}).forEach(([k, v]) => {
+    if (v === null || v === undefined || v === false) return;
+    if (k === 'class') el.className = v;
+    else if (k.slice(0, 2) === 'on') el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? '' : v);
+  });
+  kids.flat().forEach(k => { if (k !== null && k !== undefined && k !== false) el.append(k instanceof Node ? k : String(k)); });
+  return el;
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/**
+ * A photo from the camera or the gallery → { full, thumb } as JPEG (max 1280 px / 480 px), small and quick to upload.
+ * Made to work on real phones and tablets (Index.html has the same function – keep them equal):
+ *   - the file is copied into memory first: a camera file on some phones disappears once the input lets go of it
+ *   - three ways to read it: an <img> (follows the camera's rotation), createImageBitmap, and – for a JPEG / PNG that
+ *     no browser can draw – the original file as it is, when it is small enough
+ *   - a time limit, so a phone that never finishes decoding does not hang the form
+ *   - a canvas that silently failed (out of memory on a big photo) is noticed and drawn again smaller
+ *   - the decoded photo and the canvases are let go as soon as they are not needed: a phone has little memory, and
+ *     the second photo used to fail because the first one was still held
+ *   - JPEG quality 0.72: about a quarter smaller than 0.8 and no visible difference at 1280 px – a faster upload
+ * Errors are in Czech and say what to do.
+ */
+async function readPhoto(file) {
+  if (!file || !file.size) throw new Error('Fotka je prázdná – vyfoťte ji prosím znovu.');
+  if (file.size > 40 * 1024 * 1024) throw new Error('Soubor je příliš velký (víc než 40 MB). Vyberte menší fotku.');
+  let buf;
+  try { buf = await file.arrayBuffer(); } catch (e) { throw new Error('Fotku se nepodařilo přečíst – vyfoťte ji prosím znovu.'); }
+  const head = new Uint8Array(buf.slice(0, 12));
+  const kind = head[0] === 0xFF && head[1] === 0xD8 ? 'jpeg' : head[0] === 0x89 && head[1] === 0x50 ? 'png'
+    : head[0] === 0x47 && head[1] === 0x49 ? 'gif' : head[8] === 0x57 && head[9] === 0x45 ? 'webp' : '';
+  const blob = new Blob([buf], { type: kind ? 'image/' + kind : (file.type || 'application/octet-stream') });
+  buf = null; // the Blob holds the bytes now
+  const timed = (p, ms) => Promise.race([p, sleep(ms).then(() => { throw new Error('timeout'); })]);
+  let src = null;
+  try {
+    src = await timed(new Promise((ok, bad) => {
+      const img = new Image();
+      const url = URL.createObjectURL(blob);
+      const drop = () => { img.onload = img.onerror = null; img.removeAttribute('src'); };
+      img.onload = () => { URL.revokeObjectURL(url); ok({ el: img, w: img.naturalWidth || img.width, h: img.naturalHeight || img.height, close: drop }); };
+      img.onerror = () => { URL.revokeObjectURL(url); drop(); bad(new Error('img')); };
+      img.src = url;
+    }), 25000);
+  } catch (e) {
+    try {
+      const bmp = await timed(createImageBitmap(blob, { imageOrientation: 'from-image' }), 25000);
+      src = { el: bmp, w: bmp.width, h: bmp.height, close: () => bmp.close && bmp.close() };
+    } catch (e2) { src = null; }
+  }
+  if (!src || !src.w || !src.h) {
+    if (src && src.close) src.close();
+    // nothing could draw it: a JPEG / PNG small enough goes as it is (the server checks it again)
+    if ((kind === 'jpeg' || kind === 'png') && blob.size <= 4.5 * 1024 * 1024) {
+      const full = await new Promise((ok, bad) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => bad(r.error); r.readAsDataURL(blob); });
+      return { full, thumb: '' };
+    }
+    throw new Error(kind ? 'Fotku se nepodařilo zpracovat. Zkuste ji vyfotit znovu.'
+      : 'Tento formát fotky neumíme přečíst (např. HEIC). Vyfoťte ji tlačítkem „📷 Vyfotit“, nebo na iPhonu nastavte ' +
+        'Nastavení → Fotoaparát → Formáty → Nejkompatibilnější.');
+  }
+  const free = c => { if (c) { c.width = 0; c.height = 0; } }; // gives the canvas memory back at once
+  const draw = (from, w0, h0, max, quality) => {
+    const scale = Math.min(1, max / Math.max(w0, h0));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(w0 * scale));
+    c.height = Math.max(1, Math.round(h0 * scale));
+    const g = c.getContext('2d');
+    g.imageSmoothingQuality = 'high';
+    g.fillStyle = '#fff'; // a transparent PNG gets a white background instead of black
+    g.fillRect(0, 0, c.width, c.height);
+    g.drawImage(from, 0, 0, c.width, c.height);
+    const url = c.toDataURL('image/jpeg', quality);
+    return { c, url, ok: /^data:image\/jpeg;base64,/.test(url) && url.length > 200 };
+  };
+  let big = null, small = null;
+  try {
+    big = draw(src.el, src.w, src.h, 1280, 0.72);
+    if (!big.ok) { free(big.c); big = draw(src.el, src.w, src.h, 960, 0.7); } // not enough memory for 1280 px: smaller
+    if (!big.ok) throw new Error('canvas');
+    src.close && src.close(); // the big decoded photo is not needed any more
+    src.close = null;
+    small = draw(big.c, big.c.width, big.c.height, 480, 0.7); // from the 1280 px copy: quick
+    return { full: big.url, thumb: small.ok ? small.url : '' };
+  } catch (e) {
+    throw new Error('Fotku se nepodařilo zmenšit (málo paměti v zařízení?). Zavřete jiné aplikace a zkuste to znovu.');
+  } finally {
+    if (src.close) src.close();
+    free(big && big.c);
+    free(small && small.c);
+  }
+}
+
+const errText = e => String((e && e.message) || e || '').replace(/^(ScriptError|Exception|Error|Výjimka):\s*/, '') || 'Nastala chyba. Zkuste to znovu.';
+const isNetErr = e => /NetworkError|Failed to fetch|network|HTTP 0/i.test(String((e && e.message) || e || ''));
+const isTimeout = e => String((e && e.message) || e || '') === 'TIMEOUT';
+const isGone = e => /neplatí/.test(errText(e));
+// worth trying again by itself: the network, no answer at all, or Google / the server being busy for a moment
+const canRetry = e => isNetErr(e) || isTimeout(e) || /neodpovídá|zaneprázdněn|timed out|server error/i.test(errText(e));
+const failText = e => (isTimeout(e) ? 'Odesílání trvá příliš dlouho – nejspíš slabý signál. Přejděte blíž k Wi-Fi a stiskněte „Odeslat fotku znovu“.'
+  : isNetErr(e) ? 'Telefon se nemůže spojit se serverem. Zkontrolujte Wi-Fi / data a stiskněte „Odeslat fotku znovu“.' : errText(e));
+
+/** One try of an upload. A call that never answers (the phone lost the signal) counts as failed after SEND_MS. */
+const send = (kind, p) => new Promise((ok, bad) => {
+  const t = setTimeout(() => bad(new Error('TIMEOUT')), SEND_MS);
+  google.script.run
+    .withSuccessHandler(r => { clearTimeout(t); ok(r); })
+    .withFailureHandler(e => { clearTimeout(t); bad(e); })
+    .apiPhoneUpload(BOOT.token, kind, p.full, p.thumb);
+});
+
+/** What is already on the kiosk, kept for this tab: Android sometimes closes the browser while the camera is open. */
+const SAVED_KEY = 'eqrap:up:' + String(BOOT.token || '');
+function savedGet() { try { return JSON.parse(sessionStorage.getItem(SAVED_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function savedPut(kind, thumb) {
+  const s = savedGet();
+  s[kind] = thumb || '1';
+  try { sessionStorage.setItem(SAVED_KEY, JSON.stringify(s)); return; } catch (e) { /* full: without the preview */ }
+  try { s[kind] = '1'; sessionStorage.setItem(SAVED_KEY, JSON.stringify(s)); } catch (e) { /* storage off – fine */ }
+}
+
+let working = false; // a photo is being read or sent: everything else waits, leaving the page asks first
+const locks = [];    // one per photo box: disables its buttons
+function setWorking(on) { working = on; locks.forEach(f => f(on)); }
+window.addEventListener('beforeunload', e => { if (working) { e.preventDefault(); e.returnValue = ''; } });
+
+if (BOOT.error || !BOOT.token) {
+  app.append(h('div', { class: 'error', role: 'alert' }, BOOT.error || 'Odkaz není platný. Na kiosku zobrazte nový QR kód.'));
+} else {
+  const saved = savedGet();
+  const msg = h('p', { id: 'msg', role: 'alert' });
+  const allDone = h('div', { class: 'all-done', role: 'status', hidden: true }, '✓ Obě fotky jsou na kiosku. Vraťte se ke kiosku a pokračujte ve formuláři.');
+  const restored = saved.WRONG || saved.RIGHT
+    ? h('div', { class: 'restored', role: 'status' }, 'Stránka se znovu načetla. Fotky označené ✓ už jsou na kiosku – stačí dofotit zbytek.') : null;
+  const done = { WRONG: false, RIGHT: false };
+  let gone = false;
+  app.append(h('h1', null, 'Fotky k QRAP'),
+    h('p', null, 'Vyfoťte díly – jeden po druhém. Fotka se za pár vteřin objeví na kiosku. Hotovou fotku můžete vybrat i z galerie.'),
+    restored, allDone);
+  [['WRONG', 'ŠPATNÝ díl'], ['RIGHT', 'DOBRÝ díl']].forEach(([kind, label]) => {
+    // Two inputs: "capture" opens the camera straight away (newer Android phones offer only the gallery without it),
+    // the other one picks a photo that is already in the gallery.
+    const cam = h('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true });
+    const gal = h('input', { type: 'file', accept: 'image/*', hidden: true });
+    const state = h('span', { class: 'state' }, 'vyfoťte, nebo vyberte z galerie');
+    const camBtn = h('button', { class: 'cam', type: 'button', onclick: () => { if (!working) cam.click(); } }, '📷 Vyfotit');
+    const galBtn = h('button', { type: 'button', onclick: () => { if (!working) gal.click(); } }, '🖼️ Z galerie');
+    const shot = h('div', { class: 'shot', hidden: true });
+    const retry = h('button', { class: 'retry', type: 'button', hidden: true, onclick: () => upload(last) }, 'Odeslat fotku znovu');
+    const box = h('div', { class: 'pic' }, h('div', { class: 'pic-head' }, label, state), h('div', { class: 'pic-btns' }, camBtn, galBtn), shot, retry);
+    let last = null; // the photo of the last failed try: "Odeslat znovu" needs no new photo
+    let mine = false; // this box is the one working right now
+    const say = (text, spin) => { state.replaceChildren(...(spin ? [h('span', { class: 'spin', 'aria-hidden': 'true' })] : []), text); };
+    locks.push(on => {
+      camBtn.disabled = galBtn.disabled = on || gone;
+      retry.disabled = on || gone;
+      if (on && !mine && !box.classList.contains('done')) say('počkejte, odesílá se předchozí fotka…');
+      else if (!on && !mine && !box.classList.contains('done') && !box.classList.contains('fail') && !gone) say('vyfoťte, nebo vyberte z galerie');
+    });
+    const markDone = () => {
+      box.classList.remove('fail');
+      box.classList.add('done');
+      say('✓ nahráno na kiosk – tlačítky výše ji můžete nahradit');
+      camBtn.textContent = '📷 Vyfotit znovu';
+      done[kind] = true;
+      allDone.hidden = !(done.WRONG && done.RIGHT);
+    };
+    if (saved[kind]) { // the page was reloaded: this photo is already on the kiosk
+      if (saved[kind] !== '1') { shot.replaceChildren(h('img', { src: saved[kind], alt: label })); shot.hidden = false; }
+      markDone();
+    }
+
+    async function upload(p) {
+      if (!p || gone || working) return;
+      last = p;
+      mine = true;
+      setWorking(true);
+      retry.hidden = true;
+      box.classList.remove('done', 'fail');
+      const bar = h('i', { class: 'bar' });
+      shot.replaceChildren(h('img', { src: p.thumb || p.full, alt: label }), bar); // the photo shows at once
+      shot.hidden = false;
+      shot.classList.add('busy');
+      msg.textContent = '';
+      // the bar fills on its own (an upload gives no progress); the text says when it takes long
+      let phase = 'odesílám na kiosk…';
+      let t0 = Date.now();
+      const tick = setInterval(() => {
+        const s = (Date.now() - t0) / 1000;
+        bar.style.width = (10 + 80 * (1 - Math.exp(-s / 3))) + '%';
+        if (s > 5) say(phase + ' ' + Math.round(s) + ' s', true);
+      }, 300);
+      say(phase, true);
+      try {
+        for (let i = 0; ; i++) {
+          try { await send(kind, p); break; } catch (e) {
+            if (i >= 2 || !canRetry(e)) throw e;
+            phase = 'spojení zakolísalo – zkouším znovu (' + (i + 2) + '/3)…';
+            say(phase, true);
+            await sleep(i ? 4000 : 1500);
+            t0 = Date.now();
+            // the same photo again: on the kiosk it simply replaces a try that did arrive after all
+          }
+        }
+        bar.style.width = '100%';
+        setTimeout(() => bar.remove(), 450);
+        savedPut(kind, p.thumb);
+        last = null; // the full photo is not needed any more – memory back for the next one
+        markDone();
+      } catch (e) {
+        if (isGone(e)) gone = true;
+        box.classList.add('fail');
+        say(gone ? 'odkaz vypršel' : 'nepodařilo se – fotka zůstala, stačí ji odeslat znovu');
+        retry.hidden = gone;
+        msg.textContent = failText(e);
+      } finally {
+        clearInterval(tick);
+        shot.classList.remove('busy');
+        mine = false;
+        setWorking(false);
+      }
+    }
+
+    const picked = async input => {
+      const file = input.files && input.files[0];
+      if (!file || working) { input.value = ''; return; }
+      mine = true;
+      setWorking(true);
+      say('načítám fotku…', true);
+      let p = null;
+      try {
+        p = await readPhoto(file); // copies the file first – only then may the input let go of it
+      } catch (e) {
+        msg.textContent = errText(e);
+        box.classList.add('fail');
+        say('fotku se nepodařilo načíst – zkuste to znovu');
+      } finally {
+        input.value = '';
+        mine = false;
+        setWorking(false);
+      }
+      if (p) await upload(p);
+    };
+    cam.addEventListener('change', () => picked(cam));
+    gal.addEventListener('change', () => picked(gal));
+    app.append(box, cam, gal);
+  });
+  app.append(msg, h('p', null, 'Hotovo? Vraťte se ke kiosku a pokračujte ve formuláři.'));
+}
+</script>
+</body>
+</html>
