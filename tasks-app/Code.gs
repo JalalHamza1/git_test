@@ -1,7 +1,9 @@
 /**
  * Task Manager — server (Google Apps Script)
  * ---------------------------------------------------------------------------
- * Data lives in a Google Sheet (one row per task); the UI is index.html.
+ * Data lives in a Google Sheet (one row per task); the UI is index.html
+ * (with styles.html and app.html pulled in by include()). Projects, milestones,
+ * notes and status updates live in their own sheets; see Projects.gs.
  * Every write runs under one script lock, edits rows in memory and flushes
  * them in a single setValues call, then returns only the rows it touched.
  */
@@ -21,6 +23,9 @@ const CONFIG = {
   DEFAULT_LIST: 'General',
   SHOW_LIST_IN_TITLE: true,
   DIGEST_HOUR: 7,
+  REVIEW_DAY: 5, // 0 = Sunday … 6 = Saturday; the digest reminds you to do the weekly review on this day.
+  // Lists whose names start like this become projects the first time the new version runs.
+  PROJECT_PREFIX: /^\s*project\s*[-–—:]\s*/i,
   // Emails allowed to use the app. Leave empty for a sheet only you (or trusted editors) can open.
   // Fill it in before deploying as a web app that anyone can reach.
   ALLOWED_USERS: [],
@@ -34,10 +39,13 @@ const CONFIG = {
 };
 
 const HEADERS = ['ID', 'Task', 'Description', 'Due Date', 'Status', 'Priority', 'Event ID', 'Last Synced', 'List', 'Archived',
-  'Starred', 'Parent', 'Order', 'Repeat', 'Due Time', 'Created', 'Completed'];
+  'Starred', 'Parent', 'Order', 'Repeat', 'Due Time', 'Created', 'Completed',
+  'Milestone', 'Plan Date', 'Size', 'Blocked By', 'Block Reason', 'Blocked Since', 'Waiting On', 'Waiting Since', 'Block Log', 'Updated'];
 // 0-based indexes into a row array (sheet column = index + 1)
 const C = { ID: 0, TITLE: 1, DESC: 2, DUE: 3, STATUS: 4, PRIORITY: 5, EVENT: 6, SYNCED: 7, LIST: 8, ARCH: 9,
-  STAR: 10, PARENT: 11, ORDER: 12, REPEAT: 13, TIME: 14, CREATED: 15, DONE_AT: 16 };
+  STAR: 10, PARENT: 11, ORDER: 12, REPEAT: 13, TIME: 14, CREATED: 15, DONE_AT: 16,
+  MILESTONE: 17, PLAN: 18, SIZE: 19, BLOCKED_BY: 20, BLOCK_REASON: 21, BLOCKED_SINCE: 22, WAITING: 23, WAIT_SINCE: 24,
+  BLOCK_LOG: 25, UPDATED: 26 };
 
 const STATUSES = ['Not started', 'In progress', 'Blocked', 'Done'];
 const PRIORITIES = ['High', 'Medium', 'Low'];
@@ -48,12 +56,13 @@ const ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 
 const SCHEMA_KEY = 'schemaVersion';
-const SCHEMA_VERSION = '2';
+const SCHEMA_VERSION = '3';
 const LISTS_KEY = 'lists_v2';
 const LEGACY_LISTS_KEY = 'customLists';
 const SETTINGS_KEY = 'settings';
 const HASH_TAG = 'taskHash';
 const LEGACY_COLS = 10;
+const V2_COLS = 17;
 const MAX_WRITE_RUNS = 6;
 const NOT_FOUND = 'Task not found. It may have been deleted — refresh to see the latest.';
 
@@ -91,21 +100,27 @@ function migrate_(sh, fresh) {
     const head = sh.getRange(1, 1, 1, HEADERS.length).getValues()[0];
     const clash = head.findIndex((v, i) => i >= LEGACY_COLS && v !== '' && v !== HEADERS[i]);
     if (clash >= 0) {
-      throw new Error(`Column ${String.fromCharCode(65 + clash)} of the "${CONFIG.SHEET_NAME}" sheet already holds "${head[clash]}". ` +
-        'Move your own columns past column Q, then reopen Task Manager.');
+      throw new Error(`Column ${colLetter_(clash + 1)} of the "${CONFIG.SHEET_NAME}" sheet already holds "${head[clash]}". ` +
+        `Move your own columns past column ${colLetter_(HEADERS.length)}, then reopen Task Manager.`);
     }
   }
   sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS])
     .setFontWeight('bold').setBackground('#0d1117').setFontColor('#58a6ff');
   sh.setFrozenRows(1);
-  sh.getRangeList(['A2:C', 'E2:G', 'I2:J', 'L2:L', 'N2:O']).setNumberFormat('@');
-  sh.getRange('D2:D').setNumberFormat('yyyy-mm-dd');
-  sh.getRangeList(['H2:H', 'P2:Q']).setNumberFormat('yyyy-mm-dd hh:mm');
+  sh.getRangeList(['A2:C', 'E2:G', 'I2:J', 'L2:L', 'N2:O', 'R2:R', 'U2:V', 'X2:X', 'Z2:Z']).setNumberFormat('@');
+  sh.getRangeList(['D2:D', 'S2:S']).setNumberFormat('yyyy-mm-dd');
+  sh.getRangeList(['H2:H', 'P2:Q', 'W2:W', 'Y2:Y', 'AA2:AA']).setNumberFormat('yyyy-mm-dd hh:mm');
   if (fresh) {
     sh.setColumnWidth(C.TITLE + 1, 280);
     sh.setColumnWidth(C.DESC + 1, 420);
   }
   props_().setProperty(SCHEMA_KEY, SCHEMA_VERSION);
+}
+
+function colLetter_(n) {
+  let s = '';
+  for (; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + (n - 1) % 26) + s;
+  return s;
 }
 
 function grid_() {
@@ -120,6 +135,9 @@ function dirty_() {
   delete _cache.grid;
   delete _cache.index;
   delete _cache.touched;
+  delete _cache.pnames;
+  delete _cache.lists;
+  Object.keys(_cache).forEach(k => { if (k.indexOf('tbl_') === 0) delete _cache[k]; });
 }
 
 function index_() {
@@ -295,7 +313,21 @@ function toTask_(r, i) {
     archived: !!arch,
     archType: arch,
     synced: !!r[C.EVENT],
+    milestone: str_(r[C.MILESTONE]),
+    plan: isoDate_(r[C.PLAN]),
+    size: [1, 2, 3].includes(Number(r[C.SIZE])) ? Number(r[C.SIZE]) : 1,
+    blockedBy: idList_(r[C.BLOCKED_BY]),
+    blockReason: str_(r[C.BLOCK_REASON]),
+    blockedSince: stamp_(r[C.BLOCKED_SINCE]),
+    waiting: str_(r[C.WAITING]),
+    waitingSince: stamp_(r[C.WAIT_SINCE]),
+    blockLog: parse_(r[C.BLOCK_LOG]) || [],
+    updated: stamp_(r[C.UPDATED]) || stamp_(r[C.DONE_AT]) || stamp_(r[C.CREATED]),
   };
+}
+
+function idList_(v) {
+  return String(v == null ? '' : v).split(',').map(s => s.trim()).filter(s => ID_RE.test(s));
 }
 
 function isTask_(r) {
@@ -341,8 +373,13 @@ function onOpen() {
 }
 
 function page_() {
-  return HtmlService.createHtmlOutputFromFile('index')
+  return HtmlService.createTemplateFromFile('index').evaluate()
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+// Used by index.html to pull in styles.html and app.html.
+function include(name) {
+  return HtmlService.createHtmlOutputFromFile(name).getContent();
 }
 
 function showSidebar() { SpreadsheetApp.getUi().showSidebar(page_().setTitle('Tasks')); }
@@ -355,16 +392,18 @@ function menuDigest() { ss_().toast(sendDigest(null), 'Task Manager'); }
 /*** ===== READ API ===== ***/
 function getAll() {
   guard_();
-  if (grid_().some(r => r[C.ID] === '' && r[C.TITLE] !== '')) {
+  if (grid_().some(r => r[C.ID] === '' && r[C.TITLE] !== '') || props_().getProperty(PROJECTS_MIGRATED_KEY) !== '1') {
     withLock_(() => {
       grid_().forEach((r, i) => {
         if (r[C.ID] === '' && r[C.TITLE] !== '') { r[C.ID] = newId_(); touch_(i); }
       });
       flush_();
+      if (props_().getProperty(PROJECTS_MIGRATED_KEY) !== '1') migrateProjects_();
     });
+    dirty_();
   }
   const tasks = allTasks_();
-  return { tasks: tasks, lists: lists_(tasks), settings: settings_(), defaultList: CONFIG.DEFAULT_LIST };
+  return Object.assign({ tasks: tasks, lists: lists_(tasks), settings: settings_(), defaultList: CONFIG.DEFAULT_LIST }, projectData_());
 }
 
 /*** ===== LISTS ===== ***/
@@ -395,8 +434,10 @@ function saveLists_(arr) {
 
 // Stored lists first (user order), then any list a live task still points at.
 function lists_(tasks) {
-  const out = storedLists_().map(l => Object.assign({}, l));
+  const projects = projectNames_();
+  const out = storedLists_().filter(l => !projects.has(l.name)).map(l => Object.assign({}, l));
   const seen = new Set(out.map(l => l.name));
+  projects.forEach(n => seen.add(n));
   const add = n => {
     if (n && !seen.has(n)) { seen.add(n); out.push({ name: n, color: CONFIG.LIST_COLORS[n] || 'GRAY' }); }
   };
@@ -417,6 +458,7 @@ function createList(name, color) {
   return withLock_(() => {
     const all = lists_();
     if (all.some(l => l.name.toLowerCase() === name.toLowerCase())) throw new Error('That list already exists.');
+    if (nameTaken_(name)) throw new Error('A project already has that name.');
     const stored = storedLists_().concat({ name: name, color: COLORS.includes(color) ? color : 'BLUE' });
     saveLists_(stored);
     return { lists: lists_() };
@@ -433,6 +475,7 @@ function renameList(oldName, newName) {
     if (lists_().some(l => l.name !== oldName && l.name.toLowerCase() === newName.toLowerCase())) {
       throw new Error('A list with that name already exists.');
     }
+    if (nameTaken_(newName)) throw new Error('A project already has that name.');
     const stored = storedLists_();
     const had = stored.find(l => l.name === oldName);
     saveLists_(had ? stored.map(l => (l.name === oldName ? { name: newName, color: l.color } : l))
@@ -544,7 +587,25 @@ function applyPatch_(r, i, p, changed) {
     r[C.DUE] = due ? new Date(due + 'T12:00:00') : '';
   }
   if ('time' in p) r[C.TIME] = hhmm_(p.time);
-  if ('status' in p && STATUSES.includes(p.status) && p.status !== 'Done') r[C.STATUS] = p.status;
+  if ('plan' in p) {
+    const plan = String(p.plan || '').trim();
+    if (plan && !validIso_(plan)) throw new Error('That date isn\'t valid.');
+    r[C.PLAN] = plan ? new Date(plan + 'T12:00:00') : '';
+  }
+  if ('size' in p) r[C.SIZE] = [1, 2, 3].includes(Number(p.size)) ? Number(p.size) : 1;
+  if ('milestone' in p) r[C.MILESTONE] = String(p.milestone || '').trim().slice(0, 40);
+  if ('waiting' in p) {
+    const w = String(p.waiting || '').trim().slice(0, 100);
+    if (!w) r[C.WAIT_SINCE] = '';
+    else if (!r[C.WAITING]) r[C.WAIT_SINCE] = new Date();
+    r[C.WAITING] = w;
+  }
+  if ('waitingSince' in p && r[C.WAITING]) r[C.WAIT_SINCE] = new Date();
+  // "Blocked" is set through blockTask so it always carries a reason; leaving it is allowed here.
+  if ('status' in p && STATUSES.includes(p.status) && p.status !== 'Done' && p.status !== 'Blocked') {
+    if (r[C.STATUS] === 'Blocked') clearBlock_(r, 'Unblocked by hand');
+    r[C.STATUS] = p.status;
+  }
   if ('priority' in p && PRIORITIES.includes(p.priority)) r[C.PRIORITY] = p.priority;
   if ('starred' in p) r[C.STAR] = p.starred ? true : '';
   if ('repeat' in p) r[C.REPEAT] = REPEATS.includes(p.repeat) ? p.repeat : '';
@@ -553,6 +614,7 @@ function applyPatch_(r, i, p, changed) {
     const list = cleanListName_(p.list || CONFIG.DEFAULT_LIST);
     if (listOf_(r) !== list) {
       r[C.LIST] = list;
+      if (!('milestone' in p)) r[C.MILESTONE] = '';
       if (!('parent' in p) && str_(r[C.PARENT])) r[C.PARENT] = '';
       childrenOf_(id).forEach(k => { g[k][C.LIST] = list; touch_(k); changed.push(k); });
     }
@@ -569,6 +631,7 @@ function applyPatch_(r, i, p, changed) {
     }
     r[C.PARENT] = parent;
   }
+  r[C.UPDATED] = new Date();
 }
 
 function completeTask(id, nextId) {
@@ -578,7 +641,10 @@ function completeTask(id, nextId) {
     const g = grid_(), i = must_(id), r = g[i];
     if (arch_(r)) return out_([i]);
     const now = new Date(), changed = [i];
-    const mark = row => { row[C.STATUS] = 'Done'; row[C.ARCH] = 'Completed'; row[C.DONE_AT] = now; };
+    const mark = row => {
+      if (row[C.STATUS] === 'Blocked') clearBlock_(row, 'Finished while blocked');
+      row[C.STATUS] = 'Done'; row[C.ARCH] = 'Completed'; row[C.DONE_AT] = now; row[C.UPDATED] = now;
+    };
     mark(r);
     touch_(i);
     childrenOf_(id).forEach(k => {
@@ -588,7 +654,7 @@ function completeTask(id, nextId) {
     if (rule && !(nextId && find_(nextId) >= 0)) {
       const n = blankRow_();
       n[C.ID] = nextId || newId_();
-      [C.TITLE, C.DESC, C.PRIORITY, C.LIST, C.STAR, C.PARENT, C.ORDER, C.REPEAT, C.TIME].forEach(c => { n[c] = r[c]; });
+      [C.TITLE, C.DESC, C.PRIORITY, C.LIST, C.STAR, C.PARENT, C.ORDER, C.REPEAT, C.TIME, C.MILESTONE, C.SIZE].forEach(c => { n[c] = r[c]; });
       n[C.STATUS] = 'Not started';
       n[C.DUE] = new Date(nextDue_(isoDate_(r[C.DUE]), rule, isoDate_(now)) + 'T12:00:00');
       n[C.CREATED] = now;
@@ -599,9 +665,10 @@ function completeTask(id, nextId) {
       if (r[C.EVENT] || r[C.SYNCED]) n[C.SYNCED] = now;
       changed.push(appendRow_(n));
     }
+    const extra = afterFinished_(changed.filter(k => arch_(g[k])), changed);
     calendarAfter_(changed, false);
     flush_();
-    return out_(changed);
+    return out_(changed, extra);
   });
 }
 
@@ -657,9 +724,11 @@ function restoreTask(id) {
       touch_(k);
       changed.push(k);
     });
+    r[C.UPDATED] = new Date();
+    const extra = reopenMilestones_(changed);
     calendarAfter_(changed, false);
     flush_();
-    return out_(changed);
+    return out_(changed, extra);
   });
 }
 
@@ -673,9 +742,10 @@ function deleteTask(id) {
       touch_(k);
       if (k !== i) changed.push(k);
     });
+    const extra = afterFinished_(changed, changed);
     calendarAfter_(changed, true);
     flush_();
-    return out_(changed);
+    return out_(changed, extra);
   });
 }
 
@@ -788,8 +858,10 @@ function dueDate_(r) {
   return s ? new Date(s + 'T12:00:00') : null;
 }
 
+// Inside a project only tasks with a time get events; milestones carry the rest (see syncMilestone_).
 function wantsEvent_(r) {
-  return isTask_(r) && !arch_(r) && !!dueDate_(r);
+  if (!isTask_(r) || arch_(r) || !dueDate_(r)) return false;
+  return !projectNames_().has(listOf_(r)) || !!hhmm_(r[C.TIME]);
 }
 
 // Brings the calendar in line with a row. Keeps "Last Synced" as a marker so a
@@ -872,6 +944,8 @@ function syncToCalendar() {
       }
     });
     flush_();
+    const ms = syncAllMilestones_();
+    created += ms.created; updated += ms.updated; removed += ms.removed; failed += ms.failed;
     const parts = [`Created ${created}`, `Updated ${updated}`];
     if (removed) parts.push(`Removed ${removed}`);
     if (failed) parts.push(`${failed} failed`);
@@ -891,6 +965,7 @@ function userSettings_() {
     autoSync: !!s.autoSync,
     digest: !!s.digest,
     digestHour: Number.isInteger(s.digestHour) ? s.digestHour : CONFIG.DIGEST_HOUR,
+    reviewDay: Number.isInteger(s.reviewDay) ? s.reviewDay : CONFIG.REVIEW_DAY,
   });
 }
 
@@ -909,6 +984,10 @@ function saveSettings(patch) {
   if ('digestHour' in patch) {
     const h = Number(patch.digestHour);
     if (Number.isInteger(h) && h >= 0 && h <= 23) cur.digestHour = h;
+  }
+  if ('reviewDay' in patch) {
+    const d = Number(patch.reviewDay);
+    if (Number.isInteger(d) && d >= 0 && d <= 6) cur.reviewDay = d;
   }
   if ('digest' in patch || 'digestHour' in patch) {
     ScriptApp.getProjectTriggers()
@@ -941,15 +1020,21 @@ function sendDigest(e) {
   const overdue = active.filter(t => t.due && t.due < today).sort(byDue);
   const dueToday = active.filter(t => t.due === today).sort(byDue);
   const starred = active.filter(t => t.starred && !(t.due && t.due <= today)).sort(byDue);
-  if (!overdue.length && !dueToday.length && !starred.length) return 'Nothing due — no email sent.';
+  const planned = active.filter(t => t.plan && t.plan <= today && !(t.due && t.due <= today)).sort(byDue);
+  const attention = projectAttention_(active, today);
+  const reviewDay = new Date().getDay() === userSettings_().reviewDay;
+  if (!overdue.length && !dueToday.length && !starred.length && !planned.length && !attention.length && !reviewDay) return 'Nothing due — no email sent.';
 
   const row = t => `<tr><td style="padding:6px 0;border-bottom:1px solid #30363d">
       <div style="color:#e6edf3;font-size:14px">${t.starred ? '★ ' : ''}${esc_(t.title)}</div>
       <div style="color:#8b949e;font-size:12px">${esc_(t.list)}${t.due ? ' · ' + esc_(t.due) : ''}${t.time ? ' ' + esc_(t.time) : ''}${t.priority === 'High' ? ' · High priority' : ''}</div>
     </td></tr>`;
-  const section = (title, color, list) => !list.length ? '' :
+  const attRow = a => `<tr><td style="padding:6px 0;border-bottom:1px solid #30363d">
+      <div style="color:#e6edf3;font-size:14px">${esc_(a.project)}</div>
+      <div style="color:${a.level === 'red' ? '#ff7b72' : '#e3b341'};font-size:12px">${esc_(a.text)}</div></td></tr>`;
+  const section = (title, color, list, fmt) => !list.length ? '' :
     `<h3 style="margin:20px 0 4px;font-size:13px;letter-spacing:.5px;text-transform:uppercase;color:${color}">${title} (${list.length})</h3>
-     <table style="width:100%;border-collapse:collapse">${list.map(row).join('')}</table>`;
+     <table style="width:100%;border-collapse:collapse">${list.map(fmt || row).join('')}</table>`;
 
   let link = '';
   try { link = ScriptApp.getService().getUrl() || ''; } catch (e) {}
@@ -958,8 +1043,11 @@ function sendDigest(e) {
   const html = `<div style="background:#0d1117;padding:24px;font-family:Arial,sans-serif">
     <div style="max-width:560px;margin:0 auto;background:#161b22;border:1px solid #30363d;border-radius:12px;padding:20px 24px">
       <h2 style="margin:0;color:#e6edf3;font-size:18px">Your tasks for ${esc_(Utilities.formatDate(new Date(), tz_(), 'EEEE, MMM d'))}</h2>
+      ${reviewDay ? '<p style="margin:16px 0 0;color:#6ea8fe;font-size:14px">It\'s weekly review day: about 10 minutes to check each project and post an update.</p>' : ''}
+      ${section('Projects needing attention', '#ff7b72', attention, attRow)}
       ${section('Overdue', '#ff7b72', overdue)}
       ${section('Due today', '#6ea8fe', dueToday)}
+      ${section('Planned for today', '#6ea8fe', planned)}
       ${section('Starred', '#e3b341', starred)}
       ${link ? `<p style="margin:20px 0 0"><a href="${esc_(link)}" style="color:#6ea8fe">Open Task Manager</a></p>` : ''}
     </div></div>`;
@@ -979,7 +1067,8 @@ function buildTitle_(t) {
 
 function buildDescription_(t, shiftedIso) {
   const lines = [t.desc || '(no description)', '', '─────────────',
-    `List: ${t.list}`, `Priority: ${t.priority}`, `Status: ${t.status}`];
+    `${projectNames_().has(t.list) ? 'Project' : 'List'}: ${t.list}`, `Priority: ${t.priority}`, `Status: ${t.status}`];
+  if (t.status === 'Blocked' && t.blockReason) lines.push(`Blocked: ${t.blockReason}`);
   if (t.repeat) lines.push(`Repeats: ${t.repeat}`);
   if (shiftedIso !== t.due) lines.push(`Due ${t.due} — moved to the next working day.`);
   lines.push('Managed by Task Manager — edit in the app, not here.');
@@ -987,7 +1076,7 @@ function buildDescription_(t, shiftedIso) {
 }
 
 function colorFor_(list) {
-  const stored = storedLists_().find(l => l.name === list);
+  const stored = storedLists_().find(l => l.name === list) || projectByName_(list);
   const name = (stored && stored.color) || CONFIG.LIST_COLORS[list] || 'GRAY';
   return CalendarApp.EventColor[name] || CalendarApp.EventColor.GRAY;
 }
