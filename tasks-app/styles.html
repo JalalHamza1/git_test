@@ -88,9 +88,19 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ===== Page layout =================================================== */
-  .wrap { padding: 6px 24px 48px; display: flex; flex-direction: column; gap: 16px; max-width: 1240px; }
-  .wrap.narrow { max-width: 880px; }
-  .cols { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .wrap { padding: 8px 32px 48px; display: flex; flex-direction: column; gap: 16px; max-width: 1180px; margin: 0 auto; }
+  .wrap.narrow { max-width: 860px; }
+  .center { text-align: center; }
+  .summary { padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+  .summary .goal { font-size: 16px; }
+  .facts { display: grid; grid-template-columns: 160px 180px minmax(0, 1fr); gap: 24px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .fact { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .fl { font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text-3); }
+  .fv { font-size: 22px; font-weight: 600; letter-spacing: -.3px; font-variant-numeric: tabular-nums; }
+  .fv-task { font-size: 15px; font-weight: 500; }
+  .text-btn.flush { padding: 0; align-self: flex-start; }
+  .text-btn.flush:hover { background: none; text-decoration: underline; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
   .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; }
   .card-h { margin: 0; padding: 14px 16px 6px; font-size: 12px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text-3); display: flex; align-items: center; gap: 8px; }
@@ -139,7 +149,7 @@
   .sub.warn { color: var(--amber); } .sub.bad { color: var(--red); } .sub.good { color: var(--green); }
 
   /* ===== Home ========================================================== */
-  .strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+  .strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
   .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-width: 0; }
   .stat .v { font-size: 24px; font-weight: 600; letter-spacing: -.4px; font-variant-numeric: tabular-nums; }
   .stat .l { font-size: 12px; color: var(--text-2); }
@@ -229,7 +239,8 @@
   .qa-preview:empty { display: none; }
 
   /* ===== Project page ================================================== */
-  .phead { padding: 0 24px; border-bottom: 1px solid var(--line); }
+  .phead { border-bottom: 1px solid var(--line); }
+  .phead-in { max-width: 1180px; margin: 0 auto; padding: 0 32px; }
   .ph-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 2px; }
   .ph-meta { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 8px 0 4px; font-size: 13px; color: var(--text-2); }
   .ph-meta b { color: var(--text); font-weight: 500; }
@@ -241,7 +252,7 @@
   .tabs .count { color: var(--text-3); font-size: 12px; margin-left: 4px; }
   .goal { font-size: 15px; line-height: 1.55; max-width: 64ch; margin: 0; white-space: pre-wrap; }
   .goal.empty-goal { color: var(--text-3); font-size: 14px; }
-  .mrow { display: grid; grid-template-columns: 18px minmax(0, 1fr) 110px 120px; gap: 12px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
+  .mrow { display: grid; grid-template-columns: 18px minmax(0, 1fr) 90px 100px; gap: 12px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
   .mrow:first-child { border-top: 0; }
   .mrow > svg { width: 14px; height: 14px; color: var(--text-3); }
   .mrow.reached > svg { color: var(--green); } .mrow.late > svg { color: var(--red); } .mrow.current > svg { color: var(--accent); }
@@ -483,7 +494,9 @@
     .topbar.searching .search .icon-btn { display: grid; }
     .status { display: none; }
     .wrap { padding: 4px 10px 96px; }
-    .phead { padding: 0 12px; }
+    .phead-in { padding: 0 12px; }
+    .facts { grid-template-columns: 1fr 1fr; }
+    .fact.wide { grid-column: 1 / -1; }
     .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .two { grid-template-columns: 1fr; }
     .panel { top: 0; right: 0; bottom: 0; left: 0; width: auto; max-width: none; border-radius: 0; border: 0; }

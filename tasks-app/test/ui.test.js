@@ -32,7 +32,7 @@ const { chromium } = require('playwright');
     assert.match(await page.textContent('#viewTitle'), /Excel Digitization/);
     assert.strictEqual(await page.locator('.mrow').count(), 4);
     assert.ok(await page.locator('.sig').count() >= 2);
-    assert.ok(await page.locator('.burn svg').count());
+    assert.ok(await page.locator('.summary .fact').count() === 3);
   });
 
   await step('Completing a blocker that was itself blocked unblocks the task waiting on it', async () => {
@@ -117,6 +117,7 @@ const { chromium } = require('playwright');
     await page.fill('.ntitle', 'Use Apps Script for the import');
     await page.click('[data-act="tab"][data-v="overview"]');
     assert.ok(await page.locator('.nmini', { hasText: 'Use Apps Script for the import' }).count(), 'decision shows on overview');
+    await page.click('[data-act="compose"]');
     await page.click('.hbtn.amber');
     await page.fill('[data-key="upd:ov:demop1"]', 'Sheets are built. IT access is still slow.');
     await page.click('[data-act="post-update"]');

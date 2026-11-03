@@ -806,6 +806,7 @@ function postUpdate(p, ctx) {
   drafts.delete(key);
   delete S.uh[p.id];
   if (ctx === 'rv') S.reviewed.add(p.id);
+  S.composeFor = null;
   schedule();
   send('postUpdate', u);
   snack(`Update posted for ${p.name}`);
@@ -1207,17 +1208,16 @@ function homeHTML() {
   const shelf = S.projects.filter(p => p.status === 'planned' || p.status === 'paused');
   const activeN = S.projects.filter(p => p.status === 'active' || p.status === 'blocked').length;
   return `<div class="wrap">
-    <div class="sub" style="margin-top:-4px">${parseISO(today).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</div>
     <div class="strip">
       <div class="stat ${activeN > 5 ? 'warn' : ''}"><div class="v">${activeN}</div><div class="l">Open projects${activeN > 5 ? ' · consider pausing one' : ''}</div></div>
       <button type="button" class="stat link" data-act="view" data-v="myday"><div class="v">${live.filter(inMyDay).length}</div><div class="l">Tasks in My Day</div></button>
       <div class="stat ${blocked ? 'warn' : ''}"><div class="v">${blocked}</div><div class="l">Blocked</div></div>
       <div class="stat"><div class="v">${waiting}</div><div class="l">Waiting on people</div></div>
-      <div class="stat"><div class="v">${doneWeek}</div><div class="l">Done in the last 7 days</div></div>
     </div>
     <section class="card"><div class="card-h">Needs attention<span class="grow"></span><span class="note">${plural(att.length, 'item')}</span></div>
-      <div>${att.length ? att.map(a => `<button type="button" class="att ${a.lvl}" data-act="${a.task ? 'task' : 'project'}" data-id="${a.task || a.p.id}" ${a.task ? '' : 'data-tab="overview"'}>
-        <span class="sev"></span><span class="txt">${esc(a.text)}</span><span class="who">${dot(a.p ? a.p.name : a.list)}${esc(a.p ? a.p.name : a.list)}</span></button>`).join('') : '<div class="empty">Nothing needs attention right now.</div>'}</div>
+      <div>${att.length ? att.slice(0, prefs.open['att-all'] ? 99 : 5).map(a => `<button type="button" class="att ${a.lvl}" data-act="${a.task ? 'task' : 'project'}" data-id="${a.task || a.p.id}" ${a.task ? '' : 'data-tab="overview"'}>
+        <span class="sev"></span><span class="txt">${esc(a.text)}</span><span class="who">${dot(a.p ? a.p.name : a.list)}${esc(a.p ? a.p.name : a.list)}</span></button>`).join('') : '<div class="empty">Nothing needs attention right now.</div>'}
+      ${att.length > 5 ? `<button type="button" class="done-toggle ${prefs.open['att-all'] ? 'open' : ''}" data-act="show-done" data-v="att-all">${ic('chevron')}${prefs.open['att-all'] ? 'Show fewer' : `Show all ${att.length}`}</button>` : ''}</div>
     </section>
     <section class="card"><div class="card-h">Projects · riskiest first<span class="grow"></span><button class="text-btn" type="button" data-act="new-project">New project</button></div>
       ${sorted.length ? `<div class="ptable" role="table">
@@ -1373,13 +1373,11 @@ function projectHTML(p) {
   const st = stats(p), today = todayISO();
   const statusPill = p.status === 'blocked' ? `<button type="button" class="pill blocked" data-act="status-menu" data-id="${p.id}">${ic('blocked')}Blocked${ic('chevron')}</button>`
     : `<button type="button" class="pill ${p.status === 'done' ? 'done' : ''}" data-act="status-menu" data-id="${p.id}">${PSTATUS[p.status]}${ic('chevron')}</button>`;
-  const left = p.target ? diffDays(today, p.target) : null;
-  const head = `<div class="phead" style="--c:${COLOR_HEX[p.color]}">
+  const head = `<div class="phead" style="--c:${COLOR_HEX[p.color]}"><div class="phead-in">
     <div class="ph-row">${dot(p.name)}${statusPill}${isOpenProject(p) ? healthPill(reported(p)) : ''}<span class="grow"></span>
       <button class="btn sm" type="button" data-act="edit-project" data-id="${p.id}">${ic('edit')}Edit</button></div>
-    <div class="ph-meta">${p.start ? `<span>Started <b>${fmtShort(p.start)}</b></span>` : ''}${p.target ? `<span>Target <b>${fmtShort(p.target)}</b> (${left >= 0 ? `${plural(left, 'day')} left` : `${-left} days ago`})</span>` : '<span>No target date</span>'}
-      <span>Priority <b>${PPRI[p.priority] || 'Medium'}</b></span><span><b>${st.pct}%</b> done</span>${p.closed ? `<span>Closed <b>${fmtShort(p.closed)}</b></span>` : ''}</div>
-    <nav class="tabs" role="tablist">${[['overview', 'Overview', ''], ['tasks', 'Tasks', st.open.length], ['notes', 'Notes', notesOf(p).length]].map(([k, l, n]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" data-act="tab" data-v="${k}">${l}${n ? `<span class="count">${n}</span>` : ''}</button>`).join('')}</nav></div>`;
+    ${p.closed ? `<div class="ph-meta"><span>Closed <b>${fmtShort(p.closed)}</b></span></div>` : ''}
+    <nav class="tabs" role="tablist">${[['overview', 'Overview', ''], ['tasks', 'Tasks', st.open.length], ['notes', 'Notes', notesOf(p).length]].map(([k, l, n]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" data-act="tab" data-v="${k}">${l}${n ? `<span class="count">${n}</span>` : ''}</button>`).join('')}</nav></div></div>`;
   return head + ({ overview: overviewHTML, tasks: projectTasksHTML, notes: notesHTML }[S.tab])(p);
 }
 
@@ -1398,83 +1396,58 @@ function blockBoxHTML(kind, x) {
 }
 
 function overviewHTML(p) {
-  const st = stats(p), sig = signals(p), sug = suggested(p), rep = reported(p), na = nextAction(p), today = todayISO();
-  const ms = msOf(p), ups = updatesOf(p);
+  const st = stats(p), na = nextAction(p), today = todayISO(), ms = msOf(p), ups = updatesOf(p);
+  const sig = signals(p).filter(x => x.act !== 'blocked');
   const pinned = notesOf(p).filter(n => n.pinned || n.type === 'decision').sort((a, b) => b.pinned - a.pinned || (b.updated || '').localeCompare(a.updated || ''));
   const late = st.forecast && p.target ? diffDays(p.target, st.forecast) : 0;
-  const closing = sig.some(s => s.act === 'close');
-  return `<div class="wrap"><div class="cols">
-    <div class="col">
-      ${p.status === 'blocked' ? blockBoxHTML('project', p) : ''}
-      <section class="card"><div class="card-h">Done when<span class="grow"></span><button class="text-btn" type="button" data-act="edit-project" data-id="${p.id}">Edit</button></div>
-        <div class="card-b">${p.goal ? `<p class="goal">${esc(p.goal)}</p>` : '<p class="goal empty-goal">Write one sentence that says when this project is finished. It keeps the scope honest.</p>'}
-        ${p.outcome ? `<p class="small" style="color:var(--green);margin:10px 0 0">Outcome: ${esc(p.outcome)}</p>` : ''}</div></section>
-      <section class="card"><div class="card-h">Milestones<span class="grow"></span><button class="text-btn" type="button" data-act="milestones" data-id="${p.id}">${ms.length ? 'Edit' : 'Add milestones'}</button></div>
-        <div class="card-b">${ms.map(m => {
-          const s = msStats(m), lateM = !m.done && m.target && m.target < today, cur = currentMs(p) === m;
-          const when = m.done ? `Reached ${fmtShort(m.done)}` : !m.target ? 'No date' : lateM ? `${diffDays(m.target, today)} days late` : `Due ${relLower(m.target)}`;
-          return `<div class="mrow ${m.done ? 'reached' : lateM ? 'late' : cur ? 'current' : ''}">${ic('diamond')}<div><div style="font-weight:${cur ? 600 : 500}">${esc(m.name)}</div><div class="sub">${s.nd}/${s.n} tasks${cur ? ' · current' : ''}</div></div>
-            <div class="bar" style="--c:${m.done ? 'var(--green)' : COLOR_HEX[p.color]}"><i style="width:${s.pct}%"></i></div><div class="when">${when}</div></div>`;
-        }).join('') || '<p class="sub" style="margin:0">Milestones are the phases of the project, each with a date. Tasks belong to one, and a milestone is reached when its last task is done.</p>'}</div></section>
-      <section class="card"><div class="card-h">Status updates</div><div class="card-b">${isOpenProject(p) ? composerHTML(p, 'ov') : ''}
-        ${ups.map(u => `<div class="upd"><div class="uh">${healthPill(u.health)}<span>${fmtDay(u.date)}</span>${u.progress !== '' && u.progress != null ? `<span class="mono">${u.progress}%</span>` : ''}</div><p>${esc(u.text)}</p></div>`).join('') || '<p class="sub">No updates yet. A short weekly update is what makes the health on Home trustworthy.</p>'}</div></section>
-    </div>
-    <div class="col">
-      <section class="card"><div class="card-h">Progress</div><div class="card-b">
-        <div style="display:flex;align-items:baseline;gap:10px"><span class="big">${st.pct}%</span><span class="sub mono">${st.done} of ${st.total} points</span></div>
-        <div class="burn">${burnupSVG(p, st)}</div>
-        ${st.total ? `<div class="legend"><span><i style="background:var(--chart-scope)"></i>Total scope</span><span><i style="background:${COLOR_HEX[p.color]}"></i>Done</span>${st.forecast ? '<span><i style="background:var(--amber)"></i>Forecast</span>' : ''}</div>` : ''}
-        <dl class="kv"><dt>Done in the last 7 days</dt><dd>+${st.doneWeek} pts</dd>
-          <dt>Scope added this week</dt><dd class="${st.addedPts ? 'warn' : ''}">${st.addedPts ? `+${st.addedPts} pts (${plural(st.added, 'task')})` : 'None'}</dd>
-          <dt>Forecast finish</dt><dd class="${late > 7 ? 'bad' : late > 0 ? 'warn' : st.forecast ? 'good' : ''}">${st.forecast ? `${fmtShort(st.forecast)}${p.target ? (late > 0 ? ` · ${late}d late` : ' · on time') : ''}` : esc(st.why)}</dd></dl>
-        <p class="sub" style="margin:10px 0 0">Points: S = 1, M = 2, L = 3. Set a task's size in its details.</p></div></section>
-      ${isOpenProject(p) ? `<section class="card"><div class="card-h">Signals</div><div class="card-b">
-        <div class="suggest">Suggested health ${healthPill(sug)}${rep && rep !== sug ? `<span>· your last update said</span>${healthPill(rep)}` : ''}</div>
-        ${sig.map(s => `<div class="sig ${s.lvl}"><span class="sev"></span><span>${s.task ? `<button type="button" class="link" data-act="task" data-id="${s.task}">${esc(s.text)}</button>` : esc(s.text)}</span></div>`).join('') || '<p class="sub" style="margin:0">No signals. Everything looks on track.</p>'}
-        ${closing ? `<div class="composer" style="margin-top:10px"><label class="sub" for="outcome-${p.id}">What did this project achieve?</label><textarea id="outcome-${p.id}" data-key="outcome:${p.id}" data-draft="outcome:${p.id}" rows="2" placeholder="e.g. Repeat defects down 38% on line 2">${esc(drafts.get('outcome:' + p.id) || '')}</textarea>
-          <div><button type="button" class="btn sm primary" data-act="close-project" data-id="${p.id}">Close project</button></div></div>` : ''}</div></section>
-      <section class="card"><div class="card-h">Next action</div>${na ? taskRow(na, { k: ':na' }) : `<div class="empty">${st.open.length ? 'Every open task is blocked. Unblock one or add a new task.' : st.total ? 'Nothing left to do.' : 'No tasks yet.'}</div>`}<div style="height:8px"></div></section>` : ''}
-      <section class="card"><div class="card-h">Pinned notes &amp; decisions<span class="grow"></span><button class="text-btn" type="button" data-act="tab" data-v="notes">All notes</button></div><div class="card-b">
-        ${pinned.map(n => `<button type="button" class="nmini" data-act="note" data-id="${n.id}"><span class="ntype ${n.type}">${n.type}</span><span>${esc(n.title || 'Untitled')}</span><small>${fmtShort(localDayOf(n.updated || n.created))}</small></button>`).join('') || '<p class="sub" style="margin:0">Decision notes and pinned notes show up here.</p>'}
-        ${(p.blockLog || []).length ? `<div class="card-h" style="padding:14px 0 6px">Block history</div><div class="hist">${p.blockLog.slice().reverse().map(b => `<div>${esc(b.reason || 'No reason')}<small>${b.from ? fmtShort(localDayOf(b.from)) + ' – ' : ''}${b.to ? fmtShort(localDayOf(b.to)) : ''} · ${esc(b.how || '')}</small></div>`).join('')}</div>` : ''}</div></section>
-    </div>
-  </div></div>`;
-}
+  const composing = S.composeFor === p.id, allUps = !!prefs.open['ups:' + p.id];
+  const closing = sig.some(x => x.act === 'close');
 
-function burnupSVG(p, st) {
-  const ts = tasksIn(p.name), today = todayISO();
-  if (!p.start || !ts.length || p.start > today) return '';
-  const end = maxOf([p.target, st.forecast, today]);
-  const n = Math.max(1, diffDays(p.start, end));
-  const W = 340, H = 140, L = 6, R = 6, Tp = 12, B = 22;
-  const created = ts.map(t => [localDayOf(t.created) || p.start, pts(t)]);
-  const completed = ts.filter(t => t.archType === 'Completed').map(t => [localDayOf(t.completed), pts(t)]);
-  const upTo = (arr, d) => sum(arr.filter(([x]) => x <= d), x => x[1]);
-  const days = diffDays(p.start, today);
-  const total = Math.max(1, st.total, upTo(created, today));
-  const X = d => L + Math.max(0, diffDays(p.start, d)) / n * (W - L - R);
-  const Y = v => Tp + (1 - v / total) * (H - Tp - B);
-  let scope = '', done = '';
-  const step = Math.max(1, Math.ceil(days / 120));
-  for (let i = 0; i <= days; i += step) {
-    const d = addDays(p.start, Math.min(i, days));
-    scope += `${i ? 'L' : 'M'}${X(d).toFixed(1)},${Y(upTo(created, d)).toFixed(1)}`;
-    done += `${i ? 'L' : 'M'}${X(d).toFixed(1)},${Y(upTo(completed, d)).toFixed(1)}`;
-  }
-  scope += `L${X(today).toFixed(1)},${Y(upTo(created, today)).toFixed(1)}`;
-  done += `L${X(today).toFixed(1)},${Y(st.done).toFixed(1)}`;
-  const xt = X(today), xg = p.target && p.target >= p.start ? X(p.target) : null, col = COLOR_HEX[p.color];
-  const labels = [`<text class="ax" x="${L}" y="${H - 6}">${fmtShort(p.start)}</text>`];
-  if (xg !== null) labels.push(`<text class="ax" x="${Math.min(xg, W - R)}" y="${H - 6}" text-anchor="end">Target ${fmtShort(p.target)}</text>`);
-  if (xg === null || Math.abs(xt - xg) > 90) labels.push(`<text class="ax" x="${Math.min(xt, W - 30)}" y="${H - 6}" text-anchor="middle" style="fill:var(--text-2)">Today</text>`);
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Burn-up chart: ${st.done} of ${st.total} points done">
-    <line x1="${L}" x2="${W - R}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line-2)" stroke-width="1"/>
-    ${xg !== null ? `<line x1="${xg}" x2="${xg}" y1="${Tp - 4}" y2="${Y(0)}" stroke="var(--text-3)" stroke-dasharray="3 3"/>` : ''}
-    <line x1="${xt}" x2="${xt}" y1="${Tp - 4}" y2="${Y(0)}" stroke="var(--accent)" stroke-opacity=".45"/>
-    <path d="${scope}" fill="none" stroke="var(--chart-scope)" stroke-width="2"/>
-    <path d="${done}" fill="none" stroke="${col}" stroke-width="2.5"/>
-    ${st.forecast ? `<line x1="${xt}" y1="${Y(st.done)}" x2="${X(st.forecast)}" y2="${Y(st.total)}" stroke="var(--amber)" stroke-width="1.5" stroke-dasharray="4 4"/><circle cx="${X(st.forecast)}" cy="${Y(st.total)}" r="3" fill="var(--amber)"/>` : ''}
-    <circle cx="${xt}" cy="${Y(st.done)}" r="3.5" fill="${col}"/>${labels.join('')}</svg>`;
+  const target = p.target
+    ? `<div class="fv">${fmtShort(p.target)}</div><div class="sub ${late > 7 ? 'bad' : late > 0 ? 'warn' : ''}">${st.forecast ? (late > 0 ? `Forecast ${fmtShort(st.forecast)}` : 'On pace') : diffDays(today, p.target) >= 0 ? plural(diffDays(today, p.target), 'day') + ' left' : 'Past target'}</div>`
+    : `<button type="button" class="text-btn flush" data-act="edit-project" data-id="${p.id}">Set a date</button>`;
+  const next = na ? `<button type="button" class="link fv-task" data-act="task" data-id="${na.id}">${esc(na.title)}</button>${na.due ? `<div class="sub">Due ${relLower(na.due)}</div>` : ''}`
+    : st.open.length ? '<div class="sub warn">Everything open is blocked</div>'
+    : `<button type="button" class="text-btn flush" data-act="tab" data-v="tasks">${st.total ? 'All done' : '+ Add the first task'}</button>`;
+  const summary = `<section class="card summary">
+    ${p.goal ? `<p class="goal">${esc(p.goal)}</p>` : `<button type="button" class="text-btn flush" data-act="edit-project" data-id="${p.id}">+ Add a goal: when is this project done?</button>`}
+    ${p.outcome ? `<p class="small" style="color:var(--green);margin:0">Outcome: ${esc(p.outcome)}</p>` : ''}
+    <div class="facts">
+      <div class="fact"><div class="fl">Progress</div><div class="fv">${st.pct}%</div><div class="bar" style="--c:${COLOR_HEX[p.color]}"><i style="width:${st.pct}%"></i></div></div>
+      <div class="fact"><div class="fl">Target</div>${target}</div>
+      <div class="fact wide"><div class="fl">Next action</div>${next}</div>
+    </div></section>`;
+
+  const attention = sig.length ? `<section class="card"><div class="card-h">Needs attention</div><div class="card-b">
+    ${sig.map(x => `<div class="sig ${x.lvl}"><span class="sev"></span><span>${x.task ? `<button type="button" class="link" data-act="task" data-id="${x.task}">${esc(x.text)}</button>` : esc(x.text)}</span></div>`).join('')}
+    ${closing ? `<div class="composer" style="margin-top:8px"><textarea data-key="outcome:${p.id}" data-draft="outcome:${p.id}" rows="2" placeholder="What did it achieve? e.g. Repeat defects down 38%" aria-label="Outcome">${esc(drafts.get('outcome:' + p.id) || '')}</textarea>
+      <div><button type="button" class="btn sm primary" data-act="close-project" data-id="${p.id}">Close project</button></div></div>` : ''}</div></section>` : '';
+
+  const milestones = ms.length ? `<section class="card"><div class="card-h">Milestones<span class="grow"></span><button class="text-btn" type="button" data-act="milestones" data-id="${p.id}">Edit</button></div>
+    <div class="card-b">${ms.map(m => {
+      const s = msStats(m), lateM = !m.done && m.target && m.target < today, cur = currentMs(p) === m;
+      const when = m.done ? `Reached ${fmtShort(m.done)}` : !m.target ? '' : lateM ? `${diffDays(m.target, today)} days late` : relDay(m.target);
+      return `<div class="mrow ${m.done ? 'reached' : lateM ? 'late' : cur ? 'current' : ''}">${ic('diamond')}<div>${esc(m.name)}<span class="sub"> · ${s.nd}/${s.n}</span></div>
+        <div class="bar" style="--c:${m.done ? 'var(--green)' : COLOR_HEX[p.color]}"><i style="width:${s.pct}%"></i></div><div class="when">${when}</div></div>`;
+    }).join('')}</div></section>` : '';
+
+  const shown = allUps ? ups : ups.slice(0, 1);
+  const updates = isOpenProject(p) || ups.length ? `<section class="card"><div class="card-h">Status<span class="grow"></span>
+      ${isOpenProject(p) && !composing ? `<button class="text-btn" type="button" data-act="compose" data-id="${p.id}">Post update</button>` : ''}</div>
+    <div class="card-b">${composing ? composerHTML(p, 'ov') : ''}
+      ${shown.map(u => `<div class="upd"><div class="uh">${healthPill(u.health)}<span>${fmtDay(u.date)}</span></div><p>${esc(u.text)}</p></div>`).join('') || (composing ? '' : '<p class="sub" style="margin:0">No updates yet.</p>')}
+      ${ups.length > 1 ? `<button type="button" class="text-btn flush" data-act="show-done" data-v="ups:${p.id}">${allUps ? 'Show less' : `Show earlier (${ups.length - 1})`}</button>` : ''}</div></section>` : '';
+
+  const notes = pinned.length ? `<section class="card"><div class="card-h">Pinned &amp; decisions</div><div class="card-b">
+    ${pinned.slice(0, 5).map(n => `<button type="button" class="nmini" data-act="note" data-id="${n.id}"><span class="ntype ${n.type}">${n.type}</span><span>${esc(n.title || 'Untitled')}</span></button>`).join('')}</div></section>` : '';
+
+  const side = attention + notes;
+  return `<div class="wrap">
+    ${p.status === 'blocked' ? blockBoxHTML('project', p) : ''}
+    ${summary}
+    ${side ? `<div class="cols"><div class="col">${milestones}${updates}</div><div class="col">${side}</div></div>` : `${milestones}${updates}`}
+    ${!ms.length && p.status !== 'done' ? `<p class="sub center"><button type="button" class="text-btn" data-act="milestones" data-id="${p.id}">+ Add milestones</button> to split the project into phases</p>` : ''}
+  </div>`;
 }
 
 function projectTasksHTML(p) {
@@ -2093,6 +2066,7 @@ const ACT = {
   arrived: el => arrived(el.dataset.kind, el.dataset.id),
   followed: el => followedUp(el.dataset.kind, el.dataset.id),
   uh: el => { S.uh[el.dataset.id] = el.dataset.h; renderNow(); },
+  compose: el => { S.composeFor = el.dataset.id; renderNow(); const t = document.querySelector(`[data-key="upd:ov:${el.dataset.id}"]`); if (t) t.focus(); },
   'post-update': el => { const p = proj(el.dataset.id); if (p) postUpdate(p, el.dataset.ctx); },
   'close-project': el => { const p = proj(el.dataset.id); if (p) closeProject(p); },
   'plan-today': el => { const t = byId.get(el.dataset.id); if (t) { patch(t.id, { plan: todayISO() }); snack(`Added to My Day: ${t.title}`); } },
