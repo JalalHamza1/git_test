@@ -1,0 +1,2300 @@
+<script>
+'use strict';
+
+/* ======================================================================
+ * Preview mode: open the combined preview page in a browser to try the app
+ * with sample data. Inside Apps Script `google.script.run` exists and this
+ * block is skipped.
+ * ==================================================================== */
+if (typeof google === 'undefined') {
+  const p2 = n => String(n).padStart(2, '0');
+  const day = n => { const x = new Date(); x.setDate(x.getDate() + n); return `${x.getFullYear()}-${p2(x.getMonth() + 1)}-${p2(x.getDate())}`; };
+  const at = n => new Date(Date.now() + n * 864e5).toISOString();
+  let k = 0;
+  const T = (id, title, list, o) => Object.assign({ id, title, desc: '', due: '', time: '', status: 'Not started', priority: 'Medium', list, starred: false,
+    parent: '', order: ++k, repeat: '', created: at(-22), completed: '', archived: false, archType: '', synced: false, milestone: '', plan: '', size: 1,
+    blockedBy: [], blockReason: '', blockedSince: '', waiting: '', waitingSince: '', blockLog: [], updated: '' }, o || {});
+  const done = n => ({ status: 'Done', archived: true, archType: 'Completed', completed: at(n) });
+  const tasks = [
+    T('demox01', 'Interview the 4 report owners', 'Excel Digitization', Object.assign({ milestone: 'demom1', size: 2 }, done(-15))),
+    T('demox02', 'Map the current Excel workflow', 'Excel Digitization', Object.assign({ milestone: 'demom1', size: 3 }, done(-12))),
+    T('demox03', 'List every recurring report', 'Excel Digitization', Object.assign({ milestone: 'demom1' }, done(-11))),
+    T('demox04', 'Design the shared sheet structure', 'Excel Digitization', Object.assign({ milestone: 'demom2', size: 3 }, done(-4))),
+    T('demox05', 'Build the production tracker sheet', 'Excel Digitization', { milestone: 'demom2', size: 3, status: 'In progress', priority: 'High', due: day(3), plan: day(0), updated: at(-1), desc: 'One tab per line, daily totals pulled from the ERP export.' }),
+    T('demox06', 'Get Shared Drive permissions from IT', 'Excel Digitization', { milestone: 'demom2', priority: 'High', due: day(-1), status: 'Blocked', blockReason: 'The IT ticket has no answer yet', blockedSince: at(-6), waiting: 'IT helpdesk', waitingSince: at(-6) }),
+    T('demox07', 'Build the QA log sheet', 'Excel Digitization', { milestone: 'demom2', size: 2, due: day(6), status: 'Blocked', blockReason: 'Needs the Shared Drive to exist first', blockedSince: at(-5), blockedBy: ['demox06'] }),
+    T('demox08', 'Write import script for old files', 'Excel Digitization', { milestone: 'demom2', size: 3, due: day(7), created: at(-4) }),
+    T('demox09', 'Train team leads on the new sheets', 'Excel Digitization', { milestone: 'demom3', size: 2, due: day(15) }),
+    T('demox10', 'Run a parallel week (Excel + Sheets)', 'Excel Digitization', { milestone: 'demom3', size: 3, due: day(20) }),
+    T('demox11', 'Send a feedback form to the team', 'Excel Digitization', { milestone: 'demom3', due: day(21), created: at(-3) }),
+    T('demox12', 'Archive old Excel files', 'Excel Digitization', { milestone: 'demom4', due: day(28) }),
+    T('demox13', 'Retro and write-up', 'Excel Digitization', { milestone: 'demom4', due: day(30) }),
+    T('demoy00', 'Agree OJT scope with HR', 'OJT Program', Object.assign({ milestone: 'demon1', created: at(-5) }, done(-3))),
+    T('demoy01', 'Collect SOPs from each production line', 'OJT Program', { milestone: 'demon1', size: 2, created: at(-5), due: day(4), plan: day(0) }),
+    T('demoy02', 'Draft the week-1 checklist', 'OJT Program', { milestone: 'demon1', size: 2, created: at(-5), due: day(7) }),
+    T('demoy03', 'Draft the week 2–4 checklists', 'OJT Program', { milestone: 'demon1', size: 3, created: at(-5), due: day(10) }),
+    T('demoy04', 'Pick trainers with the supervisors', 'OJT Program', { milestone: 'demon2', created: at(-5), due: day(14) }),
+    T('demoz01', 'Set up the QRQC board on line 2', 'QRQC', Object.assign({ milestone: 'demoq1', size: 2, created: at(-50) }, done(-45))),
+    T('demoz02', 'Train shift leads on 5-why', 'QRQC', Object.assign({ milestone: 'demoq1', size: 2, created: at(-50) }, done(-42))),
+    T('demoz03', 'Run daily 10-minute meetings for 2 weeks', 'QRQC', Object.assign({ milestone: 'demoq2', size: 3, created: at(-50) }, done(-28))),
+    T('demoz04', 'Present results to the plant manager', 'QRQC', Object.assign({ milestone: 'demoq2', created: at(-50) }, done(-6))),
+    T('demow01', 'Read the Oct 12 meeting notes', 'TV Automation', Object.assign({ milestone: 'demov1', created: at(-24) }, done(-22))),
+    T('demow02', 'Pick a display tool', 'TV Automation', { milestone: 'demov1', size: 2, created: at(-24), due: day(2) }),
+    T('demow03', 'Connect live production numbers', 'TV Automation', { milestone: 'demov2', size: 3, created: at(-24), due: day(14) }),
+    T('demog01', 'Submit October expense report', 'General', { priority: 'High', due: day(-1), created: at(-8) }),
+    T('demog02', 'Book dentist appointment', 'General', { plan: day(0), created: at(-6) }),
+    T('demog03', 'Renew car insurance', 'General', { due: day(2), created: at(-6), starred: true }),
+    T('demog04', 'Weekly planning', 'General', { due: day(0), time: '09:00', repeat: 'weekly', created: at(-30) }),
+    T('demog05', 'Pack for the trip', 'General', { created: at(-6) }),
+    T('demog06', 'Passport photos', 'General', { created: at(-6), parent: 'demog05' }),
+    T('demog07', 'Return library books', 'General', Object.assign({ created: at(-6) }, done(-1))),
+    T('demoh01', 'Call mom', 'Personal', { plan: day(0), created: at(-2) }),
+    T('demoh02', 'Old request', 'Personal', { archived: true, archType: 'Deleted' }),
+  ];
+  const P = (id, name, color, o) => Object.assign({ id, name, color, status: 'active', priority: 2, goal: '', start: day(-24), target: '', order: 0, created: at(-24),
+    closed: '', outcome: '', blockReason: '', blockedBy: [], blockedSince: '', waiting: '', waitingSince: '', blockLog: [], updated: '' }, o);
+  const projects = [
+    P('demop1', 'Excel Digitization', 'BLUE', { priority: 1, target: day(30), order: 0, goal: 'Every recurring department report lives in a shared Google Sheet with one named owner, and nobody emails Excel files for reporting.' }),
+    P('demop2', 'OJT Program', 'ORANGE', { start: day(-5), target: day(40), order: 1, goal: 'Every new hire completes a 4-week on-the-job training plan and is signed off by their line trainer.' }),
+    P('demop3', 'QRQC', 'MAUVE', { start: day(-50), target: day(-2), order: 2, goal: 'Line 2 runs a daily 10-minute QRQC meeting and repeat defects drop by at least 25% in 30 days.' }),
+    P('demop4', 'TV Automation', 'CYAN', { priority: 3, target: day(20), order: 3, goal: 'The lobby TV shows live production numbers without anyone updating it by hand.',
+      status: 'blocked', blockReason: 'Facilities hasn’t told us the TV model and inputs', blockedSince: at(-20), waiting: 'Facilities', waitingSince: at(-20), updated: at(-20) }),
+    P('demop5', 'Supplier Scorecard', 'YELLOW', { status: 'planned', priority: 3, start: '', order: 4, goal: 'A monthly scorecard for the top 10 suppliers: on-time delivery, defect rate and response time.' }),
+  ];
+  const M = (id, projectId, name, target, isDone, order) => ({ id, projectId, name, target, done: isDone || '', order, eventId: '' });
+  const milestones = [
+    M('demom1', 'demop1', 'Workflow mapped', day(-10), day(-11), 0), M('demom2', 'demop1', 'Sheets built', day(8), '', 1),
+    M('demom3', 'demop1', 'Team migrated', day(24), '', 2), M('demom4', 'demop1', 'Old files retired', day(30), '', 3),
+    M('demon1', 'demop2', 'Curriculum drafted', day(10), '', 0), M('demon2', 'demop2', 'Trainers assigned', day(18), '', 1),
+    M('demoq1', 'demop3', 'Daily board live', day(-40), day(-41), 0), M('demoq2', 'demop3', '30-day review', day(-8), day(-6), 1),
+    M('demov1', 'demop4', 'Display tool chosen', day(2), '', 0), M('demov2', 'demop4', 'Screen live in lobby', day(20), '', 1),
+  ];
+  const notes = [
+    { id: 'demok1', projectId: 'demop1', type: 'meeting', title: 'Kickoff with report owners', created: at(-20), updated: at(-20), pinned: false, made: { 6: 'demox06' },
+      body: 'Attendees: Ana (Production), Ravi (QA), Mei (Planning), Tom (Finance)\n\n- Most reports are pasted from the ERP export every Monday\n- Finance needs the numbers by 10:00 on Monday\n[ ] Ask IT for a Shared Drive for the department\n[ ] Get one sample file from each report owner\n[ ] Check whether the ERP export can go straight into Sheets' },
+    { id: 'demok2', projectId: 'demop1', type: 'decision', title: 'One sheet per report, not one big workbook', created: at(-6), updated: at(-6), pinned: true, made: {},
+      body: 'Decision: each recurring report gets its own Google Sheet with one owner.\nWhy: one workbook makes permissions all-or-nothing and gets slow.\nAlternatives considered: one workbook with tabs; Looker Studio on top of the ERP.\nRevisit if: we need a cross-report dashboard.' },
+    { id: 'demok3', projectId: 'demop3', type: 'reference', title: '30-day results', created: at(-6), updated: at(-6), pinned: true, made: {},
+      body: 'Repeat defects: 42 → 26 (−38%)\nTop cause: label misprints (fixed with a printer check at shift start)' },
+  ];
+  const updates = [
+    { id: 'demou1', projectId: 'demop1', date: day(-17), health: 'green', text: 'Kickoff done. Interviews with the four report owners are booked.', progress: 10 },
+    { id: 'demou2', projectId: 'demop1', date: day(-9), health: 'green', text: 'Workflow mapping finished a day early: 11 recurring reports, 4 owners.', progress: 27 },
+    { id: 'demou3', projectId: 'demop2', date: day(-3), health: 'green', text: 'Scope agreed with HR: 4 weeks, sign-off by the line trainer.', progress: 9 },
+    { id: 'demou4', projectId: 'demop3', date: day(-6), health: 'green', text: '30-day review done. Repeat defects down 38% on line 2.', progress: 100 },
+    { id: 'demou5', projectId: 'demop4', date: day(-20), health: 'amber', text: 'Waiting on Facilities for the TV model before choosing a tool.', progress: 14 },
+  ];
+  const lists = [{ name: 'General', color: 'GRAY' }, { name: 'Personal', color: 'GREEN' }];
+  const api = {
+    getAll: () => ({ tasks, lists, projects, milestones, notes, updates, settings: { autoSync: false, digest: false, digestHour: 7, reviewDay: 5, sheetUrl: '' }, defaultList: 'General' }),
+    syncToCalendar: () => ({ message: 'Preview mode — nothing synced' }),
+    sendDigest: () => 'Preview mode — no email sent',
+  };
+  const runner = (ok, fail) => new Proxy({}, {
+    get: (_, name) => {
+      if (name === 'withSuccessHandler') return fn => runner(fn, fail);
+      if (name === 'withFailureHandler') return fn => runner(ok, fn);
+      return (...args) => setTimeout(() => {
+        try { const r = api[name] ? api[name](...args) : {}; ok && ok(JSON.parse(JSON.stringify(r))); } catch (e) { fail && fail(e); }
+      }, 120);
+    },
+  });
+  window.google = { script: { run: runner() } };
+}
+
+/* ======================================================================
+ * Helpers
+ * ==================================================================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const plural = (n, w, ws) => `${n} ${n === 1 ? w : (ws || w + 's')}`;
+const sum = (arr, f) => arr.reduce((s, x) => s + f(x), 0);
+const maxOf = arr => arr.filter(Boolean).sort().pop() || '';
+
+const ICONS = {
+  logo: 'M22 5.18 10.59 16.6l-4.24-4.24 1.41-1.41 2.83 2.83 10-10L22 5.18zm-2.21 5.04c.13.57.21 1.17.21 1.78 0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8c1.58 0 3.04.46 4.28 1.25l1.44-1.44A9.9 9.9 0 0 0 12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10c0-1.19-.22-2.33-.6-3.39l-1.61 1.61z',
+  menu: 'M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z',
+  search: 'M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
+  close: 'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+  add: 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z',
+  addCircle: 'M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7zm-1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z',
+  check: 'M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z',
+  star: 'M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z',
+  starOutline: 'M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4l-3.76 2.27 1-4.28-3.32-2.88 4.38-.38L12 6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z',
+  refresh: 'M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z',
+  event: 'M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z',
+  settings: 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z',
+  more: 'M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z',
+  home: 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z',
+  sun: 'M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z',
+  upcoming: 'M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z',
+  review: 'M22 7h-9v2h9V7zm0 8h-9v2h9v-2zM5.54 11 2 7.46l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41L5.54 11zm0 8L2 15.46l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41L5.54 19z',
+  trash: 'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z',
+  restore: 'M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z',
+  deleteForever: 'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zm2.46-7.12 1.41-1.41L12 12.59l2.12-2.12 1.41 1.41L13.41 14l2.12 2.12-1.41 1.41L12 15.41l-2.12 2.12-1.41-1.41L10.59 14l-2.13-2.12zM15.5 4l-1-1h-5l-1 1H5v2h14V4z',
+  repeat: 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z',
+  flag: 'M14.4 6 14 4H5v17h2v-7h5.6l.4 2h7V6z',
+  checklist: 'M22 7h-9v2h9V7zm0 8h-9v2h9v-2zM5.54 11 2 7.46l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41L5.54 11zm0 8L2 15.46l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41L5.54 19z',
+  notes: 'M3 18h12v-2H3v2zM3 6v2h18V6H3zm0 7h18v-2H3v2z',
+  keyboard: 'M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z',
+  chevron: 'M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z',
+  back: 'M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z',
+  clock: 'M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z',
+  palette: 'M12 3a9 9 0 0 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z',
+  edit: 'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z',
+  mail: 'M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z',
+  alert: 'M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z',
+  doneAll: 'M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41 6 19l1.41-1.41L1.83 12 .41 13.41z',
+  blocked: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9A7.902 7.902 0 0 1 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1A7.902 7.902 0 0 1 20 12c0 4.42-3.58 8-8 8z',
+  half: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18V4c4.41 0 8 3.59 8 8s-3.59 8-8 8z',
+  up: 'M7.41 15.41 12 10.83l4.59 4.58L18 14l-6-6-6 6z',
+  down: 'M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z',
+  diamond: 'M12 2 22 12 12 22 2 12z',
+  hourglass: 'M6 2v6h.01L6 8.01 10 12l-4 4 .01.01H6V22h12v-5.99h-.01L18 16l-4-4 4-3.99-.01-.01H18V2H6zm10 14.5V20H8v-3.5l4-4 4 4zm-4-5-4-4V4h8v3.5l-4 4z',
+  decision: 'M12 2 1 21h22L12 2zm1 16h-2v-2h2v2zm0-4h-2v-4h2v4z',
+  meeting: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
+  pin: 'M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z',
+  folder: 'M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z',
+  unlock: 'M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z',
+  subArrow: 'M19 15l-6 6-1.42-1.42L15.17 16H4V4h2v10h9.17l-3.59-3.58L13 9l6 6z',
+};
+const ic = name => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[name]}"/></svg>`;
+
+const COLORS = ['BLUE', 'GREEN', 'RED', 'ORANGE', 'YELLOW', 'MAUVE', 'CYAN', 'PALE_BLUE', 'PALE_GREEN', 'PALE_RED', 'GRAY'];
+const COLOR_HEX = { BLUE: '#5b8def', GREEN: '#3fb950', RED: '#f0625d', ORANGE: '#f0883e', YELLOW: '#e3b341', MAUVE: '#b889f5',
+  CYAN: '#39c5cf', PALE_BLUE: '#9db8f7', PALE_GREEN: '#7ddbb2', PALE_RED: '#ff9b92', GRAY: '#8b949e' };
+const COLOR_NAMES = { BLUE: 'Blueberry', GREEN: 'Basil', RED: 'Tomato', ORANGE: 'Tangerine', YELLOW: 'Banana', MAUVE: 'Grape',
+  CYAN: 'Peacock', PALE_BLUE: 'Lavender', PALE_GREEN: 'Sage', PALE_RED: 'Flamingo', GRAY: 'Graphite' };
+const REPEATS = ['', 'daily', 'weekdays', 'weekly', 'monthly', 'yearly'];
+const RANK = { High: 0, Medium: 1, Low: 2 };
+const SIZES = { 1: 'S', 2: 'M', 3: 'L' };
+const HEALTH = { green: 'On track', amber: 'At risk', red: 'Off track' };
+const SEV = { green: 0, amber: 1, red: 2 };
+const PSTATUS = { active: 'Active', blocked: 'Blocked', planned: 'Planned', paused: 'Paused', done: 'Done' };
+const PPRI = { 1: 'High', 2: 'Medium', 3: 'Low' };
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/* ----- dates (due/plan/target dates are local 'YYYY-MM-DD' strings) ----- */
+const pad = n => String(n).padStart(2, '0');
+const isoOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const todayISO = () => isoOf(new Date());
+const parseISO = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (iso, n) => { const d = parseISO(iso); d.setDate(d.getDate() + n); return isoOf(d); };
+const addMonths = (iso, n) => {
+  const d = parseISO(iso), day = d.getDate();
+  const t = new Date(d.getFullYear(), d.getMonth() + n, 1);
+  t.setDate(Math.min(day, new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate()));
+  return isoOf(t);
+};
+const diffDays = (a, b) => Math.round((parseISO(b) - parseISO(a)) / 864e5);
+const localDayOf = stamp => (stamp ? isoOf(new Date(stamp)) : '');
+const ageDays = stamp => (stamp ? Math.max(0, diffDays(localDayOf(stamp), todayISO())) : 0);
+function fmtDay(iso, opts) {
+  const d = parseISO(iso), o = Object.assign({ weekday: 'short', month: 'short', day: 'numeric' }, opts);
+  if (d.getFullYear() !== new Date().getFullYear()) o.year = 'numeric';
+  return d.toLocaleDateString(undefined, o);
+}
+const fmtShort = iso => fmtDay(iso, { weekday: undefined });
+function relDay(iso) {
+  const diff = diffDays(todayISO(), iso);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  if (diff === -1) return 'Yesterday';
+  if (diff > 1 && diff < 7) return parseISO(iso).toLocaleDateString(undefined, { weekday: 'long' });
+  return fmtDay(iso);
+}
+const relLower = iso => { const r = relDay(iso); return /^(Today|Tomorrow|Yesterday)$/.test(r) ? r.toLowerCase() : r; };
+const fmtTime = hm => { const [H, M] = hm.split(':').map(Number); return new Date(2000, 0, 1, H, M).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); };
+const weekdayOf = iso => parseISO(iso).toLocaleDateString(undefined, { weekday: 'long' });
+const ordinal = n => n + (['th', 'st', 'nd', 'rd'][(n % 100 - 20) % 10] || ['th', 'st', 'nd', 'rd'][n % 100] || 'th');
+
+// Mirrors nextDue_ in Code.gs so the next occurrence shows up instantly.
+function nextDue(iso, rule, today) {
+  const base = parseISO(iso || today), floor = parseISO(today), anchor = base.getDate();
+  let d = new Date(base), months = 0;
+  const step = () => {
+    if (rule === 'daily') d.setDate(d.getDate() + 1);
+    else if (rule === 'weekly') d.setDate(d.getDate() + 7);
+    else if (rule === 'weekdays') { do d.setDate(d.getDate() + 1); while (d.getDay() === 0 || d.getDay() === 6); }
+    else {
+      months += rule === 'yearly' ? 12 : 1;
+      const t = new Date(base.getFullYear(), base.getMonth() + months, 1);
+      t.setDate(Math.min(anchor, new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate()));
+      d = t;
+    }
+  };
+  step();
+  for (let g = 0; d < floor && g < 5000; g++) step();
+  return isoOf(d);
+}
+function repeatLabel(rule, due) {
+  const iso = due || todayISO(), d = parseISO(iso);
+  return {
+    '': 'Does not repeat', daily: 'Daily', weekdays: 'Every weekday (Mon–Fri)',
+    weekly: `Weekly on ${weekdayOf(iso)}`, monthly: `Monthly on the ${ordinal(d.getDate())}`,
+    yearly: `Yearly on ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`,
+  }[rule];
+}
+const newId = (prefix = 't') => {
+  const b = new Uint8Array(5);
+  crypto.getRandomValues(b);
+  return prefix + [...b].map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 9);
+};
+
+/* ======================================================================
+ * State
+ * ==================================================================== */
+const S = {
+  tasks: [], lists: [], projects: [], milestones: [], notes: [], updates: [], settings: {}, defaultList: 'General',
+  view: 'home', id: null, tab: 'overview', prevView: 'home', query: '',
+  taskId: null, draft: null, noteId: null, noteFilter: 'all', uh: {}, reviewed: new Set(),
+  ready: false, error: null, loadedAt: 0, fresh: new Set(),
+};
+const byId = new Map();
+let kids = new Map();
+const drafts = new Map();
+
+const PREF_KEY = 'taskmgr.prefs.v2';
+const prefs = (() => {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(PREF_KEY) || '{}') || {}; } catch (e) {}
+  const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+  return { open: obj(saved.open), drawer: saved.drawer !== false, view: typeof saved.view === 'string' ? saved.view : 'home', id: typeof saved.id === 'string' ? saved.id : null, showOther: !!saved.showOther };
+})();
+const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) {} };
+const VIEWS = ['home', 'myday', 'upcoming', 'starred', 'review', 'trash', 'project', 'list'];
+if (VIEWS.includes(prefs.view)) { S.view = prefs.view; S.id = prefs.id; }
+
+function reindex() {
+  byId.clear();
+  kids = new Map();
+  S.tasks.forEach(t => byId.set(t.id, t));
+  S.tasks.forEach(t => {
+    if (!t.parent) return;
+    if (!kids.has(t.parent)) kids.set(t.parent, []);
+    kids.get(t.parent).push(t);
+  });
+}
+const proj = id => S.projects.find(p => p.id === id) || null;
+const projByName = name => S.projects.find(p => p.name === name) || null;
+const listByName = name => S.lists.find(l => l.name === name) || null;
+const colorOf = name => COLOR_HEX[((projByName(name) || listByName(name)) || {}).color] || COLOR_HEX.GRAY;
+const kidsOf = id => kids.get(id) || [];
+const activeKids = id => kidsOf(id).filter(k => !k.archived);
+const isLive = t => t.archType !== 'Deleted';
+const isBlocked = t => !t.archived && t.status === 'Blocked';
+const isTop = t => { const p = t.parent && byId.get(t.parent); return !p || p.archived || p.list !== t.list || !!p.parent; };
+const hasLiveKids = id => kidsOf(id).some(isLive);
+const pts = t => t.size || 1;
+const msOf = p => S.milestones.filter(m => m.projectId === p.id).sort((a, b) => (a.order - b.order) || (a.target || '9').localeCompare(b.target || '9'));
+const msById = id => S.milestones.find(m => m.id === id) || null;
+const currentMs = p => msOf(p).find(m => !m.done) || null;
+const notesOf = p => S.notes.filter(n => n.projectId === p.id);
+const updatesOf = p => S.updates.map((u, i) => [u, i]).filter(([u]) => u.projectId === p.id)
+  .sort((a, b) => b[0].date.localeCompare(a[0].date) || b[1] - a[1]).map(x => x[0]);
+const reported = p => (updatesOf(p)[0] || {}).health || '';
+const tasksIn = name => S.tasks.filter(t => t.list === name && isLive(t));
+const isOpenProject = p => p.status === 'active' || p.status === 'blocked';
+const openProjects = () => S.projects.filter(isOpenProject).sort((a, b) => a.priority - b.priority || a.order - b.order || a.name.localeCompare(b.name));
+const blockersCleared = ids => ids.every(b => { const x = byId.get(b); return !x || x.archived; });
+const openBlockers = t => t.blockedBy.map(id => byId.get(id)).filter(b => b && !b.archived);
+const hasPlan = x => x.blockedBy.length > 0 || !!x.waiting;
+const inMyDay = t => !t.archived && ((t.plan && t.plan <= todayISO()) || (t.due && t.due <= todayISO()));
+
+const SORTS = {
+  my: (a, b) => a.order - b.order || (a.created || '').localeCompare(b.created || ''),
+  due: (a, b) => (a.due || '9999').localeCompare(b.due || '9999') || (a.time || '99').localeCompare(b.time || '99') || RANK[a.priority] - RANK[b.priority] || a.order - b.order,
+};
+const byCompletedDesc = (a, b) => (b.completed || '').localeCompare(a.completed || '');
+
+function stats(p) {
+  const today = todayISO(), ts = tasksIn(p.name);
+  const done = ts.filter(t => t.archType === 'Completed');
+  const total = sum(ts, pts), donePts = sum(done, pts);
+  const pct = total ? Math.round(donePts / total * 100) : 0;
+  const recent = sum(done.filter(t => diffDays(localDayOf(t.completed), today) <= 14), pts);
+  const age = p.start ? diffDays(p.start, today) : 0;
+  let forecast = '', why = '';
+  if (!total) why = 'No tasks yet';
+  else if (donePts === total) why = 'Complete';
+  else if (age < 7 || donePts < 3) why = 'Shown after a week of work';
+  else if (!recent) why = 'Nothing finished in 14 days';
+  else forecast = addDays(today, Math.ceil((total - donePts) / (recent / 14)));
+  const doneWeek = sum(done.filter(t => diffDays(localDayOf(t.completed), today) <= 7), pts);
+  const added = ts.filter(t => p.start && t.created && diffDays(p.start, localDayOf(t.created)) > 3 && diffDays(localDayOf(t.created), today) <= 7);
+  const last = maxOf([...ts.map(t => localDayOf(t.updated)), ...done.map(t => localDayOf(t.completed)), ...ts.map(t => localDayOf(t.created)),
+    ...updatesOf(p).map(u => u.date), localDayOf(p.updated), p.start]);
+  return { total, done: donePts, pct, forecast, why, doneWeek, addedPts: sum(added, pts), added: added.length, last, open: ts.filter(t => !t.archived) };
+}
+
+function nextAction(p) {
+  const ms = msOf(p).map(m => m.id);
+  const mi = id => { const i = ms.indexOf(id); return i < 0 ? 99 : i; };
+  const ready = tasksIn(p.name).filter(t => !t.archived && !isBlocked(t));
+  ready.sort((a, b) => mi(a.milestone) - mi(b.milestone) || (b.status === 'In progress') - (a.status === 'In progress') || RANK[a.priority] - RANK[b.priority] ||
+    (a.due || '9').localeCompare(b.due || '9') || a.order - b.order);
+  return ready[0] || null;
+}
+
+// Things the app noticed. They suggest a health; you confirm it with a status update.
+function signals(p) {
+  const out = [];
+  if (!isOpenProject(p)) return out;
+  const today = todayISO(), st = stats(p), open = st.open;
+  if (p.status === 'blocked') {
+    const age = ageDays(p.blockedSince);
+    out.push({ lvl: age > 7 ? 'red' : 'amber', text: `Project blocked${age ? ` for ${plural(age, 'day')}` : ''}: ${p.blockReason || 'no reason given'}`, act: 'blocked' });
+    if (!hasPlan(p)) out.push({ lvl: 'amber', text: 'Blocked with no unblock plan yet', act: 'blocked' });
+  }
+  if (p.status === 'active' && st.total && !open.length) {
+    out.push({ lvl: 'info', text: 'All tasks are done. Close the project and record the outcome.', act: 'close' });
+    return out;
+  }
+  msOf(p).filter(m => !m.done && m.target && m.target < today).forEach(m => out.push({ lvl: 'red', text: `Milestone “${m.name}” was due ${relLower(m.target)}` }));
+  if (st.forecast && p.target) {
+    const late = diffDays(p.target, st.forecast);
+    if (late > 7) out.push({ lvl: 'red', text: `Forecast ${fmtShort(st.forecast)} is ${late} days past the target` });
+    else if (late > 0) out.push({ lvl: 'amber', text: `Forecast ${fmtShort(st.forecast)} is ${plural(late, 'day')} past the target` });
+  }
+  const idle = st.last ? diffDays(st.last, today) : 0;
+  if (idle >= 21) out.push({ lvl: 'red', text: `Nothing has moved in ${idle} days` });
+  else if (idle >= 10) out.push({ lvl: 'amber', text: `Nothing has moved in ${idle} days` });
+  const od = open.filter(t => t.due && t.due < today);
+  if (od.length) out.push({ lvl: 'amber', text: `${plural(od.length, 'overdue task')}: ${od[0].title}`, task: od[0].id });
+  open.filter(isBlocked).forEach(t => {
+    if (!hasPlan(t)) out.push({ lvl: 'amber', text: `Blocked with no unblock plan: ${t.title}`, task: t.id });
+    else if (t.waiting && ageDays(t.waitingSince) >= 5) out.push({ lvl: 'amber', text: `Waiting on ${t.waiting} for ${ageDays(t.waitingSince)} days: ${t.title}`, task: t.id });
+  });
+  if (p.waiting && ageDays(p.waitingSince) >= 5) out.push({ lvl: 'amber', text: `Waiting on ${p.waiting} for ${ageDays(p.waitingSince)} days`, act: 'blocked' });
+  if (p.status === 'active' && open.length && !nextAction(p)) out.push({ lvl: 'amber', text: 'No next action: every open task is blocked' });
+  const ups = updatesOf(p), lastUp = (ups[0] && ups[0].date) || p.start;
+  if (lastUp && diffDays(lastUp, today) > 7) out.push({ lvl: 'amber', text: ups.length ? `Last status update was ${diffDays(lastUp, today)} days ago` : 'No status update yet', act: 'update' });
+  const order = { red: 0, amber: 1, info: 2 };
+  return out.sort((a, b) => order[a.lvl] - order[b.lvl]);
+}
+function suggested(p) {
+  const s = signals(p);
+  return s.some(x => x.lvl === 'red') ? 'red' : s.some(x => x.lvl === 'amber') ? 'amber' : 'green';
+}
+function msStats(m) {
+  const ts = S.tasks.filter(t => t.milestone === m.id && isLive(t));
+  const total = sum(ts, pts), done = sum(ts.filter(t => t.archType === 'Completed'), pts);
+  return { pct: total ? Math.round(done / total * 100) : 0, n: ts.length, nd: ts.filter(t => t.archType === 'Completed').length };
+}
+
+/* ======================================================================
+ * Server bridge: one ordered write queue, results merged when it drains
+ * ==================================================================== */
+const call = (fn, ...args) => new Promise((resolve, reject) => {
+  google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
+});
+// A lock timeout means the server never ran the call, so retrying is safe.
+async function callWithRetry(fn, args) {
+  for (let attempt = 1; ; attempt++) {
+    try { return await call(fn, ...args); }
+    catch (err) {
+      if (attempt >= 3 || !/lock timeout/i.test(String((err && err.message) || err))) throw err;
+      await new Promise(r => setTimeout(r, 2000 * attempt));
+    }
+  }
+}
+const Q = { chain: Promise.resolve(), pending: 0, results: [], failed: false };
+function send(fn, ...args) {
+  Q.pending++;
+  setStatus();
+  const run = Q.chain.then(() => callWithRetry(fn, args));
+  Q.chain = run.then(res => { Q.results.push(res); }, err => {
+    Q.failed = true;
+    snack(`Couldn't save: ${(err && err.message) || err}`);
+  }).then(() => { if (--Q.pending === 0) drain(); });
+  return run.catch(() => undefined);
+}
+function drain() {
+  setStatus();
+  const results = Q.results;
+  Q.results = [];
+  if (Q.failed) { Q.failed = false; boot(true); return; }
+  results.forEach(merge);
+  reindex();
+  schedule();
+}
+function upsert(arr, rec) {
+  const i = arr.findIndex(x => x.id === rec.id);
+  if (i >= 0) Object.assign(arr[i], rec); else arr.push(rec);
+}
+function merge(r) {
+  if (!r || typeof r !== 'object') return;
+  (r.tasks || []).forEach(t => upsert(S.tasks, t));
+  if (r.removed && r.removed.length) { const gone = new Set(r.removed); S.tasks = S.tasks.filter(t => !gone.has(t.id)); }
+  ['projects', 'milestones', 'notes', 'updates'].forEach(k => (r[k] || []).forEach(x => upsert(S[k], x)));
+  if (r.gone) Object.keys(r.gone).forEach(k => { if (S[k]) { const g = new Set(r.gone[k]); S[k] = S[k].filter(x => !g.has(x.id)); } });
+  if (r.lists) S.lists = r.lists;
+  if (r.settings) S.settings = r.settings;
+}
+let statusTimer;
+function setStatus() {
+  const s = $('status');
+  clearTimeout(statusTimer);
+  if (Q.pending) { s.textContent = 'Saving…'; s.style.opacity = 1; return; }
+  if (s.textContent) { s.textContent = 'Saved'; statusTimer = setTimeout(() => { s.style.opacity = 0; }, 1600); }
+}
+window.addEventListener('beforeunload', e => { flushSaves(); if (Q.pending) { e.preventDefault(); e.returnValue = ''; } });
+
+async function boot(silent) {
+  if (!silent && !S.ready) render();
+  try {
+    const data = await call('getAll');
+    ['tasks', 'lists', 'projects', 'milestones', 'notes', 'updates'].forEach(k => { S[k] = data[k] || []; });
+    S.settings = data.settings || {};
+    S.defaultList = data.defaultList || 'General';
+    S.ready = true;
+    S.error = null;
+    S.loadedAt = Date.now();
+    reindex();
+    if (S.view === 'project' && !proj(S.id)) S.view = 'home';
+    if (S.view === 'list' && !listByName(S.id)) S.view = 'home';
+  } catch (err) {
+    if (!S.ready) S.error = (err && err.message) || String(err);
+    else snack(`Couldn't refresh: ${(err && err.message) || err}`);
+  }
+  render();
+}
+
+/* ======================================================================
+ * Mutations: optimistic locally, then queued to the server.
+ * The local rules mirror Code.gs / Projects.gs so the screen updates at once.
+ * ==================================================================== */
+const PAYLOAD = ['id', 'title', 'desc', 'due', 'time', 'status', 'priority', 'list', 'starred', 'parent', 'order', 'repeat', 'milestone', 'plan', 'size'];
+const pick = (o, keys) => keys.reduce((a, k) => (k in o ? (a[k] = o[k], a) : a), {});
+const nowStamp = () => new Date().toISOString();
+
+function siblingOrders(list, parent, milestone) {
+  return S.tasks.filter(t => !t.archived && t.list === list && (parent ? t.parent === parent : isTop(t)) && (milestone === undefined || t.milestone === milestone)).map(t => t.order);
+}
+function createTask(f) {
+  const list = f.list || S.defaultList, parent = f.parent || '';
+  const p = projByName(list);
+  const milestone = p ? (f.milestone !== undefined ? f.milestone : ((currentMs(p) || {}).id || '')) : '';
+  const orders = siblingOrders(list, parent);
+  const order = !orders.length ? 0 : f.append ? Math.max(...orders) + 1 : Math.min(...orders) - 1;
+  const due = f.due || (f.time ? todayISO() : '');
+  const t = {
+    id: newId(), title: f.title, desc: f.desc || '', due, time: due ? (f.time || '') : '', status: 'Not started', priority: f.priority || 'Medium',
+    list, starred: !!f.starred, parent, order, repeat: f.repeat || '', created: nowStamp(), completed: '', archived: false, archType: '', synced: false,
+    milestone, plan: f.plan || '', size: f.size || 1, blockedBy: [], blockReason: '', blockedSince: '', waiting: '', waitingSince: '', blockLog: [], updated: nowStamp(),
+  };
+  S.tasks.push(t);
+  reindex();
+  S.fresh.add(t.id);
+  schedule();
+  send('saveTask', Object.assign(pick(t, PAYLOAD), { create: true }));
+  if (p) touchProject(p);
+  return t;
+}
+function touchProject(p) { p.updated = nowStamp(); }
+
+function patch(id, fields) {
+  const t = byId.get(id);
+  if (!t) return;
+  const diff = {};
+  for (const k in fields) if (t[k] !== fields[k]) diff[k] = fields[k];
+  if (!Object.keys(diff).length) return;
+  if ('due' in diff && !diff.due && t.time) diff.time = '';
+  if ('list' in diff) {
+    if (!('milestone' in diff)) { const p = projByName(diff.list); diff.milestone = p ? ((currentMs(p) || {}).id || '') : ''; }
+    if (!('order' in diff)) { const o = siblingOrders(diff.list, ''); diff.order = o.length ? Math.min(...o) - 1 : 0; }
+    if (t.parent && !('parent' in diff)) t.parent = '';
+    kidsOf(id).forEach(k => { k.list = diff.list; });
+  }
+  if ('status' in diff && t.status === 'Blocked' && diff.status !== 'Blocked') clearBlockLocal(t, 'Unblocked by hand');
+  Object.assign(t, diff, { updated: nowStamp() });
+  reindex();
+  schedule();
+  send('saveTask', Object.assign({ id }, diff));
+}
+
+function clearBlockLocal(x, how) {
+  if (x.blockReason || x.blockedBy.length || x.waiting) {
+    x.blockLog = (x.blockLog || []).concat({ reason: x.blockReason, from: x.blockedSince, to: nowStamp(), how }).slice(-20);
+  }
+  Object.assign(x, { blockReason: '', blockedBy: [], blockedSince: '', waiting: '', waitingSince: '' });
+}
+// Mirrors afterFinished_ in Projects.gs.
+function afterFinishedLocal(ids) {
+  const fin = new Set(ids), unblocked = [], reached = [];
+  S.tasks.forEach(t => {
+    if (t.archived || t.status !== 'Blocked' || t.waiting || !t.blockedBy.some(x => fin.has(x)) || !blockersCleared(t.blockedBy)) return;
+    clearBlockLocal(t, 'Unblocked when its tasks were done');
+    t.status = 'Not started';
+    unblocked.push(t.title);
+  });
+  S.projects.forEach(p => {
+    if (p.status !== 'blocked' || p.waiting || !p.blockedBy.some(x => fin.has(x)) || !blockersCleared(p.blockedBy)) return;
+    clearBlockLocal(p, 'Unblocked when its tasks were done');
+    p.status = 'active';
+    unblocked.push(`project ${p.name}`);
+  });
+  ids.forEach(id => {
+    const t = byId.get(id);
+    if (!t || t.archType !== 'Completed' || !t.milestone) return;
+    const m = msById(t.milestone);
+    if (!m || m.done || S.tasks.some(x => x.milestone === m.id && !x.archived)) return;
+    m.done = todayISO();
+    reached.push(m.name);
+  });
+  return { unblocked, reached };
+}
+
+const completing = new Set();
+function complete(id, rowEl) {
+  const t = byId.get(id);
+  if (!t || t.archived || completing.has(id)) return;
+  completing.add(id);
+  const finish = () => {
+    completing.delete(id);
+    if (t.archived) return;
+    const now = nowStamp();
+    const finished = [t, ...activeKids(id)];
+    finished.forEach(x => { if (x.status === 'Blocked') clearBlockLocal(x, 'Finished while blocked'); Object.assign(x, { archived: true, archType: 'Completed', status: 'Done', completed: now, updated: now }); });
+    let next = null;
+    if (t.repeat) {
+      next = Object.assign(pick(t, ['title', 'desc', 'time', 'priority', 'list', 'starred', 'order', 'repeat', 'milestone', 'size']), {
+        id: newId(), due: nextDue(t.due, t.repeat, todayISO()), status: 'Not started', created: now, completed: '', plan: '',
+        parent: t.parent && byId.get(t.parent) && !byId.get(t.parent).archived ? t.parent : '', archived: false, archType: '', synced: false,
+        blockedBy: [], blockReason: '', blockedSince: '', waiting: '', waitingSince: '', blockLog: [], updated: now,
+      });
+      S.tasks.push(next);
+      S.fresh.add(next.id);
+    }
+    reindex();
+    const res = afterFinishedLocal(finished.map(x => x.id));
+    const p = projByName(t.list);
+    if (p) touchProject(p);
+    reindex();
+    schedule();
+    send('completeTask', id, next ? next.id : null);
+    const nextId = next && next.id;
+    const parts = [];
+    if (res.reached.length) parts.push(`Milestone reached: ${res.reached.join(', ')}`);
+    if (res.unblocked.length) parts.push(`Unblocked: ${res.unblocked.join(', ')}`);
+    if (next) parts.push(`next one ${relLower(next.due)}`);
+    snack(parts.length ? parts.join(' · ') : 'Task completed', 'Undo', () => uncomplete(id, nextId));
+  };
+  if (rowEl && !matchMedia('(prefers-reduced-motion: reduce)').matches) { rowEl.classList.add('completing'); setTimeout(finish, 260); }
+  else finish();
+}
+
+function unarch(x) { Object.assign(x, { archived: false, archType: '', completed: '', status: x.status === 'Done' ? 'Not started' : x.status, updated: nowStamp() }); }
+// Mirrors restoreTask in Code.gs (plus reopening a reached milestone).
+function restoreLocal(t) {
+  const was = t.archType, stamp = t.completed;
+  unarch(t);
+  const p = t.parent && byId.get(t.parent);
+  if (t.parent && !p) t.parent = '';
+  else if (p && p.archType === 'Completed') unarch(p);
+  else if (p && p.archived) t.parent = '';
+  kidsOf(t.id).forEach(k => { if (k.archType === was && (was !== 'Completed' || k.completed === stamp)) unarch(k); });
+  [t, ...kidsOf(t.id)].forEach(x => { const m = x.milestone && msById(x.milestone); if (m && m.done && !x.archived) m.done = ''; });
+}
+function dropLocal(ids) {
+  S.tasks = S.tasks.filter(t => !ids.has(t.id) && !(ids.has(t.parent) && t.archType === 'Deleted'));
+  S.tasks.forEach(t => { if (ids.has(t.parent)) t.parent = ''; });
+  reindex();
+}
+function uncomplete(id, spawnedId) {
+  const t = byId.get(id);
+  if (!t) return;
+  if (t.archType === 'Completed') { restoreLocal(t); send('restoreTask', id); }
+  if (spawnedId && byId.has(spawnedId)) { dropLocal(new Set([spawnedId])); send('purgeTask', spawnedId); }
+  reindex();
+  schedule();
+}
+function trash(id) {
+  const t = byId.get(id);
+  if (!t) return;
+  const affected = [t, ...kidsOf(id).filter(isLive)];
+  if (S.taskId && affected.some(a => a.id === S.taskId)) closePanel();
+  affected.forEach(x => Object.assign(x, { archived: true, archType: 'Deleted' }));
+  reindex();
+  const res = afterFinishedLocal(affected.map(a => a.id));
+  schedule();
+  send('deleteTask', id);
+  const msg = affected.length > 1 ? `Moved to trash with ${plural(affected.length - 1, 'subtask')}` : 'Moved to trash';
+  snack(res.unblocked.length ? `${msg} · Unblocked: ${res.unblocked.join(', ')}` : msg, 'Undo', () => untrash(id));
+}
+function untrash(id) {
+  const t = byId.get(id);
+  if (!t || t.archType !== 'Deleted') return;
+  restoreLocal(t);
+  S.fresh.add(id);
+  reindex();
+  schedule();
+  send('restoreTask', id);
+}
+async function purge(id) {
+  const t = byId.get(id);
+  if (!t) return;
+  if (!(await confirmDlg('Delete forever?', `“${t.title}” will be permanently removed. This can't be undone.`, 'Delete forever'))) return;
+  dropLocal(new Set([id]));
+  schedule();
+  send('purgeTask', id);
+}
+async function emptyTrash() {
+  const gone = S.tasks.filter(t => t.archType === 'Deleted');
+  if (!gone.length) return;
+  if (!(await confirmDlg('Empty trash?', `${plural(gone.length, 'task')} will be permanently deleted. This can't be undone.`, 'Empty trash'))) return;
+  dropLocal(new Set(gone.map(t => t.id)));
+  schedule();
+  send('emptyTrash');
+  snack('Trash emptied');
+}
+
+// Keyboard and panel "move up / down": swaps with the neighbour in the same group.
+function moveBy(id, dir) {
+  const t = byId.get(id);
+  if (!t || t.archived) return;
+  const top = isTop(t);
+  const sib = S.tasks.filter(x => !x.archived && x.list === t.list && (top ? isTop(x) && x.milestone === t.milestone : x.parent === t.parent)).sort(SORTS.my);
+  const i = sib.indexOf(t), j = i + dir;
+  if (j < 0 || j >= sib.length) return;
+  [sib[i], sib[j]] = [sib[j], sib[i]];
+  sib.forEach((x, n) => { x.order = n; });
+  schedule();
+  send('reorderTasks', t.list, top ? '' : t.parent, sib.map(x => x.id));
+}
+
+/* ----- blocking ----- */
+function blockLocal(target, spec, kind) {
+  const now = nowStamp(), made = [];
+  const p = kind === 'project' ? target : null;
+  const list = p ? p.name : target.list;
+  const milestone = p ? spec.milestone : target.milestone;
+  const baseOrder = p ? Math.min(0, ...siblingOrders(list, '')) - 1 : target.order;
+  spec.create.forEach((c, n) => {
+    const t = {
+      id: c.id, title: c.title, desc: '', due: '', time: '', status: 'Not started', priority: p ? 'High' : target.priority, list, starred: false, parent: '',
+      order: baseOrder - (spec.create.length - n) * 0.01, repeat: '', created: now, completed: '', archived: false, archType: '', synced: false,
+      milestone, plan: '', size: 1, blockedBy: [], blockReason: '', blockedSince: '', waiting: '', waitingSince: '', blockLog: [], updated: now,
+    };
+    S.tasks.push(t);
+    S.fresh.add(t.id);
+    made.push(t.id);
+  });
+  reindex();
+  const blockers = [...new Set(spec.blockers.concat(made))];
+  const wasBlocked = p ? p.status === 'blocked' : target.status === 'Blocked';
+  if (!wasBlocked) target.blockedSince = now;
+  if (spec.waiting !== target.waiting) target.waitingSince = spec.waiting ? now : '';
+  Object.assign(target, { blockReason: spec.reason, blockedBy: blockers, waiting: spec.waiting, updated: now });
+  if (p) p.status = 'blocked'; else target.status = 'Blocked';
+}
+function blockTask(t, spec) {
+  blockLocal(t, spec, 'task');
+  schedule();
+  send('blockTask', t.id, spec);
+  snack(spec.create.length ? `Blocked · added ${plural(spec.create.length, 'task')} to unblock it` : 'Marked blocked');
+}
+function blockProject(p, spec) {
+  blockLocal(p, spec, 'project');
+  schedule();
+  send('blockProject', p.id, spec);
+  snack(spec.create.length ? `Project blocked · added ${plural(spec.create.length, 'task')} to unblock it` : 'Project marked blocked');
+}
+function unblock(kind, id) {
+  const x = kind === 'project' ? proj(id) : byId.get(id);
+  if (!x) return;
+  clearBlockLocal(x, 'Unblocked by hand');
+  if (kind === 'project') x.status = 'active'; else x.status = 'Not started';
+  x.updated = nowStamp();
+  schedule();
+  send(kind === 'project' ? 'unblockProject' : 'unblockTask', id);
+  snack(kind === 'project' ? `${x.name} is active again` : 'Unblocked');
+}
+function arrived(kind, id) {
+  const x = kind === 'project' ? proj(id) : byId.get(id);
+  if (!x || !x.waiting) return;
+  const who = x.waiting;
+  const blocked = kind === 'project' ? x.status === 'blocked' : x.status === 'Blocked';
+  if (blocked && blockersCleared(x.blockedBy)) {
+    clearBlockLocal(x, `${who} came through`);
+    if (kind === 'project') x.status = 'active'; else x.status = 'Not started';
+    snack(`${who} came through · ${kind === 'project' ? x.name : `“${x.title}”`} is unblocked`);
+  } else {
+    x.waiting = ''; x.waitingSince = '';
+    snack(`No longer waiting on ${who}. Still blocked by ${plural(x.blockedBy.filter(b => byId.get(b) && !byId.get(b).archived).length, 'task')}.`);
+  }
+  x.updated = nowStamp();
+  schedule();
+  send('clearWaiting', kind, id);
+}
+function followedUp(kind, id) {
+  const x = kind === 'project' ? proj(id) : byId.get(id);
+  if (!x || !x.waiting) return;
+  x.waitingSince = nowStamp();
+  schedule();
+  send('followUp', kind, id);
+  snack('Follow-up logged. The waiting clock restarts today.');
+}
+
+/* ----- projects ----- */
+function saveProjectLocal(p, fields) {
+  const old = p.name;
+  if (fields.name && fields.name !== old) {
+    S.tasks.forEach(t => { if (t.list === old) t.list = fields.name; });
+    if (S.view === 'project' && S.id === p.id) savePrefs();
+  }
+  if (fields.status && fields.status !== p.status) {
+    if (p.status === 'blocked') clearBlockLocal(p, 'Unblocked by hand');
+    if (fields.status === 'done') p.closed = todayISO(); else p.closed = '';
+    if (fields.status === 'active' && p.status === 'planned') p.start = todayISO();
+  }
+  Object.assign(p, fields, { updated: nowStamp() });
+  reindex();
+  schedule();
+  send('saveProject', Object.assign({ id: p.id }, fields));
+}
+async function newProject() {
+  const res = await projectDlg(null);
+  if (!res) return;
+  const p = {
+    id: newId('p'), name: res.name, color: res.color, status: 'active', priority: res.priority, goal: res.goal, start: res.start || todayISO(), target: res.target,
+    order: S.projects.length, created: nowStamp(), closed: '', outcome: '', blockReason: '', blockedBy: [], blockedSince: '', waiting: '', waitingSince: '', blockLog: [], updated: nowStamp(),
+  };
+  S.projects.push(p);
+  send('saveProject', Object.assign(pick(p, ['id', 'name', 'color', 'priority', 'goal', 'start', 'target']), { create: true }));
+  openProject(p.id);
+  snack(`${p.name} created. Add milestones and tasks to get going.`);
+}
+async function editProject(p) {
+  const res = await projectDlg(p);
+  if (!res) return;
+  if (res === 'delete') return deleteProject(p);
+  const fields = {};
+  ['name', 'color', 'priority', 'goal', 'start', 'target'].forEach(k => { if (res[k] !== p[k]) fields[k] = res[k]; });
+  if (Object.keys(fields).length) saveProjectLocal(p, fields);
+}
+async function deleteProject(p) {
+  const n = tasksIn(p.name).filter(t => t.archType !== 'Deleted').length;
+  if (!(await confirmDlg(`Delete “${p.name}”?`, `${n ? `Its ${plural(n, 'task')} move to Trash. ` : ''}Milestones, notes and status updates are deleted for good.`, 'Delete project'))) return;
+  S.tasks.forEach(t => { if (t.list === p.name && isLive(t)) Object.assign(t, { archived: true, archType: 'Deleted' }); });
+  S.milestones = S.milestones.filter(m => m.projectId !== p.id);
+  S.notes = S.notes.filter(x => x.projectId !== p.id);
+  S.updates = S.updates.filter(x => x.projectId !== p.id);
+  S.projects = S.projects.filter(x => x !== p);
+  closePanel();
+  setView('home');
+  send('deleteProject', p.id);
+  snack(`“${p.name}” deleted`);
+}
+function setProjectStatus(p, status) {
+  if (status === 'blocked') return blockDlg('project', p.id);
+  saveProjectLocal(p, { status });
+  snack(status === 'done' ? `${p.name} closed` : `${p.name} is now ${PSTATUS[status].toLowerCase()}`);
+}
+function closeProject(p) {
+  const ta = document.querySelector(`[data-key="outcome:${p.id}"]`);
+  const outcome = ta ? ta.value.trim() : '';
+  drafts.delete('outcome:' + p.id);
+  saveProjectLocal(p, outcome ? { outcome, status: 'done' } : { status: 'done' });
+  snack(`${p.name} closed. Find it under “Planned, paused & done”.`);
+}
+function postUpdate(p, ctx) {
+  const key = `upd:${ctx}:${p.id}`, text = (drafts.get(key) || '').trim();
+  if (!text) { snack('Write a sentence or two first: what changed, what’s next, what’s in the way.'); const el = document.querySelector(`[data-key="${key}"]`); if (el) el.focus(); return; }
+  const u = { id: newId('u'), projectId: p.id, date: todayISO(), health: S.uh[p.id] || suggested(p), text, progress: stats(p).pct };
+  S.updates.push(u);
+  drafts.delete(key);
+  delete S.uh[p.id];
+  if (ctx === 'rv') S.reviewed.add(p.id);
+  schedule();
+  send('postUpdate', u);
+  snack(`Update posted for ${p.name}`);
+}
+
+/* ----- milestones & notes ----- */
+function saveMilestoneLocal(m, fields, create) {
+  Object.assign(m, fields);
+  if (create) S.milestones.push(m);
+  send('saveMilestone', Object.assign({ id: m.id }, create ? Object.assign({ create: true, projectId: m.projectId }, pick(m, ['name', 'target', 'order'])) : fields));
+}
+function deleteMilestoneLocal(m) {
+  S.milestones = S.milestones.filter(x => x !== m);
+  S.tasks.forEach(t => { if (t.milestone === m.id) t.milestone = ''; });
+  send('deleteMilestone', m.id);
+}
+const noteTimers = new Map();
+function saveNoteSoon(n, fields) {
+  Object.assign(n, fields, { updated: nowStamp() });
+  const prev = noteTimers.get(n.id) || {};
+  clearTimeout(prev.timer);
+  const pending = Object.assign(prev.fields || {}, fields);
+  const run = () => { noteTimers.delete(n.id); send('saveNote', Object.assign({ id: n.id }, pending)); };
+  noteTimers.set(n.id, { timer: setTimeout(run, 700), fields: pending, run });
+}
+function newNote(p, type) {
+  const tpl = { meeting: 'Attendees: \n\nNotes\n- \n\nAction items\n[ ] ', decision: 'Decision: \nWhy: \nAlternatives considered: \nRevisit if: ', reference: '' }[type];
+  const n = { id: newId('n'), projectId: p.id, type, title: '', body: tpl, pinned: false, created: nowStamp(), updated: nowStamp(), made: {} };
+  S.notes.push(n);
+  S.noteId = n.id;
+  S.noteFilter = 'all';
+  send('saveNote', Object.assign(pick(n, ['id', 'projectId', 'type', 'title', 'body']), { create: true }));
+  renderNow();
+  const ti = document.querySelector(`[data-key="ntitle:${n.id}"]`);
+  if (ti) ti.focus();
+}
+async function deleteNote(n) {
+  if (!(await confirmDlg('Delete this note?', `“${n.title || 'Untitled'}” will be deleted. This can't be undone.`, 'Delete note'))) return;
+  S.notes = S.notes.filter(x => x !== n);
+  S.noteId = null;
+  schedule();
+  send('deleteNote', n.id);
+}
+function actionItems(n) {
+  return n.body.split('\n').map((line, i) => ({ line, i })).filter(x => /^\s*\[\s?\]/.test(x.line))
+    .map(x => ({ i: x.i, text: x.line.replace(/^\s*\[\s?\]\s*/, '').trim(), made: n.made[x.i] })).filter(x => x.text);
+}
+function noteToTask(n, i) {
+  const p = proj(n.projectId), item = actionItems(n).find(x => x.i === i);
+  if (!p || !item) return;
+  const t = createTask({ title: item.text.slice(0, 500), list: p.name });
+  n.made = Object.assign({}, n.made, { [i]: t.id });
+  flushNote(n.id);
+  send('saveNote', { id: n.id, made: n.made });
+  const m = msById(t.milestone);
+  snack(`Task added${m ? ' to ' + m.name : ''}`, 'Open', () => openPanel(t.id));
+}
+function flushNote(id) { const v = noteTimers.get(id); if (v) { clearTimeout(v.timer); v.run(); } }
+
+/* ----- lists ----- */
+async function newList() {
+  const res = await listDlg({ title: 'Create new list', ok: 'Create', color: COLORS[S.lists.length % COLORS.length] });
+  if (!res || !res.name) return;
+  if (nameTaken(res.name)) return snack('A list or project already has that name');
+  S.lists.push({ name: res.name, color: res.color });
+  send('createList', res.name, res.color);
+  openList(res.name);
+}
+const nameTaken = (name, except) => [...S.lists.map(l => l.name), ...S.projects.map(p => p.name)].some(n => n !== except && n.toLowerCase() === name.toLowerCase());
+async function renameList(l) {
+  const res = await listDlg({ title: 'Edit list', name: l.name, color: l.color, ok: 'Save', nameEditable: l.name !== S.defaultList });
+  if (!res || !res.name) return;
+  const old = l.name, name = res.name;
+  if (name !== old) {
+    if (nameTaken(name, old)) return snack('A list or project already has that name');
+    l.name = name;
+    S.tasks.forEach(t => { if (t.list === old) t.list = name; });
+    if (S.view === 'list' && S.id === old) { S.id = name; prefs.id = name; savePrefs(); }
+    send('renameList', old, name);
+  }
+  if (res.color !== l.color) { l.color = res.color; send('setListColor', name, res.color); }
+  schedule();
+}
+async function deleteList(l) {
+  const n = tasksIn(l.name).length;
+  if (!(await confirmDlg(`Delete “${l.name}”?`, n ? `Its ${plural(n, 'task')} will move to Trash, where you can still restore them.` : 'This list is empty.', 'Delete list'))) return;
+  S.lists = S.lists.filter(x => x !== l);
+  S.tasks.forEach(t => { if (t.list === l.name && isLive(t)) Object.assign(t, { archived: true, archType: 'Deleted' }); });
+  setView('home');
+  send('deleteList', l.name);
+  snack(`“${l.name}” deleted`);
+}
+async function listToProject(l) {
+  if (!(await confirmDlg(`Turn “${l.name}” into a project?`, 'Its tasks stay where they are. You get milestones, progress, notes and status updates, and you can set a goal and target date next.', 'Make it a project', false))) return;
+  const p = {
+    id: newId('p'), name: l.name, color: l.color, status: 'active', priority: 2, goal: '', start: tasksIn(l.name).map(t => localDayOf(t.created)).filter(Boolean).sort()[0] || todayISO(),
+    target: '', order: S.projects.length, created: nowStamp(), closed: '', outcome: '', blockReason: '', blockedBy: [], blockedSince: '', waiting: '', waitingSince: '', blockLog: [], updated: nowStamp(),
+  };
+  S.lists = S.lists.filter(x => x !== l);
+  S.projects.push(p);
+  send('convertListToProject', l.name, p.id);
+  openProject(p.id);
+  editProject(p);
+}
+function clearCompleted(name) {
+  const done = S.tasks.filter(t => t.list === name && t.archType === 'Completed');
+  if (!done.length) return;
+  done.forEach(t => { t.archType = 'Deleted'; });
+  schedule();
+  send('clearCompleted', name);
+  snack(`${plural(done.length, 'completed task')} moved to trash`);
+}
+
+/* ----- calendar / settings ----- */
+async function sync() {
+  const btn = $('btnSync');
+  btn.classList.add('spin');
+  snack('Syncing to Google Calendar…');
+  const res = await send('syncToCalendar');
+  btn.classList.remove('spin');
+  if (res && res.message) snack(res.message);
+}
+async function saveSettings(p) {
+  Object.assign(S.settings, p);
+  const res = await send('saveSettings', p);
+  if (res && res.settings) S.settings = res.settings;
+}
+
+/* ======================================================================
+ * Quick add:  "Call Sam tomorrow 3pm !high #Excel ^Sheets ~L * every week"
+ * ==================================================================== */
+const MONTHS = ['january|jan', 'february|feb', 'march|mar', 'april|apr', 'may', 'june|jun', 'july|jul', 'august|aug', 'september|sept|sep', 'october|oct', 'november|nov', 'december|dec'];
+const DAYS_FULL = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const DAYS_SHORT = ['sun', 'mon', 'tue|tues', 'wed', 'thu|thur|thurs', 'fri', 'sat'];
+const dayIndex = w => { w = w.toLowerCase(); return DAYS_FULL.findIndex((f, i) => f === w || DAYS_SHORT[i].split('|').includes(w)); };
+const monthIndex = w => { w = w.toLowerCase().replace('.', ''); return MONTHS.findIndex(m => m.split('|').includes(w)); };
+const nextWeekday = (idx, allowToday) => { const t = todayISO(); let diff = (idx - parseISO(t).getDay() + 7) % 7; if (!diff && !allowToday) diff = 7; return addDays(t, diff); };
+const norm = s => s.toLowerCase().replace(/[\s_-]+/g, '');
+function findContainer(token) {
+  const n = norm(token), names = [...S.projects.filter(p => p.status !== 'done').map(p => p.name), ...S.lists.map(l => l.name)];
+  const exact = names.find(x => norm(x) === n);
+  if (exact) return exact;
+  const pre = names.filter(x => norm(x).startsWith(n));
+  return pre.length === 1 ? pre[0] : '';
+}
+function findMilestone(list, token) {
+  const p = projByName(list);
+  if (!p) return null;
+  const n = norm(token), ms = msOf(p).filter(m => !m.done);
+  return ms.find(m => norm(m.name) === n) || (ms.filter(m => norm(m.name).startsWith(n)).length === 1 ? ms.find(m => norm(m.name).startsWith(n)) : null);
+}
+function parseQuick(raw) {
+  let s = ' ' + raw + ' ';
+  const r = {};
+  const take = (pattern, fn) => {
+    const m = s.match(new RegExp('\\s' + pattern + '(?=\\s)', 'i'));
+    if (!m || fn(m.slice(1)) === false) return false;
+    s = s.slice(0, m.index) + ' ' + s.slice(m.index + m[0].length);
+    return true;
+  };
+  const monthRe = `(${MONTHS.join('|')})\\.?`;
+  const dayRe = `(${DAYS_FULL.join('|')})`;
+  const dayAnyRe = `(${DAYS_FULL.join('|')}|${DAYS_SHORT.join('|')})`;
+  take('(?:!(?:high|h|1)|!!)', () => { r.priority = 'High'; })
+    || take('!(?:low|l|3)', () => { r.priority = 'Low'; })
+    || take('!(?:medium|med|m|2)', () => { r.priority = 'Medium'; });
+  take('\\*', () => { r.starred = true; });
+  take('#([^\\s#]+)', ([name]) => { const l = findContainer(name); if (!l) return false; r.list = l; });
+  take('\\^([^\\s^]+)', ([name]) => { r.msToken = name; });
+  take('~([sml123])', ([v]) => { r.size = { s: 1, m: 2, l: 3, 1: 1, 2: 2, 3: 3 }[v.toLowerCase()]; });
+  take(`every\\s+${dayAnyRe}`, ([d]) => { r.repeat = 'weekly'; r.due = nextWeekday(dayIndex(d), true); })
+    || [['every\\s+day|daily', 'daily'], ['every\\s+weekday|weekdays', 'weekdays'], ['every\\s+week|weekly', 'weekly'],
+      ['every\\s+month|monthly', 'monthly'], ['every\\s+year|yearly|annually', 'yearly']]
+      .some(([p, v]) => take(`(?:${p})`, () => { r.repeat = v; }));
+  take('(?:at\\s+)?(\\d{1,2})(?::([0-5]\\d))?\\s?(am|pm)', ([hh, mm, ap]) => {
+    const n = Number(hh);
+    if (n < 1 || n > 12) return false;
+    r.time = pad(n % 12 + (ap.toLowerCase() === 'pm' ? 12 : 0)) + ':' + (mm || '00');
+  })
+    || take('(?:at\\s+)?([01]?\\d|2[0-3]):([0-5]\\d)', ([hh, mm]) => { r.time = pad(Number(hh)) + ':' + mm; })
+    || take('(?:at\\s+)?noon', () => { r.time = '12:00'; });
+  if (!r.due) {
+    const today = todayISO();
+    take('(?:today|tod)', () => { r.due = today; })
+      || take('(?:tomorrow|tmrw|tmr)', () => { r.due = addDays(today, 1); })
+      || take('(?:day\\s+after\\s+tomorrow)', () => { r.due = addDays(today, 2); })
+      || take('next\\s+week', () => { r.due = nextWeekday(1, false); })
+      || take('next\\s+month', () => { r.due = addMonths(today, 1); })
+      || take('(?:this\\s+)?weekend', () => { r.due = nextWeekday(6, true); })
+      || take('in\\s+(\\d+|a|an|one|two|three)\\s+(days?|weeks?|months?)', ([n, unit]) => {
+        const k = { a: 1, an: 1, one: 1, two: 2, three: 3 }[n.toLowerCase()] || Number(n);
+        r.due = unit.startsWith('month') ? addMonths(today, k) : addDays(today, unit.startsWith('week') ? k * 7 : k);
+      })
+      || take(`(?:on\\s+|next\\s+|this\\s+|due\\s+)${dayAnyRe}`, ([d]) => { r.due = nextWeekday(dayIndex(d), false); })
+      || take(dayRe, ([d]) => { r.due = nextWeekday(dayIndex(d), false); })
+      || take('(\\d{4})-(\\d{2})-(\\d{2})', ([y, m, d]) => { const iso = `${y}-${m}-${d}`; if (isoOf(parseISO(iso)) !== iso) return false; r.due = iso; })
+      || take(`(?:on\\s+)?${monthRe}\\s+(\\d{1,2})(?:st|nd|rd|th)?`, ([mo, d]) => setMonthDay(r, monthIndex(mo), Number(d)))
+      || take(`(?:on\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+${monthRe}`, ([d, mo]) => setMonthDay(r, monthIndex(mo), Number(d)));
+  }
+  if (r.time && !r.due) r.due = todayISO();
+  r.title = s.replace(/\s+/g, ' ').trim() || raw.trim();
+  return r;
+}
+function setMonthDay(r, mi, day) {
+  if (mi < 0 || day < 1 || day > 31) return false;
+  const now = new Date();
+  let d = new Date(now.getFullYear(), mi, day);
+  if (d.getMonth() !== mi) return false;
+  if (isoOf(d) < todayISO()) d = new Date(now.getFullYear() + 1, mi, day);
+  r.due = isoOf(d);
+}
+function quickFields(text, defaults) {
+  const p = parseQuick(text), f = Object.assign({}, defaults);
+  ['title', 'priority', 'starred', 'list', 'repeat', 'time', 'due', 'size'].forEach(k => { if (p[k] !== undefined) f[k] = p[k]; });
+  if (p.list && p.list !== defaults.list) delete f.milestone;
+  if (p.msToken) { const m = findMilestone(f.list || S.defaultList, p.msToken); if (m) f.milestone = m.id; else f.title = text.trim(); }
+  return f;
+}
+
+/* ======================================================================
+ * Rendering
+ * ==================================================================== */
+let rafPending = false, renderBlocked = false, composing = false;
+function schedule() {
+  if (rafPending) return;
+  rafPending = true;
+  requestAnimationFrame(() => { rafPending = false; render(); });
+}
+function renderNow() { rafPending = false; render(); }
+const isTextField = el => el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && /^(text|search|)$/.test(el.type)));
+const focusKey = el => (el && el.dataset ? (el.dataset.key ? `[data-key="${CSS.escape(el.dataset.key)}"]` : el.dataset.f ? `[data-f="${CSS.escape(el.dataset.f)}"]` : null) : null);
+
+function render() {
+  if (composing) { renderBlocked = true; return; }
+  const a = document.activeElement, sel = focusKey(a);
+  let range = null;
+  try { if (isTextField(a)) range = [a.selectionStart, a.selectionEnd]; } catch (e) {}
+  const main = $('main'), top = main.scrollTop;
+  $('drawer').innerHTML = `<div class="drawer-inner">${drawerHTML()}</div>`;
+  renderTop();
+  main.innerHTML = viewHTML();
+  main.scrollTop = top;
+  const typingInPanel = a && $('panel').contains(a) && isTextField(a);
+  if (!typingInPanel) renderPanel();
+  if (sel && !(typingInPanel)) {
+    const n = document.querySelector(sel);
+    if (n && n !== document.activeElement) {
+      n.focus({ preventScroll: true });
+      if (range && isTextField(n)) { try { n.setSelectionRange(range[0], range[1]); } catch (e) {} }
+    }
+  }
+  document.querySelectorAll('#panel textarea').forEach(autogrow);
+  S.fresh.clear();
+}
+const autogrow = ta => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+
+const VIEW_TITLES = { home: 'Home', myday: 'My Day', upcoming: 'Upcoming', starred: 'Starred', review: 'Weekly review', trash: 'Trash', search: 'Search' };
+function renderTop() {
+  let title = VIEW_TITLES[S.view] || 'Tasks';
+  if (S.view === 'project' && proj(S.id)) title = proj(S.id).name;
+  if (S.view === 'list') title = S.id || 'List';
+  $('viewTitle').textContent = title;
+  $('btnClearSearch').hidden = !S.query;
+  $('searchKbd').hidden = !!S.query;
+  $('app').classList.toggle('drawer-closed', !prefs.drawer);
+}
+
+function drawerHTML() {
+  const live = S.tasks.filter(t => !t.archived), today = todayISO();
+  const myDay = live.filter(inMyDay).length, overdue = live.some(t => t.due && t.due < today);
+  const open = openProjects();
+  const toReview = open.filter(p => !S.reviewed.has(p.id) && signals(p).some(s => s.lvl !== 'info')).length;
+  const nav = (v, icon, label, badge, hot) => `<button type="button" class="nav ${S.view === v ? 'on' : ''}" data-act="view" data-v="${v}" data-key="nav:${v}">${ic(icon)}<span class="lbl">${label}</span>${badge ? `<span class="badge ${hot ? 'hot' : ''}">${badge}</span>` : ''}</button>`;
+  const prow = p => {
+    const st = stats(p), h = isOpenProject(p) ? suggested(p) : '';
+    const right = p.status === 'blocked' ? `<span style="color:var(--red)">${ic('blocked')}</span>` : `<span class="pct">${p.status === 'planned' ? '' : st.pct + '%'}</span>`;
+    return `<button type="button" class="srow ${S.view === 'project' && S.id === p.id ? 'on' : ''} ${isOpenProject(p) ? '' : 'dim'}" data-act="project" data-id="${p.id}" data-key="proj:${p.id}" title="${esc(p.name)}${h ? ' · signals: ' + HEALTH[h] : ''}">
+      <i class="dot" style="--c:${COLOR_HEX[p.color] || COLOR_HEX.GRAY}"></i><span class="nm">${esc(p.name)}</span>${h && p.status !== 'blocked' ? `<i class="hd ${h}"></i>` : ''}${right}</button>`;
+  };
+  const other = S.projects.filter(p => !isOpenProject(p)).sort((a, b) => ['planned', 'paused', 'done'].indexOf(a.status) - ['planned', 'paused', 'done'].indexOf(b.status) || a.name.localeCompare(b.name));
+  const counts = new Map();
+  live.forEach(t => counts.set(t.list, (counts.get(t.list) || 0) + 1));
+  const trashN = S.tasks.filter(t => t.archType === 'Deleted').length;
+  return `<div class="brand">${ic('logo')}<span>Tasks</span></div>
+    <button class="create" type="button" data-act="create">${ic('add')}<span>Create</span></button>
+    ${nav('home', 'home', 'Home')}
+    ${nav('myday', 'sun', 'My Day', myDay || '', overdue)}
+    ${nav('upcoming', 'upcoming', 'Upcoming')}
+    ${nav('starred', 'star', 'Starred', live.filter(t => t.starred).length || '')}
+    ${nav('review', 'review', 'Weekly review', toReview || '')}
+    <div class="sec"><span>Projects</span><button class="icon-btn" type="button" data-act="new-project" title="Create project" aria-label="Create project">${ic('add')}</button></div>
+    ${open.map(prow).join('') || '<div class="empty" style="padding:6px 12px">No active projects.</div>'}
+    ${other.length ? `<button type="button" class="sec-toggle" data-act="toggle-other">${prefs.showOther ? 'Hide' : 'Show'} planned, paused &amp; done (${other.length})</button>${prefs.showOther ? other.map(prow).join('') : ''}` : ''}
+    <div class="sec"><span>Lists</span><button class="icon-btn" type="button" data-act="new-list" title="Create list" aria-label="Create list">${ic('add')}</button></div>
+    ${S.lists.map(l => `<button type="button" class="srow ${S.view === 'list' && S.id === l.name ? 'on' : ''}" data-act="list" data-name="${esc(l.name)}" data-key="list:${esc(l.name)}">
+      <i class="dot" style="--c:${COLOR_HEX[l.color] || COLOR_HEX.GRAY}"></i><span class="nm">${esc(l.name)}</span><span class="pct">${counts.get(l.name) || ''}</span></button>`).join('')}
+    <div class="drawer-foot">
+      ${nav('trash', 'trash', 'Trash', trashN || '')}
+      <button type="button" class="nav" data-act="settings">${ic('settings')}<span class="lbl">Settings</span></button>
+      <button type="button" class="nav" data-act="shortcuts">${ic('keyboard')}<span class="lbl">Keyboard shortcuts</span><kbd>?</kbd></button>
+    </div>`;
+}
+
+function viewHTML() {
+  if (S.error && !S.ready) {
+    return `<div class="big-empty">${ic('alert')}<p>Couldn't load your tasks.</p><p>${esc(S.error)}</p><button class="btn primary" type="button" data-act="retry">Try again</button></div>`;
+  }
+  if (!S.ready) return `<div class="wrap"><div class="card"><div class="skeleton"><i></i><i></i><i></i><i></i><i></i></div></div></div>`;
+  if (S.view === 'project' && proj(S.id)) return projectHTML(proj(S.id));
+  if (S.view === 'list' && listByName(S.id)) return listHTML(listByName(S.id));
+  return ({ home: homeHTML, myday: myDayHTML, upcoming: upcomingHTML, starred: starredHTML, review: reviewHTML, trash: trashHTML, search: searchHTML }[S.view] || homeHTML)();
+}
+
+const healthPill = h => (h ? `<span class="hp ${h}"><i></i>${HEALTH[h]}</span>` : '<span class="hp"><i></i>No update yet</span>');
+const dot = name => `<i class="dot" style="--c:${colorOf(name)}"></i>`;
+
+function highlight(text, q) {
+  if (!q) return esc(text);
+  const lower = text.toLowerCase(), needle = q.toLowerCase();
+  let out = '', i = 0, at;
+  while ((at = lower.indexOf(needle, i)) >= 0) { out += esc(text.slice(i, at)) + `<mark>${esc(text.slice(at, at + needle.length))}</mark>`; i = at + needle.length; }
+  return out + esc(text.slice(i));
+}
+
+function taskRow(t, o = {}) {
+  const done = t.archType === 'Completed', today = todayISO(), chips = [];
+  const q = S.view === 'search' ? S.query.trim() : '';
+  if (o.showList) chips.push(`<span class="chip" style="--c:${colorOf(t.list)}"><span class="cdot"></span>${esc(t.list)}</span>`);
+  if (done && t.completed) chips.push(`<span class="chip">${ic('check')}Done ${relLower(localDayOf(t.completed))}</span>`);
+  if (!done && !o.trash) {
+    if (isBlocked(t)) {
+      const ob = openBlockers(t);
+      chips.push(`<span class="chip blocked" title="${esc(t.blockReason)}">${ic('blocked')}Blocked${t.blockReason ? ': ' + esc(t.blockReason) : ''}</span>`);
+      if (t.waiting) chips.push(`<span class="chip wait">${ic('hourglass')}${esc(t.waiting)} · ${ageDays(t.waitingSince)}d</span>`);
+      if (ob.length) chips.push(`<span class="chip" title="${esc(ob.map(b => b.title).join(', '))}">${ic('subArrow')}After: ${esc(ob[0].title)}${ob.length > 1 ? ` +${ob.length - 1}` : ''}</span>`);
+      if (!hasPlan(t)) chips.push('<span class="chip wait">No unblock plan</span>');
+    }
+    if (t.status === 'In progress') chips.push(`<span class="chip doing">${ic('half')}In progress</span>`);
+    if (t.due && !o.hideDue) {
+      const cls = t.due < today ? 'overdue' : t.due === today ? 'today' : '';
+      chips.push(`<span class="chip ${cls}">${ic(t.time ? 'clock' : 'event')}${relDay(t.due)}${t.time ? ', ' + fmtTime(t.time) : ''}${t.repeat ? ic('repeat') : ''}</span>`);
+    } else if (t.repeat) chips.push(`<span class="chip">${ic('repeat')}${esc(repeatLabel(t.repeat, t.due).split(' on ')[0])}</span>`);
+    if (t.plan && !o.hidePlan) chips.push(t.plan <= today ? `<span class="chip myday">${ic('sun')}My Day</span>` : `<span class="chip">${ic('sun')}Plan ${relLower(t.plan)}</span>`);
+    if (t.priority === 'High') chips.push(`<span class="chip high">${ic('flag')}High</span>`);
+    if (t.priority === 'Low') chips.push(`<span class="chip low">${ic('flag')}Low</span>`);
+    const ks = kidsOf(t.id).filter(isLive);
+    if (ks.length) chips.push(`<span class="chip" title="Subtasks done">${ic('checklist')}${ks.filter(k => k.archived).length}/${ks.length}</span>`);
+    if (o.showParent && t.parent && byId.get(t.parent)) chips.push(`<span class="chip" title="Subtask of ${esc(byId.get(t.parent).title)}">${ic('subArrow')}${esc(byId.get(t.parent).title)}</span>`);
+  }
+  const inProject = !!projByName(t.list);
+  const right = o.trash
+    ? `<div class="row-actions"><button class="icon-btn" type="button" data-act="untrash" data-id="${t.id}" title="Restore" aria-label="Restore">${ic('restore')}</button><button class="icon-btn" type="button" data-act="purge" data-id="${t.id}" title="Delete forever" aria-label="Delete forever">${ic('deleteForever')}</button></div>`
+    : `${inProject && !done ? `<span class="size" title="Size">${SIZES[pts(t)]}</span>` : ''}${!done ? `<button type="button" class="star ${t.starred ? 'on' : ''}" data-act="star" data-id="${t.id}" aria-pressed="${t.starred}" aria-label="${t.starred ? 'Remove star' : 'Star task'}">${ic(t.starred ? 'star' : 'starOutline')}</button>` : ''}`;
+  return `<div class="task ${done ? 'done' : ''} ${isBlocked(t) ? 'blocked' : ''} ${S.taskId === t.id ? 'sel' : ''} ${S.fresh.has(t.id) ? 'enter' : ''}" data-act="${o.trash ? '' : 'task'}" data-id="${t.id}" data-key="task:${t.id}${o.k || ''}" tabindex="0" aria-label="${esc(t.title)}${done ? ', completed' : ''}">
+    ${o.trash ? '' : `<button type="button" class="check" data-act="toggle" data-id="${t.id}" role="checkbox" aria-checked="${done}" aria-label="${done ? 'Mark not complete' : 'Complete'}">${ic('check')}</button>`}
+    <div class="tb"><div class="tt">${highlight(t.title, q)}</div>${t.desc && !done && o.notes !== false ? `<div class="tn">${highlight(t.desc.split('\n')[0], q)}</div>` : ''}${chips.length ? `<div class="chips">${chips.join('')}</div>` : ''}</div>
+    ${right}</div>`;
+}
+
+function quickAdd(key, defaults, placeholder) {
+  const v = drafts.get(key) || '';
+  return `<label class="qa">${ic('addCircle')}<input data-qa="1" data-key="qa:${esc(key)}" data-defaults="${esc(JSON.stringify(defaults))}" placeholder="${esc(placeholder || 'Add a task')}" aria-label="${esc(placeholder || 'Add a task')}" value="${esc(v)}" autocomplete="off" maxlength="500" enterkeyhint="done"></label>
+    <div class="qa-preview" data-preview="${esc(key)}">${v.trim() ? previewChips(quickFields(v, defaults), defaults) : ''}</div>`;
+}
+function previewChips(f, defaults) {
+  const out = [];
+  if (f.due && f.due !== defaults.due) out.push(`<span class="chip today">${ic('event')}${relDay(f.due)}</span>`);
+  if (f.time) out.push(`<span class="chip today">${ic('clock')}${fmtTime(f.time)}</span>`);
+  if (f.repeat) out.push(`<span class="chip">${ic('repeat')}${esc(repeatLabel(f.repeat, f.due).split(' on ')[0])}</span>`);
+  if (f.priority && f.priority !== defaults.priority) out.push(`<span class="chip ${f.priority.toLowerCase()}">${ic('flag')}${f.priority}</span>`);
+  if (f.list && f.list !== defaults.list) out.push(`<span class="chip" style="--c:${colorOf(f.list)}"><span class="cdot"></span>${esc(f.list)}</span>`);
+  if (f.milestone && f.milestone !== defaults.milestone && msById(f.milestone)) out.push(`<span class="chip">${ic('diamond')}${esc(msById(f.milestone).name)}</span>`);
+  if (f.size && f.size !== 1) out.push(`<span class="chip mono">${SIZES[f.size]}</span>`);
+  if (f.starred && !defaults.starred) out.push(`<span class="chip star">${ic('star')}Starred</span>`);
+  if (out.length) out.push('<span class="sub" style="align-self:center">Enter to add</span>');
+  return out.join('');
+}
+
+function doneToggle(key, tasks, o) {
+  if (!tasks.length) return '';
+  const open = !!prefs.open[key];
+  return `<button type="button" class="done-toggle ${open ? 'open' : ''}" data-act="show-done" data-v="${esc(key)}" aria-expanded="${open}">${ic('chevron')}Completed (${tasks.length})</button>
+    ${open ? tasks.map(t => taskRow(t, o || {})).join('') : ''}`;
+}
+
+/* ----- Home ----- */
+function homeHTML() {
+  const open = openProjects(), today = todayISO(), live = S.tasks.filter(t => !t.archived);
+  const att = [];
+  open.forEach(p => signals(p).forEach(s => att.push(Object.assign({ p }, s))));
+  live.filter(t => !projByName(t.list) && t.due && t.due < today).forEach(t => att.push({ lvl: 'amber', text: `Overdue: ${t.title}`, task: t.id, list: t.list }));
+  live.filter(t => !projByName(t.list) && isBlocked(t) && !hasPlan(t)).forEach(t => att.push({ lvl: 'amber', text: `Blocked with no unblock plan: ${t.title}`, task: t.id, list: t.list }));
+  const order = { red: 0, amber: 1, info: 2 };
+  att.sort((a, b) => order[a.lvl] - order[b.lvl]);
+  const waiting = live.filter(t => t.waiting).length + S.projects.filter(p => p.waiting && isOpenProject(p)).length;
+  const blocked = live.filter(isBlocked).length + S.projects.filter(p => p.status === 'blocked').length;
+  const doneWeek = S.tasks.filter(t => t.archType === 'Completed' && diffDays(localDayOf(t.completed), today) <= 6).length;
+  const sorted = open.slice().sort((a, b) => SEV[suggested(b)] - SEV[suggested(a)] || a.priority - b.priority);
+  const shelf = S.projects.filter(p => p.status === 'planned' || p.status === 'paused');
+  const activeN = S.projects.filter(p => p.status === 'active' || p.status === 'blocked').length;
+  return `<div class="wrap">
+    <div class="sub" style="margin-top:-4px">${parseISO(today).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</div>
+    <div class="strip">
+      <div class="stat ${activeN > 5 ? 'warn' : ''}"><div class="v">${activeN}</div><div class="l">Open projects${activeN > 5 ? ' · consider pausing one' : ''}</div></div>
+      <button type="button" class="stat link" data-act="view" data-v="myday"><div class="v">${live.filter(inMyDay).length}</div><div class="l">Tasks in My Day</div></button>
+      <div class="stat ${blocked ? 'warn' : ''}"><div class="v">${blocked}</div><div class="l">Blocked</div></div>
+      <div class="stat"><div class="v">${waiting}</div><div class="l">Waiting on people</div></div>
+      <div class="stat"><div class="v">${doneWeek}</div><div class="l">Done in the last 7 days</div></div>
+    </div>
+    <section class="card"><div class="card-h">Needs attention<span class="grow"></span><span class="note">${plural(att.length, 'item')}</span></div>
+      <div>${att.length ? att.map(a => `<button type="button" class="att ${a.lvl}" data-act="${a.task ? 'task' : 'project'}" data-id="${a.task || a.p.id}" ${a.task ? '' : 'data-tab="overview"'}>
+        <span class="sev"></span><span class="txt">${esc(a.text)}</span><span class="who">${dot(a.p ? a.p.name : a.list)}${esc(a.p ? a.p.name : a.list)}</span></button>`).join('') : '<div class="empty">Nothing needs attention right now.</div>'}</div>
+    </section>
+    <section class="card"><div class="card-h">Projects · riskiest first<span class="grow"></span><button class="text-btn" type="button" data-act="new-project">New project</button></div>
+      ${sorted.length ? `<div class="ptable" role="table">
+        <div class="ph">Project</div><div class="ph">Health</div><div class="ph">Progress</div><div class="ph">Current milestone</div><div class="ph c-target">Target</div><div class="ph">Next action</div>
+        ${sorted.map(projRow).join('')}</div>` : '<div class="empty">No open projects. Create one, or turn a list into a project from its menu.</div>'}
+    </section>
+    ${shelf.length ? `<section class="card"><div class="card-h">Planned &amp; paused</div>${shelf.map(p => `<div class="orow">${dot(p.name)}<div class="grow"><button type="button" class="link" data-act="project" data-id="${p.id}"><b>${esc(p.name)}</b></button><div class="sub">${PSTATUS[p.status]}${p.goal ? ' · ' + esc(p.goal) : ''}</div></div>
+      <button class="btn sm" type="button" data-act="pstatus" data-id="${p.id}" data-v="active">Start</button></div>`).join('')}</section>` : ''}
+  </div>`;
+}
+function projRow(p) {
+  const st = stats(p), rep = reported(p), sug = suggested(p), m = currentMs(p), na = nextAction(p), today = todayISO();
+  const mismatch = rep && SEV[sug] > SEV[rep];
+  let fc = `<span class="sub">${esc(st.why)}</span>`;
+  if (st.forecast && p.target) { const late = diffDays(p.target, st.forecast); fc = `<span class="sub ${late > 7 ? 'bad' : late > 0 ? 'warn' : 'good'}">Forecast ${fmtShort(st.forecast)}</span>`; }
+  const ms = m ? (() => { const s = msStats(m), late = m.target && m.target < today; return `<span class="ms" style="--c:${COLOR_HEX[p.color]}">${ic('diamond')}${esc(m.name)}</span><span class="sub ${late ? 'bad' : ''}">${s.nd}/${s.n} tasks${m.target ? ` · ${late ? 'was due' : 'due'} ${relLower(m.target)}` : ''}</span>`; })()
+    : `<span class="sub">${msOf(p).length ? 'All milestones reached' : 'No milestones yet'}</span>`;
+  return `<div class="prow" role="row" data-act="project" data-id="${p.id}" data-key="prow:${p.id}" tabindex="0">
+    <div class="pname">${dot(p.name)}<div>${esc(p.name)}<small>${PPRI[p.priority] || 'Medium'} priority</small></div></div>
+    <div class="c-health">${p.status === 'blocked' ? `<span class="pill blocked">${ic('blocked')}Blocked</span>` : healthPill(rep)}${mismatch || (!rep && sug !== 'green') ? `<span class="sub ${sug === 'red' ? 'bad' : 'warn'}">Signals say ${HEALTH[sug]}</span>` : ''}</div>
+    <div class="c-prog"><div class="bar" style="--c:${COLOR_HEX[p.color]}"><i style="width:${st.pct}%"></i></div><span class="sub mono">${st.pct}% · ${st.done}/${st.total} pts${st.addedPts ? ` · +${st.addedPts} new` : ''}</span></div>
+    <div class="c-ms">${ms}</div>
+    <div class="c-target"><span>${p.target ? fmtShort(p.target) : '—'}</span>${fc}</div>
+    <div class="c-next">${na ? `<button type="button" class="na" data-act="task" data-id="${na.id}">${esc(na.title)}</button>` : st.open.length ? '<span class="sub warn">No next action</span>' : st.total ? '<span class="sub">Ready to close</span>' : '<span class="sub">Add the first task</span>'}</div>
+  </div>`;
+}
+
+/* ----- My Day ----- */
+function myDayHTML() {
+  const today = todayISO(), live = S.tasks.filter(t => !t.archived);
+  const overdue = live.filter(t => t.due && t.due < today).sort(SORTS.due);
+  const dueToday = live.filter(t => t.due === today).sort(SORTS.due);
+  const planned = live.filter(t => t.plan && t.plan <= today && !(t.due && t.due <= today)).sort(SORTS.due);
+  const doneToday = S.tasks.filter(t => t.archType === 'Completed' && localDayOf(t.completed) === today).sort(byCompletedDesc);
+  const sugg = openProjects().filter(p => p.status === 'active').map(p => ({ p, t: nextAction(p) })).filter(x => x.t && !inMyDay(x.t));
+  const total = overdue.length + dueToday.length + planned.length + doneToday.length;
+  const sec = (label, arr, hot) => arr.length ? `<div class="group-h ${hot ? 'hot' : ''}"><span class="gname">${label}</span><span class="gmeta">${arr.length}</span></div>${arr.map(t => taskRow(t, { showList: true, hidePlan: true, k: ':' + label })).join('')}` : '';
+  return `<div class="wrap"><div class="cols">
+    <section class="card">
+      <div class="card-b" style="padding-top:14px"><div style="display:flex;align-items:center;gap:12px"><div class="bar" style="flex:1"><i style="width:${total ? Math.round(doneToday.length / total * 100) : 0}%"></i></div><span class="sub">${doneToday.length} of ${total} done</span></div></div>
+      ${quickAdd('myday', { plan: today, list: S.defaultList }, 'Add a task for today')}
+      ${sec('Overdue', overdue, true)}${sec('Due today', dueToday)}${sec('Planned for today', planned)}
+      ${!overdue.length && !dueToday.length && !planned.length ? `<div class="empty">${doneToday.length ? 'All done for today.' : 'Nothing planned for today.'} Pull in a next action on the right.</div>` : ''}
+      ${doneToggle('myday-done', doneToday, { showList: true })}<div style="height:8px"></div>
+    </section>
+    <div class="col">
+      <section class="card"><div class="card-h">Next actions from your projects</div>
+        <div>${sugg.length ? sugg.map(({ p, t }) => `<div class="orow"><div class="grow"><button type="button" class="link" data-act="task" data-id="${t.id}">${esc(t.title)}</button><div class="sub">${dot(p.name)} ${esc(p.name)}${t.due ? ' · due ' + relLower(t.due) : ''}</div></div>
+          <button type="button" class="btn sm tonal" data-act="plan-today" data-id="${t.id}">${ic('sun')}Add</button></div>`).join('') : '<div class="empty">Every active project’s next action is already in My Day.</div>'}</div></section>
+      <section class="card"><div class="card-h">Plan date vs. due date</div><div class="card-b small muted">
+        <p style="margin:0 0 6px"><b style="color:var(--text)">Plan</b> is when you intend to work on a task. It puts the task in My Day and never turns red.</p>
+        <p style="margin:0"><b style="color:var(--text)">Due</b> is a real deadline. It drives overdue warnings and project signals.</p></div></section>
+    </div>
+  </div></div>`;
+}
+
+/* ----- Upcoming ----- */
+function upcomingHTML() {
+  const today = todayISO(), live = S.tasks.filter(t => !t.archived);
+  let html = '';
+  const od = live.filter(t => t.due && t.due < today).sort(SORTS.due);
+  if (od.length) html += `<section class="card"><div class="card-h" style="color:var(--red)">Overdue<span class="grow"></span><span class="note">${od.length}</span></div>${od.map(t => taskRow(t, { showList: true, k: ':od' })).join('')}<div style="height:8px"></div></section>`;
+  for (let i = 0; i < 14; i++) {
+    const d = addDays(today, i);
+    const items = live.filter(t => t.due === d || (t.plan === d && t.due !== d)).sort(SORTS.due);
+    const ms = S.milestones.filter(m => !m.done && m.target === d && proj(m.projectId) && isOpenProject(proj(m.projectId)));
+    if (!items.length && !ms.length && i > 1) continue;
+    html += `<section class="card"><div class="card-h" style="text-transform:none;letter-spacing:0;font-size:14px;color:var(--text)">${relDay(d)}<span class="note muted">${fmtShort(d)}</span></div>
+      ${ms.map(m => { const p = proj(m.projectId); return `<div class="group-h" style="--c:${COLOR_HEX[p.color]};padding-top:6px">${ic('diamond')}<button type="button" class="link gname" data-act="project" data-id="${p.id}">Milestone: ${esc(m.name)}</button><span class="gmeta">${esc(p.name)}</span></div>`; }).join('')}
+      ${quickAdd('day:' + d, { due: d, list: S.defaultList })}
+      ${items.map(t => taskRow(t, { showList: true, hideDue: t.due === d, k: ':' + d })).join('')}<div style="height:8px"></div></section>`;
+  }
+  return `<div class="wrap narrow">${html}</div>`;
+}
+
+function starredHTML() {
+  const items = S.tasks.filter(t => !t.archived && t.starred).sort(SORTS.due);
+  return `<div class="wrap narrow"><section class="card" style="padding-top:8px">${quickAdd('starred', { starred: true, list: S.defaultList }, 'Add a starred task')}
+    ${items.map(t => taskRow(t, { showList: true })).join('') || '<div class="empty">Star important tasks to see them here.</div>'}<div style="height:8px"></div></section></div>`;
+}
+
+function searchHTML() {
+  const q = S.query.trim().toLowerCase();
+  const hit = t => isLive(t) && (t.title.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q) || t.list.toLowerCase().includes(q) || (t.blockReason || '').toLowerCase().includes(q));
+  const act = S.tasks.filter(t => !t.archived && hit(t)).sort(SORTS.due);
+  const done = S.tasks.filter(t => t.archType === 'Completed' && hit(t)).sort(byCompletedDesc);
+  const notes = S.notes.filter(n => (n.title + '\n' + n.body).toLowerCase().includes(q) && proj(n.projectId));
+  return `<div class="wrap narrow">
+    <section class="card"><div class="card-h">Tasks<span class="grow"></span><span class="note">${act.length + done.length}</span></div>
+      ${act.map(t => taskRow(t, { showList: true, showParent: true })).join('')}${!act.length && !done.length ? '<div class="empty">No matching tasks.</div>' : ''}
+      ${doneToggle('search-done', done, { showList: true })}<div style="height:8px"></div></section>
+    ${notes.length ? `<section class="card"><div class="card-h">Notes</div><div class="card-b">${notes.map(n => `<button type="button" class="nmini" data-act="note" data-id="${n.id}"><span class="ntype ${n.type}">${n.type}</span>${highlight(n.title || 'Untitled', S.query.trim())}<small>${esc(proj(n.projectId).name)}</small></button>`).join('')}</div></section>` : ''}
+  </div>`;
+}
+
+function trashHTML() {
+  const items = S.tasks.filter(t => t.archType === 'Deleted').sort((a, b) => a.list.localeCompare(b.list) || a.title.localeCompare(b.title));
+  return `<div class="wrap narrow"><section class="card"><div class="card-h">Deleted tasks stay here until you empty the trash<span class="grow"></span>
+    <button class="text-btn danger" type="button" data-act="empty-trash" ${items.length ? '' : 'disabled'}>Empty trash</button></div>
+    ${items.map(t => taskRow(t, { trash: true, showList: true })).join('') || '<div class="empty">Trash is empty.</div>'}<div style="height:8px"></div></section></div>`;
+}
+
+/* ----- Weekly review ----- */
+function reviewHTML() {
+  const open = openProjects(), live = S.tasks.filter(t => !t.archived);
+  const waiting = [...live.filter(t => t.waiting).map(t => ({ kind: 'task', x: t, title: t.title, where: t.list })),
+    ...S.projects.filter(p => p.waiting && isOpenProject(p)).map(p => ({ kind: 'project', x: p, title: `Project: ${p.name}`, where: p.name }))]
+    .sort((a, b) => (a.x.waitingSince || '').localeCompare(b.x.waitingSince || ''));
+  const noPlan = live.filter(t => isBlocked(t) && !hasPlan(t));
+  const shelf = S.projects.filter(p => p.status === 'planned' || p.status === 'paused');
+  const reviewed = open.filter(p => S.reviewed.has(p.id)).length;
+  return `<div class="wrap" style="max-width:1040px">
+    <div class="sub">About 10 minutes · ${reviewed} of ${open.length} projects reviewed${S.settings.reviewDay != null ? ` · your review day is ${WEEKDAYS[S.settings.reviewDay]}` : ''}</div>
+    <div class="step"><span class="n">01</span><h2>Check each open project</h2></div>
+    <p class="sub" style="margin:0">Read the signals, pick a health and write two sentences: what changed, what's next, what's in the way.</p>
+    ${open.map(p => {
+      const sig = signals(p), sug = suggested(p), na = nextAction(p), done = S.reviewed.has(p.id);
+      return `<section class="card"><div class="rv-h">${dot(p.name)}<h3>${esc(p.name)}</h3>
+          ${done ? '<span class="hp green"><i></i>Reviewed</span>' : `<span class="sub">Last update</span>${healthPill(reported(p))}<span class="sub">Signals</span>${healthPill(sug)}`}
+          <button class="btn sm" type="button" data-act="project" data-id="${p.id}">Open</button></div>
+        ${done ? '' : `<div class="rv-b"><div>
+            ${sig.length ? sig.map(s => `<div class="sig ${s.lvl}"><span class="sev"></span><span>${s.task ? `<button type="button" class="link" data-act="task" data-id="${s.task}">${esc(s.text)}</button>` : esc(s.text)}</span></div>`).join('') : '<p class="sub">No signals. Everything looks on track.</p>'}
+            <div class="sig info" style="border-top:1px solid var(--line)"><span class="sev"></span><span>Next action: ${na ? `<button type="button" class="link" data-act="task" data-id="${na.id}"><b>${esc(na.title)}</b></button>` : '<b style="color:var(--amber)">none. Add a task or unblock one.</b>'}</span></div>
+          </div><div>${composerHTML(p, 'rv')}</div></div>`}
+      </section>`;
+    }).join('') || '<div class="empty">No open projects.</div>'}
+    <div class="step"><span class="n">02</span><h2>Chase what you're waiting on</h2></div>
+    <section class="card">${waiting.length ? waiting.map(({ kind, x, title, where }) => {
+      const age = ageDays(x.waitingSince);
+      return `<div class="orow"><div class="grow"><button type="button" class="link" data-act="${kind === 'project' ? 'project' : 'task'}" data-id="${x.id}">${esc(title)}</button><div class="sub ${age >= 5 ? 'warn' : ''}">Waiting on ${esc(x.waiting)} for ${plural(age, 'day')} · ${esc(where)}</div></div>
+        <button class="btn sm" type="button" data-act="followed" data-kind="${kind}" data-id="${x.id}">I followed up</button><button class="btn sm tonal" type="button" data-act="arrived" data-kind="${kind}" data-id="${x.id}">It arrived</button></div>`;
+    }).join('') : '<div class="empty">You’re not waiting on anyone.</div>'}</section>
+    ${noPlan.length ? `<div class="step"><span class="n">03</span><h2>Give blocked tasks a plan</h2></div>
+    <section class="card">${noPlan.map(t => `<div class="orow"><div class="grow"><button type="button" class="link" data-act="task" data-id="${t.id}">${esc(t.title)}</button><div class="sub">${esc(t.list)} · ${t.blockReason ? 'Blocked: ' + esc(t.blockReason) : 'Blocked with no reason recorded'}</div></div>
+      <button class="btn sm warn" type="button" data-act="block" data-kind="task" data-id="${t.id}">Add a plan</button></div>`).join('')}</section>` : ''}
+    <div class="step"><span class="n">${noPlan.length ? '04' : '03'}</span><h2>Decide on planned and paused projects</h2></div>
+    <section class="card">${shelf.length ? shelf.map(p => `<div class="orow">${dot(p.name)}<div class="grow"><b>${esc(p.name)}</b><div class="sub">${PSTATUS[p.status]}${p.goal ? ' · ' + esc(p.goal) : ''}</div></div>
+      ${open.length >= 5 ? '<span class="sub warn">You already have 5 open projects</span>' : ''}<button class="btn sm" type="button" data-act="pstatus" data-id="${p.id}" data-v="active">Start</button></div>`).join('') : '<div class="empty">Nothing planned or paused.</div>'}</section>
+  </div>`;
+}
+function composerHTML(p, ctx) {
+  const pick = S.uh[p.id] || suggested(p), key = `upd:${ctx}:${p.id}`;
+  return `<div class="composer">
+    <div class="hbtns"><span class="sub">Health</span>${['green', 'amber', 'red'].map(h => `<button type="button" class="hbtn ${h}" aria-pressed="${pick === h}" data-act="uh" data-id="${p.id}" data-h="${h}"><i></i>${HEALTH[h]}</button>`).join('')}</div>
+    <textarea data-key="${key}" data-draft="${key}" rows="3" placeholder="What changed, what's next, what's in the way?" aria-label="Status update for ${esc(p.name)}">${esc(drafts.get(key) || '')}</textarea>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span class="sub">Suggested from signals: ${HEALTH[suggested(p)]}</span>
+      <button type="button" class="btn sm primary" data-act="post-update" data-id="${p.id}" data-ctx="${ctx}">Post update</button></div></div>`;
+}
+
+/* ----- Project page ----- */
+function projectHTML(p) {
+  if (!['overview', 'tasks', 'notes'].includes(S.tab)) S.tab = 'overview';
+  const st = stats(p), today = todayISO();
+  const statusPill = p.status === 'blocked' ? `<button type="button" class="pill blocked" data-act="status-menu" data-id="${p.id}">${ic('blocked')}Blocked${ic('chevron')}</button>`
+    : `<button type="button" class="pill ${p.status === 'done' ? 'done' : ''}" data-act="status-menu" data-id="${p.id}">${PSTATUS[p.status]}${ic('chevron')}</button>`;
+  const left = p.target ? diffDays(today, p.target) : null;
+  const head = `<div class="phead" style="--c:${COLOR_HEX[p.color]}">
+    <div class="ph-row">${dot(p.name)}${statusPill}${isOpenProject(p) ? healthPill(reported(p)) : ''}<span class="grow"></span>
+      <button class="btn sm" type="button" data-act="edit-project" data-id="${p.id}">${ic('edit')}Edit</button></div>
+    <div class="ph-meta">${p.start ? `<span>Started <b>${fmtShort(p.start)}</b></span>` : ''}${p.target ? `<span>Target <b>${fmtShort(p.target)}</b> (${left >= 0 ? `${plural(left, 'day')} left` : `${-left} days ago`})</span>` : '<span>No target date</span>'}
+      <span>Priority <b>${PPRI[p.priority] || 'Medium'}</b></span><span><b>${st.pct}%</b> done</span>${p.closed ? `<span>Closed <b>${fmtShort(p.closed)}</b></span>` : ''}</div>
+    <nav class="tabs" role="tablist">${[['overview', 'Overview', ''], ['tasks', 'Tasks', st.open.length], ['notes', 'Notes', notesOf(p).length]].map(([k, l, n]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" data-act="tab" data-v="${k}">${l}${n ? `<span class="count">${n}</span>` : ''}</button>`).join('')}</nav></div>`;
+  return head + ({ overview: overviewHTML, tasks: projectTasksHTML, notes: notesHTML }[S.tab])(p);
+}
+
+function blockBoxHTML(kind, x) {
+  const ob = x.blockedBy.map(id => byId.get(id)).filter(Boolean);
+  const age = ageDays(x.blockedSince);
+  return `<div class="blockbox"><div class="bh">${ic('blocked')}${kind === 'project' ? 'Project blocked' : 'Blocked'}<span class="muted">${x.blockedSince ? `· ${age ? `for ${plural(age, 'day')}` : 'since today'}` : ''}</span></div>
+    <div class="reason">${x.blockReason ? esc(x.blockReason) : '<span class="muted">No reason recorded.</span>'}</div>
+    ${hasPlan(x) ? `<div class="plan-h">Unblocks when these are done</div>
+      ${ob.map(b => `<div class="bitem ${b.archived ? 'done' : ''}"><button type="button" class="check" data-act="toggle" data-id="${b.id}" aria-label="${b.archived ? 'Mark not complete' : 'Complete'}: ${esc(b.title)}">${ic('check')}</button><button type="button" class="link bt" data-act="task" data-id="${b.id}">${esc(b.title)}</button>${b.archType === 'Deleted' ? '<span class="sub">deleted</span>' : ''}</div>`).join('')}
+      ${x.waiting ? `<div class="bitem">${ic('hourglass')}<span class="bt">Waiting on <b>${esc(x.waiting)}</b> · ${plural(ageDays(x.waitingSince), 'day')}</span>
+        <button class="btn sm" type="button" data-act="followed" data-kind="${kind}" data-id="${x.id}">I followed up</button><button class="btn sm tonal" type="button" data-act="arrived" data-kind="${kind}" data-id="${x.id}">It arrived</button></div>` : ''}`
+    : '<div class="noplan">No unblock plan yet. Add a task to do first, or who you’re waiting on.</div>'}
+    <div class="bactions"><button class="btn sm ${hasPlan(x) ? '' : 'warn'}" type="button" data-act="block" data-kind="${kind}" data-id="${x.id}">${ic('edit')}${hasPlan(x) ? 'Edit block' : 'Add a plan'}</button>
+      <button class="btn sm" type="button" data-act="unblock" data-kind="${kind}" data-id="${x.id}">${ic('unlock')}Unblock now</button></div></div>`;
+}
+
+function overviewHTML(p) {
+  const st = stats(p), sig = signals(p), sug = suggested(p), rep = reported(p), na = nextAction(p), today = todayISO();
+  const ms = msOf(p), ups = updatesOf(p);
+  const pinned = notesOf(p).filter(n => n.pinned || n.type === 'decision').sort((a, b) => b.pinned - a.pinned || (b.updated || '').localeCompare(a.updated || ''));
+  const late = st.forecast && p.target ? diffDays(p.target, st.forecast) : 0;
+  const closing = sig.some(s => s.act === 'close');
+  return `<div class="wrap"><div class="cols">
+    <div class="col">
+      ${p.status === 'blocked' ? blockBoxHTML('project', p) : ''}
+      <section class="card"><div class="card-h">Done when<span class="grow"></span><button class="text-btn" type="button" data-act="edit-project" data-id="${p.id}">Edit</button></div>
+        <div class="card-b">${p.goal ? `<p class="goal">${esc(p.goal)}</p>` : '<p class="goal empty-goal">Write one sentence that says when this project is finished. It keeps the scope honest.</p>'}
+        ${p.outcome ? `<p class="small" style="color:var(--green);margin:10px 0 0">Outcome: ${esc(p.outcome)}</p>` : ''}</div></section>
+      <section class="card"><div class="card-h">Milestones<span class="grow"></span><button class="text-btn" type="button" data-act="milestones" data-id="${p.id}">${ms.length ? 'Edit' : 'Add milestones'}</button></div>
+        <div class="card-b">${ms.map(m => {
+          const s = msStats(m), lateM = !m.done && m.target && m.target < today, cur = currentMs(p) === m;
+          const when = m.done ? `Reached ${fmtShort(m.done)}` : !m.target ? 'No date' : lateM ? `${diffDays(m.target, today)} days late` : `Due ${relLower(m.target)}`;
+          return `<div class="mrow ${m.done ? 'reached' : lateM ? 'late' : cur ? 'current' : ''}">${ic('diamond')}<div><div style="font-weight:${cur ? 600 : 500}">${esc(m.name)}</div><div class="sub">${s.nd}/${s.n} tasks${cur ? ' · current' : ''}</div></div>
+            <div class="bar" style="--c:${m.done ? 'var(--green)' : COLOR_HEX[p.color]}"><i style="width:${s.pct}%"></i></div><div class="when">${when}</div></div>`;
+        }).join('') || '<p class="sub" style="margin:0">Milestones are the phases of the project, each with a date. Tasks belong to one, and a milestone is reached when its last task is done.</p>'}</div></section>
+      <section class="card"><div class="card-h">Status updates</div><div class="card-b">${isOpenProject(p) ? composerHTML(p, 'ov') : ''}
+        ${ups.map(u => `<div class="upd"><div class="uh">${healthPill(u.health)}<span>${fmtDay(u.date)}</span>${u.progress !== '' && u.progress != null ? `<span class="mono">${u.progress}%</span>` : ''}</div><p>${esc(u.text)}</p></div>`).join('') || '<p class="sub">No updates yet. A short weekly update is what makes the health on Home trustworthy.</p>'}</div></section>
+    </div>
+    <div class="col">
+      <section class="card"><div class="card-h">Progress</div><div class="card-b">
+        <div style="display:flex;align-items:baseline;gap:10px"><span class="big">${st.pct}%</span><span class="sub mono">${st.done} of ${st.total} points</span></div>
+        <div class="burn">${burnupSVG(p, st)}</div>
+        ${st.total ? `<div class="legend"><span><i style="background:var(--chart-scope)"></i>Total scope</span><span><i style="background:${COLOR_HEX[p.color]}"></i>Done</span>${st.forecast ? '<span><i style="background:var(--amber)"></i>Forecast</span>' : ''}</div>` : ''}
+        <dl class="kv"><dt>Done in the last 7 days</dt><dd>+${st.doneWeek} pts</dd>
+          <dt>Scope added this week</dt><dd class="${st.addedPts ? 'warn' : ''}">${st.addedPts ? `+${st.addedPts} pts (${plural(st.added, 'task')})` : 'None'}</dd>
+          <dt>Forecast finish</dt><dd class="${late > 7 ? 'bad' : late > 0 ? 'warn' : st.forecast ? 'good' : ''}">${st.forecast ? `${fmtShort(st.forecast)}${p.target ? (late > 0 ? ` · ${late}d late` : ' · on time') : ''}` : esc(st.why)}</dd></dl>
+        <p class="sub" style="margin:10px 0 0">Points: S = 1, M = 2, L = 3. Set a task's size in its details.</p></div></section>
+      ${isOpenProject(p) ? `<section class="card"><div class="card-h">Signals</div><div class="card-b">
+        <div class="suggest">Suggested health ${healthPill(sug)}${rep && rep !== sug ? `<span>· your last update said</span>${healthPill(rep)}` : ''}</div>
+        ${sig.map(s => `<div class="sig ${s.lvl}"><span class="sev"></span><span>${s.task ? `<button type="button" class="link" data-act="task" data-id="${s.task}">${esc(s.text)}</button>` : esc(s.text)}</span></div>`).join('') || '<p class="sub" style="margin:0">No signals. Everything looks on track.</p>'}
+        ${closing ? `<div class="composer" style="margin-top:10px"><label class="sub" for="outcome-${p.id}">What did this project achieve?</label><textarea id="outcome-${p.id}" data-key="outcome:${p.id}" data-draft="outcome:${p.id}" rows="2" placeholder="e.g. Repeat defects down 38% on line 2">${esc(drafts.get('outcome:' + p.id) || '')}</textarea>
+          <div><button type="button" class="btn sm primary" data-act="close-project" data-id="${p.id}">Close project</button></div></div>` : ''}</div></section>
+      <section class="card"><div class="card-h">Next action</div>${na ? taskRow(na, { k: ':na' }) : `<div class="empty">${st.open.length ? 'Every open task is blocked. Unblock one or add a new task.' : st.total ? 'Nothing left to do.' : 'No tasks yet.'}</div>`}<div style="height:8px"></div></section>` : ''}
+      <section class="card"><div class="card-h">Pinned notes &amp; decisions<span class="grow"></span><button class="text-btn" type="button" data-act="tab" data-v="notes">All notes</button></div><div class="card-b">
+        ${pinned.map(n => `<button type="button" class="nmini" data-act="note" data-id="${n.id}"><span class="ntype ${n.type}">${n.type}</span><span>${esc(n.title || 'Untitled')}</span><small>${fmtShort(localDayOf(n.updated || n.created))}</small></button>`).join('') || '<p class="sub" style="margin:0">Decision notes and pinned notes show up here.</p>'}
+        ${(p.blockLog || []).length ? `<div class="card-h" style="padding:14px 0 6px">Block history</div><div class="hist">${p.blockLog.slice().reverse().map(b => `<div>${esc(b.reason || 'No reason')}<small>${b.from ? fmtShort(localDayOf(b.from)) + ' – ' : ''}${b.to ? fmtShort(localDayOf(b.to)) : ''} · ${esc(b.how || '')}</small></div>`).join('')}</div>` : ''}</div></section>
+    </div>
+  </div></div>`;
+}
+
+function burnupSVG(p, st) {
+  const ts = tasksIn(p.name), today = todayISO();
+  if (!p.start || !ts.length || p.start > today) return '';
+  const end = maxOf([p.target, st.forecast, today]);
+  const n = Math.max(1, diffDays(p.start, end));
+  const W = 340, H = 140, L = 6, R = 6, Tp = 12, B = 22;
+  const created = ts.map(t => [localDayOf(t.created) || p.start, pts(t)]);
+  const completed = ts.filter(t => t.archType === 'Completed').map(t => [localDayOf(t.completed), pts(t)]);
+  const upTo = (arr, d) => sum(arr.filter(([x]) => x <= d), x => x[1]);
+  const days = diffDays(p.start, today);
+  const total = Math.max(1, st.total, upTo(created, today));
+  const X = d => L + Math.max(0, diffDays(p.start, d)) / n * (W - L - R);
+  const Y = v => Tp + (1 - v / total) * (H - Tp - B);
+  let scope = '', done = '';
+  const step = Math.max(1, Math.ceil(days / 120));
+  for (let i = 0; i <= days; i += step) {
+    const d = addDays(p.start, Math.min(i, days));
+    scope += `${i ? 'L' : 'M'}${X(d).toFixed(1)},${Y(upTo(created, d)).toFixed(1)}`;
+    done += `${i ? 'L' : 'M'}${X(d).toFixed(1)},${Y(upTo(completed, d)).toFixed(1)}`;
+  }
+  scope += `L${X(today).toFixed(1)},${Y(upTo(created, today)).toFixed(1)}`;
+  done += `L${X(today).toFixed(1)},${Y(st.done).toFixed(1)}`;
+  const xt = X(today), xg = p.target && p.target >= p.start ? X(p.target) : null, col = COLOR_HEX[p.color];
+  const labels = [`<text class="ax" x="${L}" y="${H - 6}">${fmtShort(p.start)}</text>`];
+  if (xg !== null) labels.push(`<text class="ax" x="${Math.min(xg, W - R)}" y="${H - 6}" text-anchor="end">Target ${fmtShort(p.target)}</text>`);
+  if (xg === null || Math.abs(xt - xg) > 90) labels.push(`<text class="ax" x="${Math.min(xt, W - 30)}" y="${H - 6}" text-anchor="middle" style="fill:var(--text-2)">Today</text>`);
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Burn-up chart: ${st.done} of ${st.total} points done">
+    <line x1="${L}" x2="${W - R}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line-2)" stroke-width="1"/>
+    ${xg !== null ? `<line x1="${xg}" x2="${xg}" y1="${Tp - 4}" y2="${Y(0)}" stroke="var(--text-3)" stroke-dasharray="3 3"/>` : ''}
+    <line x1="${xt}" x2="${xt}" y1="${Tp - 4}" y2="${Y(0)}" stroke="var(--accent)" stroke-opacity=".45"/>
+    <path d="${scope}" fill="none" stroke="var(--chart-scope)" stroke-width="2"/>
+    <path d="${done}" fill="none" stroke="${col}" stroke-width="2.5"/>
+    ${st.forecast ? `<line x1="${xt}" y1="${Y(st.done)}" x2="${X(st.forecast)}" y2="${Y(st.total)}" stroke="var(--amber)" stroke-width="1.5" stroke-dasharray="4 4"/><circle cx="${X(st.forecast)}" cy="${Y(st.total)}" r="3" fill="var(--amber)"/>` : ''}
+    <circle cx="${xt}" cy="${Y(st.done)}" r="3.5" fill="${col}"/>${labels.join('')}</svg>`;
+}
+
+function projectTasksHTML(p) {
+  const ms = msOf(p), all = tasksIn(p.name).filter(isTop);
+  const groups = ms.map(m => ({ m, ts: all.filter(t => t.milestone === m.id) }));
+  const loose = all.filter(t => !ms.some(m => m.id === t.milestone));
+  if (loose.length || !ms.length) groups.push({ m: null, ts: loose });
+  const canAdd = p.status !== 'done';
+  return `<div class="wrap narrow"><section class="card" style="--c:${COLOR_HEX[p.color]}">
+    ${groups.map(({ m, ts }) => {
+      const open = ts.filter(t => !t.archived).sort(SORTS.my), done = ts.filter(t => t.archType === 'Completed').sort(byCompletedDesc);
+      const s = m ? msStats(m) : null, late = m && !m.done && m.target && m.target < todayISO();
+      const key = `ms:${p.id}:${m ? m.id : 'none'}`;
+      return `<div class="group-h ${m && m.done ? 'reached' : ''}">${m ? ic('diamond') : ''}<span class="gname">${m ? esc(m.name) : (ms.length ? 'No milestone' : 'Tasks')}</span>
+          <span class="gmeta" style="${late ? 'color:var(--red)' : ''}">${m ? `${s.nd}/${s.n}${m.done ? ` · reached ${fmtShort(m.done)}` : m.target ? ` · ${late ? 'was due' : 'due'} ${relLower(m.target)}` : ''}` : ''}</span></div>
+        ${open.map(t => taskRow(t)).join('')}
+        ${canAdd && !(m && m.done) ? quickAdd(key, { list: p.name, milestone: m ? m.id : '' }, m ? `Add a task to ${m.name}` : 'Add a task') : ''}
+        ${doneToggle(key + ':done', done)}`;
+    }).join('')}
+    <div class="card-b" style="padding-top:8px"><button class="text-btn" type="button" data-act="milestones" data-id="${p.id}">${ic('diamond')} ${ms.length ? 'Edit milestones' : 'Add milestones'}</button></div>
+  </section>
+  <p class="sub">Quick add understands <kbd>tomorrow</kbd> <kbd>fri 3pm</kbd> <kbd>!high</kbd> <kbd>~L</kbd> (size) <kbd>^Milestone</kbd> <kbd>*</kbd> (star). Alt + ↑/↓ moves the selected task.</p></div>`;
+}
+
+function notesHTML(p) {
+  const all = notesOf(p).sort((a, b) => b.pinned - a.pinned || (b.updated || '').localeCompare(a.updated || ''));
+  const shown = all.filter(n => S.noteFilter === 'all' || n.type === S.noteFilter);
+  if (!all.some(n => n.id === S.noteId)) S.noteId = (shown[0] || all[0] || {}).id || null;
+  const n = all.find(x => x.id === S.noteId);
+  const filters = [['all', 'All'], ['meeting', 'Meetings'], ['decision', 'Decisions'], ['reference', 'Reference']];
+  return `<div class="wrap"><div class="notes">
+    <section class="card"><div class="card-h">Notes</div>
+      <div class="filters">${filters.map(([k, l]) => `<button type="button" class="fbtn" aria-pressed="${S.noteFilter === k}" data-act="nfilter" data-v="${k}">${l}</button>`).join('')}</div>
+      <div class="nlist" id="nlist">${noteListHTML(shown)}</div>
+      <div class="card-b" style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" type="button" data-act="new-note" data-v="meeting" data-id="${p.id}">${ic('add')}Meeting</button>
+        <button class="btn sm" type="button" data-act="new-note" data-v="decision" data-id="${p.id}">${ic('add')}Decision</button><button class="btn sm" type="button" data-act="new-note" data-v="reference" data-id="${p.id}">${ic('add')}Note</button></div>
+    </section>
+    <section class="card">${n ? `<div class="card-b" style="padding-top:14px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select class="select-sm" data-note-type="${n.id}" aria-label="Note type" style="background:var(--bg);border:1px solid var(--line-2);border-radius:8px;height:30px;color:var(--text)">${['meeting', 'decision', 'reference'].map(t => `<option value="${t}" ${n.type === t ? 'selected' : ''}>${t[0].toUpperCase() + t.slice(1)}</option>`).join('')}</select>
+          <span class="sub">${fmtDay(localDayOf(n.created))}</span><span style="flex:1"></span>
+          <button class="btn sm" type="button" data-act="pin" data-id="${n.id}">${ic('pin')}${n.pinned ? 'Unpin' : 'Pin to overview'}</button>
+          <button class="icon-btn" type="button" data-act="delete-note" data-id="${n.id}" title="Delete note" aria-label="Delete note">${ic('trash')}</button></div>
+        <input class="ntitle" data-key="ntitle:${n.id}" data-note="${n.id}" data-nf="title" value="${esc(n.title)}" placeholder="Title" aria-label="Note title" maxlength="200">
+        <textarea class="nbody" data-key="nbody:${n.id}" data-note="${n.id}" data-nf="body" aria-label="Note text" placeholder="Write here. Start a line with [ ] to make it an action item.">${esc(n.body)}</textarea>
+        <div id="ai">${aiHTML(n)}</div></div>` : `<div class="empty">Keep meeting notes, decisions and reference material next to the work. Lines starting with <span class="mono">[ ]</span> become action items you can turn into tasks.</div>`}</section>
+  </div></div>`;
+}
+function noteListHTML(shown) {
+  return shown.map(n => `<button type="button" class="nitem ${S.noteId === n.id ? 'on' : ''}" data-act="note" data-id="${n.id}">${ic(n.type === 'decision' ? 'decision' : n.type === 'meeting' ? 'meeting' : 'notes')}
+    <span style="min-width:0;flex:1"><span class="nt">${esc(n.title || 'Untitled')}</span><small>${n.pinned ? 'Pinned · ' : ''}${fmtShort(localDayOf(n.updated || n.created))}</small></span></button>`).join('') || '<p class="sub" style="padding:8px">No notes here yet.</p>';
+}
+function aiHTML(n) {
+  const items = actionItems(n);
+  return `<div class="card-h" style="padding:6px 0">Action items</div>${items.length ? items.map(a => {
+    const t = a.made && byId.get(a.made);
+    return `<div class="ai-row"><span>${esc(a.text)}</span>${t ? `<button type="button" class="link made" data-act="task" data-id="${t.id}">${ic('check')}${t.archived ? 'Done' : 'Task created'}</button>` : `<button type="button" class="btn sm tonal" data-act="note-task" data-id="${n.id}" data-i="${a.i}">${ic('add')}Make task</button>`}</div>`;
+  }).join('') : '<p class="sub" style="margin:4px 0">Start a line with <span class="mono">[ ]</span> to add an action item.</p>'}`;
+}
+
+/* ----- Plain list ----- */
+function listHTML(l) {
+  const ts = tasksIn(l.name).filter(isTop), open = ts.filter(t => !t.archived).sort(SORTS.my), done = ts.filter(t => t.archType === 'Completed').sort(byCompletedDesc);
+  return `<div class="wrap narrow"><section class="card" style="--c:${COLOR_HEX[l.color]}">
+    <div class="card-h">${dot(l.name)}<span class="note" style="color:var(--text-2)">${plural(open.length, 'open task')}</span><span class="grow"></span>
+      <button class="icon-btn" type="button" data-act="list-menu" data-name="${esc(l.name)}" title="List options" aria-label="List options">${ic('more')}</button></div>
+    ${quickAdd('list:' + l.name, { list: l.name })}
+    ${open.map(t => taskRow(t)).join('') || '<div class="empty">No open tasks.</div>'}
+    ${doneToggle('list:' + l.name + ':done', done)}<div style="height:8px"></div></section></div>`;
+}
+
+/* ======================================================================
+ * Task panel
+ * ==================================================================== */
+const saveTimers = new Map();
+function saveSoon(id, field, value) {
+  const k = id + ':' + field, prev = saveTimers.get(k);
+  if (prev) clearTimeout(prev.timer);
+  const run = () => { saveTimers.delete(k); patch(id, { [field]: value }); };
+  saveTimers.set(k, { timer: setTimeout(run, 600), run });
+}
+function flushSaves() {
+  [...saveTimers.values()].forEach(v => { clearTimeout(v.timer); v.run(); });
+  [...noteTimers.keys()].forEach(flushNote);
+}
+
+let panelReturnFocus = null;
+function openPanel(id) {
+  if (!byId.get(id)) return;
+  flushSaves();
+  if (!S.taskId && !S.draft) panelReturnFocus = document.activeElement;
+  S.taskId = id;
+  S.draft = null;
+  renderNow();
+  if (!isNarrow()) requestAnimationFrame(() => {
+    const ta = $('panel').querySelector('.pn-title');
+    if (!ta) return;
+    ta.focus({ preventScroll: true });
+    autogrow(ta);
+    ta.scrollTop = 0;
+    $('panel').querySelector('.pn-b').scrollTop = 0;
+  });
+}
+function openNew() {
+  flushSaves();
+  let list = S.defaultList, milestone;
+  if (S.view === 'project' && proj(S.id) && proj(S.id).status !== 'done') { list = proj(S.id).name; milestone = (currentMs(proj(S.id)) || {}).id || ''; }
+  if (S.view === 'list' && listByName(S.id)) list = S.id;
+  if (!S.taskId && !S.draft) panelReturnFocus = document.activeElement;
+  S.taskId = null;
+  S.draft = { id: '', title: '', desc: '', due: '', time: '', plan: S.view === 'myday' ? todayISO() : '', priority: 'Medium', list, milestone: milestone || '', starred: S.view === 'starred', repeat: '', size: 1, status: 'Not started' };
+  renderNow();
+  requestAnimationFrame(() => { const ta = $('panel').querySelector('.pn-title'); if (ta) ta.focus(); });
+}
+function closePanel() {
+  if (!S.taskId && !S.draft) return;
+  flushSaves();
+  S.taskId = null;
+  S.draft = null;
+  renderNow();
+  const f = panelReturnFocus;
+  panelReturnFocus = null;
+  if (f && f.isConnected) f.focus({ preventScroll: true });
+}
+const isNarrow = () => matchMedia('(max-width: 900px)').matches;
+
+function renderPanel() {
+  const pnl = $('panel'), app = $('app');
+  let t = S.draft || (S.taskId && byId.get(S.taskId));
+  if (t && !S.draft && t.archType === 'Deleted') { S.taskId = null; t = null; }
+  if (!t) {
+    pnl.classList.remove('open');
+    pnl.setAttribute('aria-hidden', 'true');
+    app.classList.remove('panel-open');
+    pnl.innerHTML = '';
+    return;
+  }
+  const sc = pnl.querySelector('.pn-b'), top = sc ? sc.scrollTop : 0;
+  pnl.innerHTML = panelHTML(t, !!S.draft);
+  pnl.classList.add('open');
+  pnl.removeAttribute('aria-hidden');
+  app.classList.add('panel-open');
+  const sc2 = pnl.querySelector('.pn-b');
+  if (sc2) sc2.scrollTop = top;
+}
+
+function containerOptions(current) {
+  const ps = S.projects.filter(p => p.status !== 'done' || p.name === current);
+  return `<optgroup label="Projects">${ps.map(p => `<option value="${esc(p.name)}" ${p.name === current ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</optgroup>
+    <optgroup label="Lists">${S.lists.map(l => `<option value="${esc(l.name)}" ${l.name === current ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}
+    ${!projByName(current) && !listByName(current) ? `<option value="${esc(current)}" selected>${esc(current)}</option>` : ''}</optgroup>`;
+}
+
+function panelHTML(t, isNew) {
+  const done = t.archType === 'Completed', p = projByName(t.list), parent = !isNew && t.parent && byId.get(t.parent);
+  const sb = (f, v, label, cls) => `<button type="button" class="sb ${cls || ''}" aria-pressed="${String(t[f]) === String(v)}" data-act="set" data-f="${f}" data-v="${esc(v)}">${label}</button>`;
+  const today = todayISO();
+  const head = `<div class="pn-h">${dot(t.list)}<span class="grow">${esc(t.list)}${p && t.milestone && msById(t.milestone) ? ' · ' + esc(msById(t.milestone).name) : ''}</span>
+    ${!done ? `<button type="button" class="star on" style="opacity:1;margin:0;${t.starred ? '' : 'color:var(--text-3)'}" data-act="set" data-f="starred" data-v="${!t.starred}" aria-pressed="${t.starred}" aria-label="${t.starred ? 'Remove star' : 'Star task'}">${ic(t.starred ? 'star' : 'starOutline')}</button>` : ''}
+    ${!isNew ? `<button class="icon-btn" type="button" data-act="trash-task" data-id="${t.id}" title="Delete task (Del)" aria-label="Delete task">${ic('trash')}</button>` : ''}
+    <button class="icon-btn" type="button" data-act="close-panel" title="Close (Esc)" aria-label="Close">${ic('close')}</button></div>`;
+  let body = '';
+  if (parent) body += `<button type="button" class="pn-back" data-act="task" data-id="${parent.id}">${ic('back')}<span>${esc(parent.title)}</span></button>`;
+  if (done) body += `<div class="pn-done">${ic('doneAll')}Completed ${relLower(localDayOf(t.completed))}</div>`;
+  body += `<textarea class="pn-title" data-f="title" rows="1" placeholder="${isNew ? 'What needs doing?' : 'Title'}" aria-label="Title" maxlength="500">${esc(t.title)}</textarea>
+    <textarea class="pn-desc" data-f="desc" rows="2" placeholder="Add details" aria-label="Details" maxlength="5000">${esc(t.desc)}</textarea>`;
+  if (!isNew && isBlocked(t)) body += blockBoxHTML('task', t);
+  if (!isNew && !done) {
+    body += `<div class="field"><span class="lb">Status</span><div class="segs">${sb('status', 'Not started', 'Not started')}${sb('status', 'In progress', 'In progress')}
+      <button type="button" class="sb red" aria-pressed="${t.status === 'Blocked'}" data-act="block" data-kind="task" data-id="${t.id}">${t.status === 'Blocked' ? 'Blocked' : 'Blocked…'}</button></div></div>`;
+  }
+  body += `<div class="two"><div class="field"><label for="f-list">Project or list</label><select id="f-list" data-f="list">${containerOptions(t.list)}</select></div>
+    ${p ? `<div class="field"><label for="f-ms">Milestone</label><select id="f-ms" data-f="milestone"><option value="">None</option>${msOf(p).map(m => `<option value="${m.id}" ${m.id === t.milestone ? 'selected' : ''}>${esc(m.name)}${m.done ? ' (reached)' : ''}</option>`).join('')}</select></div>` : '<div></div>'}</div>`;
+  if (!done) {
+    body += `<div class="two">
+      <div class="field"><label for="f-plan">Plan date</label><input id="f-plan" type="date" data-f="plan" value="${t.plan}"><div class="quick"><button type="button" data-act="set" data-f="plan" data-v="${today}">Today</button><button type="button" data-act="set" data-f="plan" data-v="${addDays(today, 1)}">Tomorrow</button>${t.plan ? '<button type="button" data-act="set" data-f="plan" data-v="">Clear</button>' : ''}</div></div>
+      <div class="field"><label for="f-due">Due date</label><input id="f-due" type="date" data-f="due" value="${t.due}">${t.due ? `<input type="time" data-f="time" value="${t.time}" aria-label="Due time">` : `<div class="quick"><button type="button" data-act="set" data-f="due" data-v="${today}">Today</button><button type="button" data-act="set" data-f="due" data-v="${nextWeekday(5, true)}">Friday</button></div>`}</div></div>
+      <p class="sub" style="margin:-6px 0 0">Plan puts it in My Day. Due is the real deadline.</p>
+      <div class="field"><span class="lb">Priority</span><div class="segs">${sb('priority', 'High', 'High')}${sb('priority', 'Medium', 'Medium')}${sb('priority', 'Low', 'Low')}</div></div>
+      ${p ? `<div class="field"><span class="lb">Size</span><div class="segs">${sb('size', 1, 'S · small')}${sb('size', 2, 'M · a day or two')}${sb('size', 3, 'L · several days')}</div></div>` : ''}
+      <div class="field"><label for="f-rep">Repeat</label><select id="f-rep" data-f="repeat">${REPEATS.map(r => `<option value="${r}" ${r === (t.repeat || '') ? 'selected' : ''}>${esc(repeatLabel(r, t.due))}</option>`).join('')}</select></div>`;
+  }
+  if (!isNew && !parent && !done) {
+    const ks = kidsOf(t.id).filter(isLive).sort((a, b) => Number(a.archived) - Number(b.archived) || SORTS.my(a, b));
+    body += `<div class="field subs"><span class="lb">Subtasks${ks.length ? ` · ${ks.filter(k => k.archived).length}/${ks.length}` : ''}</span>
+      ${ks.map(k => `<div class="sub-row ${k.archived ? 'done' : ''}"><button type="button" class="check" data-act="toggle" data-id="${k.id}" aria-label="${k.archived ? 'Mark not complete' : 'Complete'}">${ic('check')}</button><button type="button" class="sub-title" data-act="task" data-id="${k.id}">${esc(k.title)}</button></div>`).join('')}
+      <label class="sub-add">${ic('add')}<input data-subadd="${t.id}" data-key="subadd:${t.id}" placeholder="Add subtask" aria-label="Add subtask" maxlength="500" value="${esc(drafts.get('sub:' + t.id) || '')}"></label></div>`;
+  }
+  if (!isNew && (t.blockLog || []).length) {
+    body += `<div class="field"><span class="lb">Block history</span><div class="hist">${t.blockLog.slice().reverse().map(b => `<div>${esc(b.reason || 'No reason')}<small>${b.from ? fmtShort(localDayOf(b.from)) + ' – ' : ''}${b.to ? fmtShort(localDayOf(b.to)) : ''} · ${esc(b.how || '')}</small></div>`).join('')}</div></div>`;
+  }
+  if (!isNew && !done) body += `<div class="quick"><button type="button" data-act="move" data-v="-1">${ic('up')} Move up</button><button type="button" data-act="move" data-v="1">${ic('down')} Move down</button></div>`;
+  let foot;
+  if (isNew) {
+    foot = `<span class="meta">Ctrl+Enter to add</span><button class="btn" type="button" data-act="close-panel">Cancel</button><button class="btn primary" type="button" data-act="submit-new" ${t.title.trim() ? '' : 'disabled'}>Add task</button>`;
+  } else {
+    const meta = [t.created ? 'Created ' + fmtShort(localDayOf(t.created)) : '', t.synced ? 'On Google Calendar' : ''].filter(Boolean).join(' · ');
+    foot = `<span class="meta" title="${esc(meta)}">${esc(meta)}</span>${done ? `<button class="btn tonal" type="button" data-act="toggle" data-id="${t.id}">${ic('restore')}Mark not complete</button>`
+      : `<button class="btn tonal" type="button" data-act="toggle" data-id="${t.id}">${ic('check')}Complete</button>`}`;
+  }
+  return `${head}<div class="pn-b">${body}</div><div class="pn-f">${foot}</div>`;
+}
+
+function submitNew() {
+  const d = S.draft;
+  if (!d || !d.title.trim()) return;
+  const t = createTask(Object.assign({}, d, { title: d.title.trim().replace(/\n/g, ' ') }));
+  S.draft = null;
+  closePanel();
+  snack(`Task added to ${t.list}`, 'Open', () => openPanel(t.id));
+}
+
+function setField(f, v) {
+  if (S.draft) {
+    const d = S.draft;
+    if (f === 'size') v = Number(v);
+    if (f === 'starred') v = v === true || v === 'true';
+    d[f] = v;
+    if (f === 'due' && !v) d.time = '';
+    if (f === 'list') { const p = projByName(v); d.milestone = p ? ((currentMs(p) || {}).id || '') : ''; }
+    renderNow();
+    return;
+  }
+  const t = byId.get(S.taskId);
+  if (!t) return;
+  if (f === 'size') v = Number(v);
+  if (f === 'starred') v = v === true || v === 'true';
+  if (f === 'status' && t.archived) return;
+  patch(t.id, { [f]: v });
+  renderNow();
+}
+
+/* ======================================================================
+ * Menus, dialogs, snackbar
+ * ==================================================================== */
+let menuReturn = null, menuItems = [];
+function openMenu(items, anchor) {
+  closeMenu(false);
+  menuReturn = anchor;
+  menuItems = items.filter(Boolean);
+  const layer = $('layer');
+  const html = menuItems.map((it, i) => {
+    if (it === '-') return '<hr>';
+    if (it.header) return `<div class="menu-h">${esc(it.header)}</div>`;
+    return `<button type="button" class="menu-i ${it.danger ? 'danger' : ''} ${it.on ? 'on' : ''}" data-mi="${i}" ${it.disabled ? 'disabled' : ''} ${it.color ? `style="--c:${it.color}"` : ''}>
+      ${it.color ? '<span class="cdot"></span>' : it.icon ? ic(it.icon) : '<span class="sp"></span>'}<span class="l">${esc(it.label)}</span></button>`;
+  }).join('');
+  layer.insertAdjacentHTML('beforeend', `<div class="menu-scrim"></div><div class="menu" role="menu">${html}</div>`);
+  const menu = layer.querySelector('.menu'), r = anchor.getBoundingClientRect();
+  const mw = menu.offsetWidth, mh = menu.offsetHeight;
+  let left = Math.max(8, Math.min(r.right - mw, innerWidth - mw - 8));
+  if (r.right - mw < 8) left = Math.max(8, Math.min(r.left, innerWidth - mw - 8));
+  let top = r.bottom + 4;
+  if (top + mh > innerHeight - 8) top = Math.max(8, r.top - mh - 4);
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
+  layer.querySelector('.menu-scrim').addEventListener('click', () => closeMenu());
+  menu.addEventListener('click', e => {
+    const b = e.target.closest('[data-mi]');
+    if (!b) return;
+    const it = menuItems[Number(b.dataset.mi)];
+    closeMenu(false);
+    it.action();
+  });
+  menu.addEventListener('keydown', e => {
+    const btns = [...menu.querySelectorAll('.menu-i:not([disabled])')], i = btns.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); btns[(i + (e.key === 'ArrowDown' ? 1 : -1) + btns.length) % btns.length].focus(); }
+    else if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); e.stopPropagation(); closeMenu(); }
+  });
+  const first = menu.querySelector('.menu-i:not([disabled])');
+  if (first) first.focus();
+}
+function closeMenu(refocus = true) {
+  const layer = $('layer'), had = layer.querySelector('.menu');
+  layer.querySelectorAll('.menu, .menu-scrim').forEach(n => n.remove());
+  if (had && refocus && menuReturn && menuReturn.isConnected) menuReturn.focus({ preventScroll: true });
+}
+
+function statusMenu(p, anchor) {
+  openMenu([
+    { header: 'Project status' },
+    ...['active', 'planned', 'paused'].map(s => ({ label: PSTATUS[s], on: p.status === s, icon: p.status === s ? 'check' : null, action: () => setProjectStatus(p, s) })),
+    p.status === 'blocked' ? { label: 'Edit block…', icon: 'blocked', action: () => blockDlg('project', p.id) } : { label: 'Blocked…', icon: 'blocked', action: () => blockDlg('project', p.id) },
+    p.status === 'blocked' ? { label: 'Unblock now', icon: 'unlock', action: () => unblock('project', p.id) } : null,
+    '-',
+    { label: p.status === 'done' ? 'Done' : 'Close project (done)', icon: 'doneAll', on: p.status === 'done', action: () => setProjectStatus(p, 'done') },
+  ], anchor);
+}
+function listMenu(l, anchor) {
+  const isDefault = l.name === S.defaultList, doneN = S.tasks.filter(t => t.list === l.name && t.archType === 'Completed').length;
+  openMenu([
+    { label: 'Rename or recolor', icon: 'edit', action: () => renameList(l) },
+    { label: 'Turn into a project', icon: 'folder', disabled: isDefault, action: () => listToProject(l) },
+    '-',
+    { label: `Delete completed (${doneN})`, icon: 'doneAll', disabled: !doneN, action: () => clearCompleted(l.name) },
+    { label: 'Delete list', icon: 'trash', danger: true, disabled: isDefault, action: () => deleteList(l) },
+  ], anchor);
+}
+
+// Generic modal. `actions`: [{ label, value, primary, danger, left }]. `onAction(value, box)` may return false to keep it open.
+function openDialog({ title, body, actions, wide, onMount, onAction }) {
+  return new Promise(resolve => {
+    const prev = document.activeElement;
+    const scrim = document.createElement('div');
+    scrim.className = 'dlg-scrim';
+    scrim.innerHTML = `<div class="dlg ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-labelledby="dlgTitle"><h2 id="dlgTitle">${esc(title)}</h2>${body}
+      <div class="dlg-actions">${actions.map((a, i) => `<button type="button" class="btn ${a.primary ? (a.danger ? 'danger' : 'primary') : a.danger ? 'danger' : ''} ${a.left ? 'left' : ''}" data-ai="${i}">${esc(a.label)}</button>`).join('')}</div></div>`;
+    const box = scrim.firstElementChild;
+    const finish = v => {
+      if (v !== null && onAction && onAction(v, box) === false) return;
+      scrim.remove();
+      document.removeEventListener('keydown', onKey, true);
+      if (prev && prev.isConnected) prev.focus({ preventScroll: true });
+      resolve(v);
+    };
+    const primary = actions.find(a => a.primary);
+    const onKey = e => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(null); }
+      else if (e.key === 'Enter' && primary && e.target.tagName === 'INPUT' && !['checkbox', 'date'].includes(e.target.type) && !e.target.dataset.enter) { e.preventDefault(); finish(primary.value); }
+      else if (e.key === 'Tab') {
+        const f = [...box.querySelectorAll('button:not([disabled]), input, select, textarea, a[href]')];
+        if (!f.length) return;
+        const i = f.indexOf(document.activeElement);
+        if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
+        else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+      }
+    };
+    box.addEventListener('click', e => { const b = e.target.closest('[data-ai]'); if (b) finish(actions[Number(b.dataset.ai)].value); });
+    scrim.addEventListener('mousedown', e => { if (e.target === scrim) finish(null); });
+    document.addEventListener('keydown', onKey, true);
+    $('layer').append(scrim);
+    if (onMount) onMount(box);
+    const first = box.querySelector('[autofocus]') || box.querySelector('input:not([type=checkbox]), textarea, select') || box.querySelector('.btn.primary, .btn.danger');
+    if (first) { first.focus(); if (first.select && first.tagName === 'INPUT') first.select(); }
+  });
+}
+const dialogOpen = () => !!$('layer').querySelector('.dlg-scrim');
+
+async function confirmDlg(title, text, ok, danger = true) {
+  const v = await openDialog({ title, body: `<p>${esc(text)}</p>`, actions: [{ label: 'Cancel', value: false }, { label: ok, primary: true, danger, value: true }] });
+  return v === true;
+}
+
+function swatchesHTML(picked) {
+  return `<div class="swatches" role="radiogroup" aria-label="Color">${COLORS.map(c => `<button type="button" class="sw ${c === picked ? 'on' : ''}" role="radio" aria-checked="${c === picked}" data-sw="${c}" aria-label="${COLOR_NAMES[c]}" title="${COLOR_NAMES[c]}" style="--c:${COLOR_HEX[c]}">${ic('check')}</button>`).join('')}</div>`;
+}
+function wireSwatches(box) {
+  box.querySelectorAll('[data-sw]').forEach(b => b.addEventListener('click', () => {
+    box.querySelectorAll('[data-sw]').forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-checked', String(on)); });
+  }));
+}
+const pickedColor = box => (box.querySelector('.sw.on') || {}).dataset ? box.querySelector('.sw.on').dataset.sw : 'BLUE';
+
+async function listDlg({ title, name = '', color = 'BLUE', ok, nameEditable = true }) {
+  let out = null;
+  const v = await openDialog({
+    title, actions: [{ label: 'Cancel', value: null }, { label: ok, primary: true, value: 'ok' }], onMount: wireSwatches,
+    body: `<div class="dlg-body">${nameEditable ? `<input class="input" id="dlgName" value="${esc(name)}" placeholder="List name" aria-label="List name" maxlength="60">` : ''}
+      <div class="dlg-label">Color (also used in Google Calendar)</div>${swatchesHTML(COLORS.includes(color) ? color : 'BLUE')}</div>`,
+    onAction: (val, box) => { if (val === 'ok') { const n = box.querySelector('#dlgName'); out = { name: n ? n.value.replace(/\s+/g, ' ').trim().slice(0, 60) : name, color: pickedColor(box) }; } },
+  });
+  return v === 'ok' ? out : null;
+}
+
+async function projectDlg(p) {
+  let out = null;
+  const isNew = !p;
+  const v = await openDialog({
+    title: isNew ? 'New project' : 'Edit project', wide: true, onMount: wireSwatches,
+    actions: [...(isNew ? [] : [{ label: 'Delete project', value: 'delete', danger: true, left: true }]), { label: 'Cancel', value: null }, { label: isNew ? 'Create project' : 'Save', primary: true, value: 'ok' }],
+    body: `<div class="dlg-body">
+      <input class="input" id="pName" value="${esc(p ? p.name : '')}" placeholder="Project name" aria-label="Project name" maxlength="60">
+      <div class="dlg-label">Done when</div>
+      <textarea id="pGoal" rows="3" placeholder="One sentence that says when this project is finished" aria-label="Done when">${esc(p ? p.goal : '')}</textarea>
+      <div class="two"><div class="field"><label for="pStart">Start</label><input id="pStart" type="date" value="${esc(p ? p.start : todayISO())}"></div>
+        <div class="field"><label for="pTarget">Target date</label><input id="pTarget" type="date" value="${esc(p ? p.target : '')}"></div></div>
+      <div class="field"><label for="pPri">Priority</label><select id="pPri">${[1, 2, 3].map(n => `<option value="${n}" ${(p ? p.priority : 2) === n ? 'selected' : ''}>${PPRI[n]}</option>`).join('')}</select></div>
+      <div class="dlg-label">Color</div>${swatchesHTML(p ? p.color : COLORS[S.projects.length % COLORS.length])}
+      <div class="dlg-err" id="pErr"></div></div>`,
+    onAction: (val, box) => {
+      if (val !== 'ok') return;
+      const name = box.querySelector('#pName').value.replace(/\s+/g, ' ').trim().slice(0, 60);
+      const err = box.querySelector('#pErr');
+      if (!name) { err.textContent = 'Give the project a name.'; return false; }
+      if (nameTaken(name, p ? p.name : undefined)) { err.textContent = 'A list or project already has that name.'; return false; }
+      const start = box.querySelector('#pStart').value, target = box.querySelector('#pTarget').value;
+      if (start && target && target < start) { err.textContent = 'The target date is before the start date.'; return false; }
+      out = { name, goal: box.querySelector('#pGoal').value.trim(), start, target, priority: Number(box.querySelector('#pPri').value), color: pickedColor(box) };
+    },
+  });
+  if (v === 'delete') return 'delete';
+  return v === 'ok' ? out : null;
+}
+
+async function milestonesDlg(p) {
+  const rows = msOf(p).map(m => ({ id: m.id, name: m.name, target: m.target, done: m.done, orig: m }));
+  const rowHTML = (r, i) => `<div class="mline ${r.done ? 'reached' : ''}" data-row="${i}">
+    <div class="ord"><button type="button" data-mv="-1" aria-label="Move up">${ic('up')}</button><button type="button" data-mv="1" aria-label="Move down">${ic('down')}</button></div>
+    <input class="input" data-mn value="${esc(r.name)}" placeholder="Milestone name" aria-label="Milestone name" maxlength="120" data-enter="1">
+    <input class="input" type="date" data-mt value="${esc(r.target)}" aria-label="Target date">
+    <button type="button" class="icon-btn" data-mdel aria-label="Delete milestone" title="Delete milestone">${ic('trash')}</button></div>`;
+  const read = box => box.querySelectorAll('.mline').forEach((el, i) => { rows[i].name = el.querySelector('[data-mn]').value; rows[i].target = el.querySelector('[data-mt]').value; });
+  const draw = box => { box.querySelector('.mlist').innerHTML = rows.map(rowHTML).join('') || '<p class="sub" style="margin:0">No milestones yet.</p>'; };
+  const v = await openDialog({
+    title: `Milestones · ${p.name}`, wide: true,
+    actions: [{ label: 'Cancel', value: null }, { label: 'Save', primary: true, value: 'ok' }],
+    body: `<p class="dlg-hint" style="margin-top:4px">Milestones are the phases of the project, in order. Each one is reached when its last task is done.</p>
+      <div class="dlg-body"><div class="mlist"></div><button type="button" class="btn sm" data-madd style="align-self:flex-start">${ic('add')}Add milestone</button><div class="dlg-err" id="mErr"></div></div>`,
+    onMount: box => {
+      draw(box);
+      if (!rows.length) { rows.push({ id: newId('m'), name: '', target: '', done: '' }); draw(box); }
+      box.addEventListener('click', e => {
+        const line = e.target.closest('.mline');
+        if (e.target.closest('[data-madd]')) { read(box); rows.push({ id: newId('m'), name: '', target: '', done: '' }); draw(box); box.querySelector('.mline:last-child [data-mn]').focus(); }
+        else if (line && e.target.closest('[data-mdel]')) { read(box); rows.splice(Number(line.dataset.row), 1); draw(box); }
+        else if (line && e.target.closest('[data-mv]')) {
+          read(box);
+          const i = Number(line.dataset.row), j = i + Number(e.target.closest('[data-mv]').dataset.mv);
+          if (j >= 0 && j < rows.length) { [rows[i], rows[j]] = [rows[j], rows[i]]; draw(box); }
+        }
+      });
+    },
+    onAction: (val, box) => {
+      if (val !== 'ok') return;
+      read(box);
+      const keep = rows.filter(r => r.name.trim());
+      const bad = keep.find(r => r.target && !/^\d{4}-\d{2}-\d{2}$/.test(r.target));
+      if (bad) { box.querySelector('#mErr').textContent = 'One of the dates isn’t valid.'; return false; }
+    },
+  });
+  if (v !== 'ok') return;
+  const keep = rows.filter(r => r.name.trim());
+  const keepIds = new Set(keep.map(r => r.id));
+  msOf(p).filter(m => !keepIds.has(m.id)).forEach(deleteMilestoneLocal);
+  keep.forEach((r, i) => {
+    const name = r.name.trim().slice(0, 120);
+    if (r.orig) {
+      const f = {};
+      if (r.orig.name !== name) f.name = name;
+      if (r.orig.target !== r.target) f.target = r.target;
+      if (r.orig.order !== i) f.order = i;
+      if (Object.keys(f).length) saveMilestoneLocal(r.orig, f, false);
+    } else saveMilestoneLocal({ id: r.id, projectId: p.id, name, target: r.target, done: '', order: i, eventId: '' }, {}, true);
+  });
+  touchProject(p);
+  schedule();
+}
+
+// Asks why it's blocked and what will unblock it. Works for a task or a whole project.
+async function blockDlg(kind, id) {
+  const x = kind === 'project' ? proj(id) : byId.get(id);
+  if (!x) return;
+  const list = kind === 'project' ? x.name : x.list;
+  const editing = kind === 'project' ? x.status === 'blocked' : x.status === 'Blocked';
+  const exclude = new Set(kind === 'task' ? [x.id, ...kidsOf(x.id).map(k => k.id)] : []);
+  const candidates = S.tasks.filter(t => !t.archived && t.list === list && !exclude.has(t.id) && !(kind === 'task' && t.blockedBy.includes(x.id))).sort(SORTS.my).slice(0, 60);
+  const checked = new Set(x.blockedBy);
+  const name = kind === 'project' ? `“${x.name}”` : `“${x.title}”`;
+  let spec = null;
+  const v = await openDialog({
+    title: editing ? 'Edit block' : (kind === 'project' ? 'Mark project as blocked' : 'Mark task as blocked'), wide: true,
+    actions: [{ label: 'Cancel', value: null }, { label: editing ? 'Save' : 'Mark blocked', primary: true, danger: true, value: 'ok' }],
+    body: `<p style="margin-top:2px">${esc(name)}</p><div class="dlg-body">
+      <div class="dlg-label">Why is it blocked?</div>
+      <textarea id="bReason" rows="2" maxlength="500" placeholder="e.g. IT hasn’t given us Shared Drive access" aria-label="Why is it blocked?" autofocus>${esc(x.blockReason || '')}</textarea>
+      <div class="dlg-label" style="margin-top:4px">What will unblock it?</div>
+      <div class="opt"><div class="opt-h">${ic('addCircle')}Something I need to do first</div>
+        <div class="sub" style="margin-top:-4px">Each line becomes a task${kind === 'project' ? ' at the top of the project' : ' right above this one'}. When they're done, it unblocks by itself.</div>
+        <div id="bNew" style="display:flex;flex-direction:column;gap:6px"><input class="input" data-new placeholder="e.g. Email IT with the access request" aria-label="Task to do first" maxlength="500" data-enter="1"></div>
+        <button type="button" class="text-btn" id="bAdd" style="align-self:flex-start">+ Another task</button></div>
+      ${candidates.length ? `<div class="opt"><div class="opt-h">${ic('subArrow')}Another task that has to finish first</div>
+        <div class="picks">${candidates.map(t => `<label class="pick"><input type="checkbox" value="${t.id}" ${checked.has(t.id) ? 'checked' : ''}><span>${esc(t.title)}</span>${isBlocked(t) ? '<span class="sub bad">blocked</span>' : ''}</label>`).join('')}</div></div>` : ''}
+      <div class="opt"><div class="opt-h">${ic('hourglass')}Waiting on a person or team</div>
+        <input class="input" id="bWait" value="${esc(x.waiting || '')}" placeholder="e.g. IT helpdesk" aria-label="Waiting on" maxlength="100" data-enter="1">
+        <div class="sub">The app counts the days and flags it after 5. Click “It arrived” when it does.</div></div>
+      <div class="dlg-err" id="bErr"></div></div>`,
+    onMount: box => {
+      box.querySelector('#bAdd').addEventListener('click', () => {
+        const inp = document.createElement('input');
+        Object.assign(inp, { className: 'input', placeholder: 'Another task to do first', maxLength: 500 });
+        inp.dataset.new = '1';
+        inp.dataset.enter = '1';
+        box.querySelector('#bNew').append(inp);
+        inp.focus();
+      });
+    },
+    onAction: (val, box) => {
+      if (val !== 'ok') return;
+      const reason = box.querySelector('#bReason').value.trim();
+      const err = box.querySelector('#bErr');
+      if (!reason) { err.textContent = 'Write a short reason. It’s what you’ll see in the weekly review.'; box.querySelector('#bReason').focus(); return false; }
+      const create = [...box.querySelectorAll('[data-new]')].map(i => i.value.replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, 10).map(title => ({ id: newId(), title }));
+      const blockers = [...box.querySelectorAll('.picks input:checked')].map(i => i.value);
+      const waiting = box.querySelector('#bWait').value.trim().slice(0, 100);
+      if (!create.length && !blockers.length && !waiting && !err.dataset.warned) {
+        err.dataset.warned = '1';
+        err.style.color = 'var(--amber)';
+        err.textContent = 'There’s no unblock plan yet. You can save anyway and add one later. Click again to save.';
+        return false;
+      }
+      spec = { reason, create, blockers, waiting, milestone: kind === 'project' ? ((currentMs(x) || {}).id || '') : '' };
+    },
+  });
+  if (v !== 'ok' || !spec) return;
+  if (kind === 'project') blockProject(x, spec); else blockTask(x, spec);
+}
+
+function settingsDlg() {
+  const s = S.settings;
+  const hours = Array.from({ length: 24 }, (_, i) => `<option value="${i}" ${i === s.digestHour ? 'selected' : ''}>${fmtTime(pad(i) + ':00')}</option>`).join('');
+  const days = WEEKDAYS.map((d, i) => `<option value="${i}" ${i === s.reviewDay ? 'selected' : ''}>${d}</option>`).join('');
+  openDialog({
+    title: 'Settings', actions: [{ label: 'Done', primary: true, value: true }],
+    body: `<div>
+      <div class="set-title">Google Calendar</div>
+      <div class="set-group">
+        <label class="set-row"><div class="grow"><div class="set-label">Auto-sync new dates</div><div class="set-desc">Create events as soon as something gets a date. List tasks with a due date, project tasks with a time, and project milestones go on the calendar. Items already there always stay current.</div></div><input class="switch" type="checkbox" id="sAuto" ${s.autoSync ? 'checked' : ''}></label>
+        <div class="set-row"><div class="grow"><div class="set-label">Sync everything now</div><div class="set-desc">Creates, updates and removes events for all tasks and milestones.</div></div><button class="btn" type="button" id="sSync">${ic('refresh')}Sync</button></div></div>
+      <div class="set-title">Daily digest</div>
+      <div class="set-group">
+        <label class="set-row"><div class="grow"><div class="set-label">Morning email</div><div class="set-desc">Projects that need attention, overdue, due-today, planned and starred tasks.</div></div><input class="switch" type="checkbox" id="sDigest" ${s.digest ? 'checked' : ''}></label>
+        <div class="set-row"><div class="grow"><div class="set-label">Send at</div></div><select class="select-sm" id="sHour" ${s.digest ? '' : 'disabled'}>${hours}</select></div>
+        <div class="set-row"><div class="grow"><div class="set-label">Weekly review day</div><div class="set-desc">The digest reminds you on this day.</div></div><select class="select-sm" id="sReview">${days}</select></div>
+        <div class="set-row"><div class="grow"><div class="set-label">Send one now</div></div><button class="btn" type="button" id="sSend">${ic('mail')}Send</button></div></div>
+      ${s.sheetUrl ? `<p><a href="${esc(s.sheetUrl)}" target="_blank" rel="noopener" style="color:var(--accent)">Open the task spreadsheet ↗</a></p>` : ''}</div>`,
+    onMount: box => {
+      box.querySelector('#sAuto').addEventListener('change', e => saveSettings({ autoSync: e.target.checked }));
+      box.querySelector('#sDigest').addEventListener('change', e => { box.querySelector('#sHour').disabled = !e.target.checked; saveSettings({ digest: e.target.checked }); });
+      box.querySelector('#sHour').addEventListener('change', e => saveSettings({ digestHour: Number(e.target.value) }));
+      box.querySelector('#sReview').addEventListener('change', e => saveSettings({ reviewDay: Number(e.target.value) }));
+      box.querySelector('#sSync').addEventListener('click', sync);
+      box.querySelector('#sSend').addEventListener('click', async () => { const m = await send('sendDigest'); if (m) snack(m); });
+    },
+  });
+}
+
+function shortcutsDlg() {
+  const rows = [['/', 'Search'], ['c', 'Create task'], ['n', 'Quick-add on this page'], ['j k', 'Next / previous task'], ['Enter', 'Open task details'],
+    ['x', 'Complete task'], ['s', 'Star / unstar'], ['b', 'Mark blocked…'], ['Del', 'Move to trash'], ['Alt ↑ ↓', 'Move task up / down'],
+    ['1–6', 'Home · My Day · Upcoming · Starred · Review · Trash'], ['m', 'Show / hide menu'], ['Esc', 'Close panel or menu']];
+  openDialog({
+    title: 'Keyboard shortcuts', actions: [{ label: 'Close', primary: true, value: true }],
+    body: `<div class="keys">${rows.map(([k, d]) => `<div>${k.split(' ').filter(Boolean).map(x => `<kbd>${esc(x)}</kbd>`).join('')}</div><div>${esc(d)}</div>`).join('')}</div>
+      <p style="margin-top:14px">Quick-add understands:</p>
+      <p style="font-size:13px;line-height:2"><kbd>tomorrow 3pm</kbd> <kbd>fri</kbd> <kbd>oct 5</kbd> <kbd>in 2 weeks</kbd> <kbd>every monday</kbd> <kbd>!high</kbd> <kbd>#Project</kbd> <kbd>^Milestone</kbd> <kbd>~L</kbd> <kbd>*</kbd></p>`,
+  });
+}
+
+let snackTimer;
+function snack(text, action, onAction) {
+  const bar = $('snack'), btn = $('snackAction');
+  $('snackText').textContent = text;
+  btn.hidden = !action;
+  if (action) { btn.textContent = action; btn.onclick = () => { hideSnack(); onAction(); }; }
+  bar.classList.add('show');
+  clearTimeout(snackTimer);
+  snackTimer = setTimeout(hideSnack, action ? 6500 : 3500);
+}
+const hideSnack = () => $('snack').classList.remove('show');
+
+/* ======================================================================
+ * Navigation
+ * ==================================================================== */
+function setView(v, id) {
+  if (v !== 'search' && S.query) { S.query = ''; $('search').value = ''; $('topbar').classList.remove('searching'); }
+  S.view = v;
+  S.id = id === undefined ? null : id;
+  if (v !== 'search') { prefs.view = v; prefs.id = S.id; savePrefs(); }
+  if (isNarrow()) closeDrawer();
+  renderNow();
+  $('main').scrollTop = 0;
+}
+function openProject(id, tab) {
+  if (!proj(id)) return;
+  if (!(S.view === 'project' && S.id === id)) { S.tab = tab || 'overview'; S.noteId = null; S.noteFilter = 'all'; }
+  else if (tab) S.tab = tab;
+  setView('project', id);
+}
+function openList(name) { setView('list', name); }
+function toggleDrawer() {
+  if (isNarrow()) { $('app').classList.toggle('drawer-open'); return; }
+  prefs.drawer = !prefs.drawer;
+  savePrefs();
+  renderTop();
+}
+const closeDrawer = () => $('app').classList.remove('drawer-open');
+
+/* ======================================================================
+ * Events
+ * ==================================================================== */
+const ACT = {
+  view: el => setView(el.dataset.v),
+  project: el => openProject(el.dataset.id, el.dataset.tab),
+  list: el => openList(el.dataset.name),
+  tab: el => { S.tab = el.dataset.v; renderNow(); },
+  task: el => openPanel(el.dataset.id),
+  toggle: el => { const t = byId.get(el.dataset.id); if (!t) return; t.archType === 'Completed' ? uncomplete(t.id) : complete(t.id, el.closest('.task')); },
+  star: el => { const t = byId.get(el.dataset.id); if (t) patch(t.id, { starred: !t.starred }); },
+  create: () => { openNew(); if (isNarrow()) closeDrawer(); },
+  drawer: () => toggleDrawer(),
+  retry: () => { S.error = null; boot(); },
+  refresh: async () => { const b = $('btnRefresh'); b.classList.add('spin'); flushSaves(); await Q.chain; await boot(true); b.classList.remove('spin'); },
+  sync: () => sync(),
+  settings: () => settingsDlg(),
+  shortcuts: () => shortcutsDlg(),
+  'toggle-other': () => { prefs.showOther = !prefs.showOther; savePrefs(); renderNow(); },
+  'new-project': () => newProject(),
+  'new-list': () => newList(),
+  'list-menu': el => { const l = listByName(el.dataset.name); if (l) listMenu(l, el); },
+  'status-menu': el => { const p = proj(el.dataset.id); if (p) statusMenu(p, el); },
+  'edit-project': el => { const p = proj(el.dataset.id); if (p) editProject(p); },
+  pstatus: el => { const p = proj(el.dataset.id); if (p) setProjectStatus(p, el.dataset.v); },
+  milestones: el => { const p = proj(el.dataset.id); if (p) milestonesDlg(p); },
+  block: el => blockDlg(el.dataset.kind, el.dataset.id),
+  unblock: el => unblock(el.dataset.kind, el.dataset.id),
+  arrived: el => arrived(el.dataset.kind, el.dataset.id),
+  followed: el => followedUp(el.dataset.kind, el.dataset.id),
+  uh: el => { S.uh[el.dataset.id] = el.dataset.h; renderNow(); },
+  'post-update': el => { const p = proj(el.dataset.id); if (p) postUpdate(p, el.dataset.ctx); },
+  'close-project': el => { const p = proj(el.dataset.id); if (p) closeProject(p); },
+  'plan-today': el => { const t = byId.get(el.dataset.id); if (t) { patch(t.id, { plan: todayISO() }); snack(`Added to My Day: ${t.title}`); } },
+  note: el => { const n = S.notes.find(x => x.id === el.dataset.id); if (!n) return; openProject(n.projectId, 'notes'); S.noteId = n.id; S.noteFilter = 'all'; renderNow(); },
+  nfilter: el => { S.noteFilter = el.dataset.v; S.noteId = null; renderNow(); },
+  pin: el => { const n = S.notes.find(x => x.id === el.dataset.id); if (n) { n.pinned = !n.pinned; send('saveNote', { id: n.id, pinned: n.pinned }); renderNow(); } },
+  'new-note': el => { const p = proj(el.dataset.id); if (p) newNote(p, el.dataset.v); },
+  'delete-note': el => { const n = S.notes.find(x => x.id === el.dataset.id); if (n) deleteNote(n); },
+  'note-task': el => { const n = S.notes.find(x => x.id === el.dataset.id); if (n) noteToTask(n, Number(el.dataset.i)); },
+  'show-done': el => { const k = el.dataset.v; prefs.open[k] = !prefs.open[k]; savePrefs(); renderNow(); },
+  'close-panel': () => closePanel(),
+  'submit-new': () => submitNew(),
+  set: el => setField(el.dataset.f, el.dataset.v),
+  move: el => { if (S.taskId) moveBy(S.taskId, Number(el.dataset.v)); },
+  'trash-task': el => trash(el.dataset.id),
+  untrash: el => untrash(el.dataset.id),
+  purge: el => purge(el.dataset.id),
+  'empty-trash': () => emptyTrash(),
+};
+document.addEventListener('click', e => {
+  if (e.target.closest('#layer')) return;
+  const el = e.target.closest('[data-act]');
+  if (!el || !el.dataset.act || el.disabled) return;
+  const fn = ACT[el.dataset.act];
+  if (fn) { e.preventDefault(); fn(el, e); }
+});
+
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.dataset.noteType) {
+    const n = S.notes.find(x => x.id === el.dataset.noteType);
+    if (n) { n.type = el.value; send('saveNote', { id: n.id, type: n.type }); renderNow(); }
+    return;
+  }
+  const f = el.dataset.f;
+  if (!f || !$('panel').contains(el) || f === 'title' || f === 'desc') return;
+  setField(f, el.value);
+});
+
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el.dataset.qa) {
+    const key = el.dataset.key.slice(3), defaults = JSON.parse(el.dataset.defaults || '{}');
+    if (el.value) drafts.set(key, el.value); else drafts.delete(key);
+    const pv = document.querySelector(`[data-preview="${CSS.escape(key)}"]`);
+    if (pv) pv.innerHTML = el.value.trim() ? previewChips(quickFields(el.value, defaults), defaults) : '';
+    return;
+  }
+  if (el.dataset.draft) { drafts.set(el.dataset.draft, el.value); return; }
+  if (el.dataset.subadd) { drafts.set('sub:' + el.dataset.subadd, el.value); return; }
+  if (el.dataset.note) {
+    const n = S.notes.find(x => x.id === el.dataset.note);
+    if (!n) return;
+    saveNoteSoon(n, { [el.dataset.nf]: el.value });
+    if (el.dataset.nf === 'title') { const nl = $('nlist'); const p = proj(n.projectId); if (nl && p) nl.innerHTML = noteListHTML(notesOf(p).filter(x => S.noteFilter === 'all' || x.type === S.noteFilter).sort((a, b) => b.pinned - a.pinned || (b.updated || '').localeCompare(a.updated || ''))); }
+    else { const ai = $('ai'); if (ai) ai.innerHTML = aiHTML(n); }
+    return;
+  }
+  const f = el.dataset.f;
+  if ((f === 'title' || f === 'desc') && $('panel').contains(el)) {
+    autogrow(el);
+    const v = f === 'title' ? el.value.replace(/\n/g, ' ') : el.value;
+    if (S.draft) {
+      S.draft[f] = v;
+      const b = $('panel').querySelector('[data-act="submit-new"]');
+      if (b) b.disabled = !S.draft.title.trim();
+    } else if (S.taskId && (f === 'desc' || v.trim())) saveSoon(S.taskId, f, f === 'title' ? v.trim() : v);
+  }
+});
+document.addEventListener('focusout', e => {
+  const el = e.target;
+  if (el.dataset && (el.dataset.f === 'title' || el.dataset.f === 'desc') && S.taskId) {
+    const t = byId.get(S.taskId);
+    if (el.dataset.f === 'title' && t && !el.value.trim()) el.value = t.title;
+    flushSaves();
+  }
+  if (el.dataset && el.dataset.note) flushNote(el.dataset.note);
+});
+
+function quickAddEnter(el) {
+  const text = el.value.trim();
+  if (!text) return;
+  const key = el.dataset.key.slice(3), defaults = JSON.parse(el.dataset.defaults || '{}');
+  const f = quickFields(text, defaults);
+  const t = createTask(f);
+  drafts.delete(key);
+  el.value = '';
+  const pv = document.querySelector(`[data-preview="${CSS.escape(key)}"]`);
+  if (pv) pv.innerHTML = '';
+  if (f.list !== defaults.list) snack(`Added to ${f.list}`, 'Open', () => openPanel(t.id));
+}
+
+document.addEventListener('keydown', e => {
+  if (dialogOpen() || $('layer').querySelector('.menu')) return;
+  const el = e.target, tag = el.tagName, typing = /^(INPUT|TEXTAREA|SELECT)$/.test(tag) || el.isContentEditable;
+  if (el.dataset && el.dataset.qa && e.key === 'Enter' && !e.isComposing) { e.preventDefault(); quickAddEnter(el); return; }
+  if (el.dataset && el.dataset.subadd && e.key === 'Enter' && !e.isComposing && el.value.trim()) {
+    e.preventDefault();
+    const parent = byId.get(el.dataset.subadd);
+    if (parent) createTask({ title: el.value.trim(), parent: parent.id, list: parent.list, milestone: parent.milestone, append: true });
+    drafts.delete('sub:' + el.dataset.subadd);
+    el.value = '';
+    return;
+  }
+  if (el.dataset && el.dataset.f === 'title' && e.key === 'Enter' && !e.isComposing) {
+    e.preventDefault();
+    if (S.draft) submitNew(); else { const d = $('panel').querySelector('.pn-desc'); if (d) d.focus(); }
+    return;
+  }
+  if (e.key === 'Escape') {
+    if (el === $('search')) { clearSearch(); el.blur(); return; }
+    if (el.dataset && el.dataset.qa) { el.value = ''; drafts.delete(el.dataset.key.slice(3)); el.blur(); return; }
+    if ((S.taskId || S.draft) && (!typing || $('panel').contains(el))) { e.preventDefault(); closePanel(); return; }
+    if ($('app').classList.contains('drawer-open')) { closeDrawer(); return; }
+    hideSnack();
+    return;
+  }
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && (S.taskId || S.draft)) { e.preventDefault(); if (S.draft) submitNew(); else closePanel(); return; }
+  if (typing) return;
+  const row = el.closest && el.closest('.task, .prow');
+  const t = row && row.classList.contains('task') ? byId.get(row.dataset.id) : null;
+  if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    const id = (t && t.id) || S.taskId;
+    if (id) { e.preventDefault(); moveBy(id, e.key === 'ArrowUp' ? -1 : 1); }
+    return;
+  }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const views = { 1: 'home', 2: 'myday', 3: 'upcoming', 4: 'starred', 5: 'review', 6: 'trash' };
+  if (views[e.key]) { e.preventDefault(); setView(views[e.key]); return; }
+  const keys = {
+    '/': () => { $('topbar').classList.add('searching'); $('search').focus(); },
+    c: () => openNew(), '?': shortcutsDlg, m: toggleDrawer,
+    n: () => { const i = $('main').querySelector('.qa input'); if (i) { i.focus(); i.scrollIntoView({ block: 'nearest' }); } else openNew(); },
+    j: () => moveFocus(1), k: () => moveFocus(-1), ArrowDown: () => moveFocus(1), ArrowUp: () => moveFocus(-1),
+    x: () => t && (t.archived ? uncomplete(t.id) : complete(t.id, row)),
+    s: () => t && !t.archived && patch(t.id, { starred: !t.starred }),
+    b: () => t && !t.archived && blockDlg('task', t.id),
+    e: () => t && openPanel(t.id),
+    Enter: () => { if (t) openPanel(t.id); else if (row) row.click(); },
+    Delete: () => t && trash(t.id), Backspace: () => t && trash(t.id),
+  };
+  if (keys[e.key]) {
+    if (e.key === 'Enter' && /^(BUTTON|A|SUMMARY)$/.test(tag)) return;
+    e.preventDefault();
+    keys[e.key]();
+  }
+});
+function moveFocus(dir) {
+  const rows = [...$('main').querySelectorAll('.task')];
+  if (!rows.length) return;
+  const cur = document.activeElement.closest && document.activeElement.closest('.task');
+  const i = rows.indexOf(cur);
+  const next = rows[i < 0 ? 0 : Math.max(0, Math.min(rows.length - 1, i + dir))];
+  next.focus();
+  next.scrollIntoView({ block: 'nearest' });
+}
+
+let searchTimer;
+function onSearch() {
+  const v = $('search').value;
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    if (v.trim()) { if (S.view !== 'search') { S.prevView = S.view; S.prevId = S.id; } S.query = v; S.view = 'search'; }
+    else if (S.view === 'search') { S.query = ''; S.view = S.prevView; S.id = S.prevId; }
+    renderNow();
+  }, 120);
+}
+function clearSearch() {
+  $('search').value = '';
+  $('topbar').classList.remove('searching');
+  if (S.view === 'search') { S.query = ''; S.view = S.prevView; S.id = S.prevId; renderNow(); }
+}
+
+function initShell() {
+  const put = (id, name) => { $(id).insertAdjacentHTML('afterbegin', ic(name)); };
+  put('btnDrawer', 'menu');
+  put('btnRefresh', 'refresh');
+  put('btnSync', 'event');
+  put('btnSettings', 'settings');
+  put('btnClearSearch', 'close');
+  put('searchBox', 'search');
+  $('fab').innerHTML = `${ic('add')}<span>Create</span>`;
+  $('searchBox').addEventListener('click', () => { $('topbar').classList.add('searching'); $('search').focus(); });
+  $('search').addEventListener('input', onSearch);
+  $('search').addEventListener('blur', () => { if (!$('search').value) $('topbar').classList.remove('searching'); });
+  $('btnClearSearch').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); clearSearch(); $('search').focus(); });
+  window.addEventListener('pagehide', flushSaves);
+  $('main').addEventListener('compositionstart', () => { composing = true; });
+  $('main').addEventListener('compositionend', () => { composing = false; if (renderBlocked) { renderBlocked = false; renderNow(); } });
+  window.addEventListener('resize', () => { if (!isNarrow()) closeDrawer(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') { flushSaves(); return; }
+    if (!S.ready || Q.pending) return;
+    const a = document.activeElement;
+    if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return;
+    if (Date.now() - S.loadedAt > 120000) boot(true);
+  });
+  let midnight = todayISO();
+  setInterval(() => { if (todayISO() !== midnight) { midnight = todayISO(); schedule(); } }, 60000);
+}
+
+initShell();
+render();
+boot();
+</script>

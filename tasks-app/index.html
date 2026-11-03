@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tasks</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <?!= include('styles'); ?>
+</head>
+<body>
+  <div class="app" id="app">
+    <aside class="drawer" id="drawer" aria-label="Navigation"></aside>
+    <div class="drawer-scrim" data-act="drawer"></div>
+
+    <main class="main">
+      <header class="topbar" id="topbar">
+        <button class="icon-btn" id="btnDrawer" type="button" data-act="drawer" title="Main menu (m)" aria-label="Toggle main menu"></button>
+        <h1 id="viewTitle">Tasks</h1>
+        <div class="search" id="searchBox" role="search">
+          <input id="search" type="search" placeholder="Search tasks and notes" aria-label="Search tasks and notes" autocomplete="off">
+          <kbd id="searchKbd">/</kbd>
+          <button class="icon-btn" id="btnClearSearch" type="button" title="Clear search" aria-label="Clear search" hidden></button>
+        </div>
+        <span class="status" id="status" aria-live="polite"></span>
+        <button class="icon-btn" id="btnRefresh" type="button" data-act="refresh" title="Refresh" aria-label="Refresh"></button>
+        <button class="icon-btn" id="btnSync" type="button" data-act="sync" title="Sync to Google Calendar" aria-label="Sync to Google Calendar"></button>
+        <button class="icon-btn" id="btnSettings" type="button" data-act="settings" title="Settings" aria-label="Settings"></button>
+      </header>
+      <div class="scroll" id="main"></div>
+    </main>
+
+    <aside class="panel" id="panel" aria-label="Task details" aria-hidden="true"></aside>
+  </div>
+
+  <button class="fab" id="fab" type="button" data-act="create" aria-label="Create task"></button>
+  <div class="snack" id="snack" role="status"><span id="snackText"></span><button id="snackAction" type="button" hidden></button></div>
+  <div id="layer"></div>
+
+  <?!= include('app'); ?>
+</body>
+</html>
