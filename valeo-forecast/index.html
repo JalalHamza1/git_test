@@ -77,7 +77,7 @@
       </section>
       <section id="view-backtest" class="panel" role="tabpanel" hidden>
         <h2>Past forecasts vs actual shipments</h2><p class="hint">Compare the customer forecast and the model prediction made at the selected version with the shipments that followed.</p>
-        <div class="filter"><label for="version-filter">Forecast version</label><select id="version-filter"></select><label for="horizon-filter">Weeks ahead</label><select id="horizon-filter"><option value="all">All 21 horizons</option></select><label class="check-label"><input id="backtest-details" type="checkbox">Show details</label><span id="case-count" class="hint"></span></div>
+        <div class="filter"><label for="version-filter">Forecast version</label><select id="version-filter"></select><label for="horizon-filter">Weeks ahead</label><select id="horizon-filter"><option value="all">All 21 horizons</option></select><label class="check-label"><input id="backtest-details" type="checkbox">Show details</label><span id="case-count" class="hint"></span></div><p id="backtest-why" class="status" style="margin:0 0 14px"></p>
         <div id="backtest-table" class="table-scroll"></div><div class="actions" style="margin-top:10px"><button id="page-prev">Previous</button><span id="page-info" class="hint"></span><button id="page-next">Next</button></div>
         <p class="footnote">Choose the version to see what was forecast and predicted then, compared with the eventual shipments. “Show details” adds errors and model information. All versions automatically shows details to identify repeated delivery weeks.</p>
       </section>
@@ -190,16 +190,22 @@ blend = 0 keeps the customer's original forecast.</div>
     versions.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;$('version-filter').appendChild(o);});
     const all=document.createElement('option');all.value='all';all.textContent='All versions (details)';$('version-filter').appendChild(all);
     // Newest versions only have 1–2 matured weeks. Default to the newest version with the most completed cases.
-    const counts=new Map();state.analysis.backtest.forEach(r=>counts.set(r.origin,(counts.get(r.origin)||0)+1));
-    const best=versions.reduce((b,v)=>counts.get(v)>counts.get(b)?v:b,versions[0]);
+    const counts=new Map(),fixed=new Map();state.analysis.backtest.forEach(r=>{counts.set(r.origin,(counts.get(r.origin)||0)+1);if(r.alpha>0)fixed.set(r.origin,(fixed.get(r.origin)||0)+1);});
+    // Prefer the newest version where the model actually changed something; otherwise the one with most weeks.
+    const best=(fixed.size?versions.reduce((b,v)=>(fixed.get(v)||0)>(fixed.get(b)||0)?v:b,versions[0]):null)||versions.reduce((b,v)=>counts.get(v)>counts.get(b)?v:b,versions[0]);
     $('version-filter').value=versions.includes(previous)||previous==='all'?previous:best;
-    [...$('version-filter').options].forEach(o=>{if(counts.has(o.value))o.textContent=o.value+' ('+counts.get(o.value)+' weeks)';});
+    [...$('version-filter').options].forEach(o=>{if(counts.has(o.value))o.textContent=o.value+' ('+counts.get(o.value)+' weeks'+(fixed.has(o.value)?', '+fixed.get(o.value)+' corrected':'')+')';});
   }
   function filteredCases(){if(!state.analysis)return[];const h=$('horizon-filter').value,v=$('version-filter').value;return state.analysis.backtest.filter(r=>(h==='all'||r.horizon===+h)&&(v==='all'||r.origin===v)).slice().sort((a,b)=>b.origin.localeCompare(a.origin)||a.week.localeCompare(b.week));}
   function renderBacktest(){
     const all=filteredCases(),rs=all.slice(state.page*100,(state.page+1)*100),details=$('backtest-details').checked||$('version-filter').value==='all';
-    const headers=details?['Version','Delivery week','Weeks ahead','Customer forecast','Model prediction','Actual shipments','Customer abs. error','Model abs. error','Source']:['Delivery week','Customer forecast','Model prediction','Actual shipments'];
-    $('backtest-table').innerHTML=table(headers,rs.map(r=>details?[esc(r.origin),esc(r.week),r.horizon,num(r.customer),num(r.prediction),num(r.actual),num(Math.abs(r.customer-r.actual)),num(Math.abs(r.prediction-r.actual)),modelPill(r)]:[esc(r.week),num(r.customer),num(r.prediction),num(r.actual)]));
+    const headers=details?['Version','Delivery week','Weeks ahead','Customer forecast','Model prediction','Actual shipments','Customer abs. error','Model abs. error','Source','Why']:['Delivery week','Customer forecast','Model prediction','Actual shipments','Source'];
+    $('backtest-table').innerHTML=table(headers,rs.map(r=>details?[esc(r.origin),esc(r.week),r.horizon,num(r.customer),num(r.prediction),num(r.actual),num(Math.abs(r.customer-r.actual)),num(Math.abs(r.prediction-r.actual)),modelPill(r),'<span class="hint">'+esc(r.reason)+'</span>']:[esc(r.week),num(r.customer),num(r.prediction),num(r.actual),modelPill(r)]));
+    // Explain why model = customer, which is the normal result until enough history exists.
+    const fixedAll=state.analysis.backtest.filter(r=>r.alpha>0),fixedHere=all.filter(r=>r.alpha>0).length;
+    const firstFix=fixedAll.map(r=>r.origin).sort()[0],ce=all.reduce((s,r)=>s+Math.abs(r.customer-r.actual),0),me=all.reduce((s,r)=>s+Math.abs(r.prediction-r.actual),0);
+    $('backtest-why').innerHTML=!all.length?'':fixedHere?'<b>The model changed '+fixedHere+' of '+all.length+' weeks here.</b> Total absolute error: customer '+num(ce)+' vs model '+num(me)+' ('+(me<ce?'model better':me>ce?'customer better':'equal')+').':
+      '<b>Model prediction = customer forecast for every week here.</b> This is intended: the model only changes a forecast after earlier versions prove the change would have cut the error by at least 2%. '+(firstFix?'In this build that first happens at version <b>'+esc(firstFix)+'</b>; pick it (or a later one marked “corrected”) in the list.':'With the history in this build that has not happened yet; more forecast versions and shipment weeks are needed.');
     if(!state.analysis.backtest.length)$('backtest-table').innerHTML='<div class="empty"><h2>No backtest yet</h2><p class="muted">'+(state.analysis.coverageConfirmed?'No forecast version has a completed delivery week inside the confirmed shipment range. Check the range under Advanced settings.':'The backtest only scores weeks inside a complete shipment range, and none is set. Open <b>Advanced settings</b>, enter the first and last complete week, then click <b>Apply settings</b>.')+'</p></div>';
     $('case-count').textContent=all.length+' completed cases';$('page-info').textContent=all.length?'Page '+(state.page+1)+' / '+Math.ceil(all.length/100):'No completed cases';controls();
   }
