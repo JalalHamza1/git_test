@@ -254,7 +254,19 @@ var ForecastEngine = (function () {
       lastPosting: data.shipments.map(function (r) { return r.date; }).sort().slice(-1)[0],
       gaps: gaps, confirmed: false, decade: o.decade, signMode: o.signMode};
     data.importNotes.push('Automatically detected SAP decade ' + o.decade + ' and ' + o.signMode + ' quantity convention. Reporting delay uses the saved/default setting, not an inferred timestamp.');
-    data.importNotes.push('Suggested coverage excludes the first and last recorded shipment weeks and the current calendar week. It requires confirmation; gaps remain unknown.');
+    if (data.detection.suggestedFrom) {
+      // Use the detected range straight away so predictions and the backtest run on Build.
+      // It can still be changed under Advanced settings.
+      data.options = options(Object.assign({}, data.options, {actualFrom: data.detection.suggestedFrom,
+        actualThrough: data.detection.suggestedThrough, missingZero: false}));
+      data.detection.confirmed = true;
+      data.detection.automatic = true;
+      data.importNotes.push('Shipment range ' + data.detection.suggestedFrom + ' to ' + data.detection.suggestedThrough +
+        ' was detected automatically and used (first and last recorded weeks and the current week excluded' +
+        (gaps.length ? '; weeks without shipments left unknown: ' + gaps.join(', ') : '') + '). Change it under Advanced settings if needed.');
+    } else {
+      data.importNotes.push('Too few finished shipment weeks to detect a complete range. Set the range under Advanced settings to enable the model and backtest.');
+    }
     return data;
   }
   function examples(ctx) {
