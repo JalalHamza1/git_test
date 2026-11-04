@@ -85,7 +85,11 @@ var ForecastEngine = (function () {
     assert(Number.isInteger(o.decade) && o.decade >= 2000 && o.decade <= 2090 && o.decade % 10 === 0, 'SAP version decade must be 2000, 2010, 2020, etc.');
     assert(o.signMode === 'sap' || o.signMode === 'positive', 'Invalid quantity convention.');
     assert(Number.isInteger(o.lag) && o.lag >= 1 && o.lag <= 8, 'Shipment availability lag must be 1–8 weeks.');
-    assert(Boolean(o.actualFrom) === Boolean(o.actualThrough), 'Enter both the first and last complete shipment week, or leave both blank for preview.');
+    // Shipment weeks the user excludes (e.g. own production/delivery shortfalls): treated as unknown.
+    var ex = Array.isArray(input.excludeWeeks) ? input.excludeWeeks : [];
+    assert(ex.length <= 520, 'Too many excluded weeks.');
+    o.excludeWeeks = Array.from(new Set(ex.map(function (s) { return label(week(s)); }))).sort();
+    assert(Boolean(o.actualFrom) === Boolean(o.actualThrough),'Enter both the first and last complete shipment week, or leave both blank for preview.');
     if (o.actualFrom) {
       var from = week(o.actualFrom), through = week(o.actualThrough);
       assert(from <= through && through - from <= 520, 'Complete shipment range must be ordered and at most ten years.');
@@ -199,14 +203,17 @@ var ForecastEngine = (function () {
     if (!o.missingZero) notes.push('Weeks with no shipment rows remain unknown, including gaps inside the complete interval.');
     notes.push('Historical availability assumption: a completed shipment week becomes known ' + o.lag + ' week(s) later. Later SAP corrections cannot be reconstructed without archived extracts.');
     if (data.forecast.every(function (r) { return !r.material || !r.customer; })) notes.push('Forecast file has no complete material/customer key. Confirm that it belongs to the shipment pair shown.');
+    var excluded = new Set(o.excludeWeeks.map(function (s) { return week(s); }));
+    if (excluded.size) notes.push('Excluded shipment weeks (not used for training, the backtest, scoring or the scale): ' + o.excludeWeeks.join(', ') + '.');
     function actualAt(w, asOf) {
-      if (from === null || w < from || w > through || (asOf !== undefined && w + o.lag > asOf)) return null;
+      if (excluded.has(w)) return null;
+      if (from === null|| w < from || w > through || (asOf !== undefined && w + o.lag > asOf)) return null;
       return actual.has(w) ? actual.get(w) : (o.missingZero ? 0 : null);
     }
     return {data: data, options: o, forecasts: forecasts, actual: actual, actualAt: actualAt,
       origins: os, targets: Array.from(targets).sort(function (a, b) { return a - b; }), notes: notes,
       material: Array.from(materials)[0] || 'Unspecified', customer: Array.from(customers)[0] || 'Unspecified',
-      unit: Array.from(units)[0] || 'units', from: from, through: through};
+      unit: Array.from(units)[0] || 'units', from: from, through: through, excluded: excluded};
   }
   function autoImport(request, today) {
     var fs = table(request.forecastGrid, ['Version', 'Week', 'Total Demand'], [], 'Forecast');
@@ -429,16 +436,30 @@ var ForecastEngine = (function () {
     actualWeeks.sort(function (a, b) { return a - b; });
     var actualRows = actualWeeks.map(function (w) {
       return {week: label(w), quantity: ctx.actual.has(w) ? ctx.actual.get(w) : null, verified: ctx.actualAt(w),
-        status: ctx.actualAt(w) === null ? 'Unverified / unknown' : (ctx.actual.has(w) ? 'Complete' : 'Confirmed zero')};
+        status: ctx.excluded.has(w) ? 'Excluded by user' : ctx.actualAt(w) === null ? 'Unverified / unknown' :(ctx.actual.has(w) ? 'Complete' : 'Confirmed zero')};
     });
     var waterfallWeeks = Array.from(new Set(ctx.targets.concat(actualWeeks))).sort(function (a, b) { return a - b; });
     assert(waterfallWeeks.length <= 650, 'Waterfall spans more than 650 weeks. Filter the input range.');
     var confirmed = ctx.from !== null;
     var waterfall = {headers: ['Version / delivery'].concat(waterfallWeeks.map(label)), rows: [], confirmed: confirmed};
     // Before coverage is confirmed, show imported shipments (for display only; the model still ignores them).
+    var imported = function (w) { return ctx.actual.has(w) ? ctx.actual.get(w) : null; };
+    var actualValues = waterfallWeeks.map(function (w) { return !confirmed || ctx.excluded.has(w) ? imported(w) : ctx.actualAt(w); });
+    var actualMarks = waterfallWeeks.map(function (w) { return ctx.excluded.has(w) ? 'excluded' : null; });
     waterfall.rows.push({label: confirmed ? 'Actual — complete only' : 'Shipments — not yet confirmed', kind: 'actual',
-      values: waterfallWeeks.map(function (w) { return confirmed ? ctx.actualAt(w) : (ctx.actual.has(w) ? ctx.actual.get(w) : null); })});
-    ctx.origins.forEach(function (o) { waterfall.rows.push({label: label(o), kind: 'forecast', values: waterfallWeeks.map(function (t) { var v = ctx.forecasts.get(o + ':' + t); return v === undefined ? null : v; })}); });
+      values: actualValues, marks: actualMarks});
+    // Classic waterfall: in each version row, weeks already in the past show the actual shipments
+    // (marked 'actual', shown green), continuing down each column. The customer's own number for
+    // that past week, if any, is kept in 'original'.
+    ctx.origins.forEach(function (o) {
+      var values = [], marks = [], original = [];
+      waterfallWeeks.forEach(function (t, i) {
+        var f = ctx.forecasts.get(o + ':' + t); f = f === undefined ? null : f;
+        if (t < o && actualValues[i] !== null) { values.push(actualValues[i]); marks.push(actualMarks[i] || 'actual'); original.push(f); }
+        else { values.push(f); marks.push(null); original.push(null); }
+      });
+      waterfall.rows.push({label: label(o), kind: 'forecast', values: values, marks: marks, original: original});
+    });
     var backtest = scored.map(function (r) { return {origin: label(r.origin), week: label(r.target), horizon: r.h, customer: r.f, actual: r.y,
       prediction: r.prediction, alpha: r.alpha, model: r.model, reason: r.reason}; });
     var totals = totalCases(history, 21);
@@ -607,7 +628,8 @@ function exportMatrices_(data, a) {
   });
   tables['Settings v2'] = [['Setting', 'Value'], ['Engine', a.version], ['As of forecast version', a.origin], ['Material', a.material], ['Customer', a.customer], ['Unit', a.unit],
     ['Complete from', a.options.actualFrom], ['Complete through', a.options.actualThrough], ['Missing weeks are confirmed zero', a.options.missingZero],
-    ['Quantity convention', a.options.signMode], ['Availability lag (weeks)', a.options.lag], ['SAP decade', a.options.decade],
+    ['Excluded shipment weeks', (a.options.excludeWeeks || []).join(', ') || 'none'],
+    ['Quantity convention', a.options.signMode],['Availability lag (weeks)', a.options.lag], ['SAP decade', a.options.decade],
     ['Training window (weeks)', 104], ['Validation window (weeks)', 52], ['Selection margin', 0.02], ['Minimum training targets (small/full)', '12 / 26'],
     ['Minimum exact-horizon validation cases', 6], ['Exact-horizon validation margin', 0.02],
     ['All-case customer MAE', a.overall.customerMAE], ['All-case model MAE', a.overall.modelMAE], ['Scored cases', a.overall.cases],
@@ -618,25 +640,34 @@ function exportMatrices_(data, a) {
   a.importNotes.forEach(function (note, i) { tables['Settings v2'].push(['Data note ' + (i + 1), note]); });
   return tables;
 }
-function writeTables_(ss, tables) {
+function writeTables_(ss, tables, a) {
   Object.keys(tables).forEach(function (name) {
     var values = tables[name], s = ss.getSheetByName(name) || ss.insertSheet(name);
     size_(s, values.length, values[0].length);
-    s.clearContents();
+    s.clear(); // contents and old colours (e.g. a previous, larger waterfall)
     s.getRange(1, 1, values.length, values[0].length).setValues(values.map(function (row) { return row.map(safeCell_); }));
     s.getRange(1, 1, 1, values[0].length).setFontWeight('bold').setBackground('#163b36').setFontColor('#ffffff');
     s.setFrozenRows(1); s.setColumnWidth(1, 170);
-    if (name === 'Waterfall v2') { s.setFrozenColumns(1); s.getRange(2, 1, 1, values[0].length).setBackground('#dcfce7'); }
+    if (name === 'Waterfall v2') {
+      s.setFrozenColumns(1);
+      if (a && values.length > 1 && values[0].length > 1) {
+        var colors = {actual: '#dcfce7', excluded: '#e5e7eb'};
+        s.getRange(2, 2, values.length - 1, values[0].length - 1).setBackgrounds(a.waterfall.rows.map(function (r) {
+          return r.values.map(function (_, i) { return r.marks && r.marks[i] ? colors[r.marks[i]] : (r.kind === 'actual' ? '#dcfce7' : '#ffffff'); });
+        }));
+      }
+      s.getRange(2, 1).setBackground('#dcfce7');
+    }
   });
   SpreadsheetApp.flush();
 }
 function publishTabs(data) {
   var a = ForecastEngine.analyze(data), tables = exportMatrices_(data, a);
-  return lock_(function () { var ss = spreadsheet_(); writeTables_(ss, tables); return ss.getUrl(); });
+  return lock_(function () { var ss = spreadsheet_(); writeTables_(ss, tables, a); return ss.getUrl(); });
 }
 function exportToGoogleSheet(data) {
   var a = ForecastEngine.analyze(data), tables = exportMatrices_(data, a);
   var ss = SpreadsheetApp.create('Valeo Forecast — ' + a.material + ' — ' + a.origin);
-  ss.getSheets()[0].setName('Prediction'); writeTables_(ss, tables);
+  ss.getSheets()[0].setName('Prediction'); writeTables_(ss, tables, a);
   return ss.getUrl();
 }
