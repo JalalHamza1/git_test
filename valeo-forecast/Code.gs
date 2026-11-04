@@ -62,8 +62,14 @@ var ForecastEngine = (function () {
   }
   function week(x, version, decade) {
     var s = String(x == null ? '' : x).trim(), m, y, n;
-    if ((m = /^(20\d{2})-?W(\d{1,2})$/i.exec(s))) { y = +m[1]; n = +m[2]; }
-    else if (!version && (m = /^(\d{1,2})\.(20\d{2})$/.exec(s))) { n = +m[1]; y = +m[2]; }
+    // Excel stores "10.2030" as the number 10.203 and version "005" as 5: restore the text.
+    if (finite(x) && !version && Math.floor(x) !== x) s = x.toFixed(4);
+    if (finite(x) && version && Number.isInteger(x) && x >= 0 && x < 1000) s = String(x).padStart(3, '0');
+    s = s.replace(/^(KW|CW|WK|W)\s*(?=\d{1,2}\b)/i, '');
+    if ((m = /^(20\d{2})\s*[-/.]?\s*W\s*(\d{1,2})$/i.exec(s))) { y = +m[1]; n = +m[2]; }
+    else if (!version && (m = /^(\d{1,2})\s*[./\s]\s*(20\d{2})$/.exec(s))) { n = +m[1]; y = +m[2]; }
+    else if (!version && (m = /^(20\d{2})\s*[/\s]\s*(\d{1,2})$/.exec(s))) { y = +m[1]; n = +m[2]; }
+    else if (!version && (m = /^(20\d{2})(\d{2})$/.exec(s))) { y = +m[1]; n = +m[2]; }
     else if (version && (m = /^(\d)(\d{2})$/.exec(s))) { y = decade + +m[1]; n = +m[2]; }
     else fail('Invalid ' + (version ? 'version' : 'week') + ' "' + s + '". Use YYYY-Www' + (version ? ' or a three-digit SAP version.' : ' or ww.YYYY.'));
     var first = Math.floor((Date.UTC(y, 0, 4) - MONDAY) / WEEK), w = first + n - 1;
@@ -107,7 +113,8 @@ var ForecastEngine = (function () {
     var same = hits.filter(function (h) { return JSON.stringify(h.map) === JSON.stringify(indices); });
     var records = [], outside = 0, headers = new Set(same.map(function (h) { return h.row; }));
     grid.forEach(function (r, i) {
-      if (headers.has(i)) return;
+      // Rows above the header are report titles, filters or notes: never data.
+      if (i <= row || headers.has(i)) return;
       var obj = {sourceRow: i + 1};
       names.forEach(function (n) { if (indices[n] !== undefined) obj[n] = r[indices[n]] == null ? '' : r[indices[n]]; });
       if (Object.keys(indices).every(function (k) { return blank(obj[k]); })) {
@@ -146,7 +153,7 @@ var ForecastEngine = (function () {
           unit: String(r['Unit of Entry'] || '').trim(), sourceRow: r.sourceRow});
       } catch (e) { fail('Shipment row ' + r.sourceRow + ': ' + e.message); }
     });
-    warnings.push('Forecast headers: row ' + fs.headerRow + '; shipment headers: row ' + ss.headerRow + '. Read transactions above and below headers.');
+    warnings.push('Forecast headers: row ' + fs.headerRow + '; shipment headers: row ' + ss.headerRow + '. Rows above the headers (titles, filters) were ignored.');
     if (fs.otherTables || ss.otherTables) warnings.push((fs.otherTables + ss.otherTables) + ' additional labeled table(s) found in other columns. Only the first labeled table was imported; separate other tables into their own worksheets if needed.');
     if (fs.outside || ss.outside) warnings.push((fs.outside + ss.outside) + ' rows contained only data outside the labeled table and were not imported. Check the selected worksheet/table.');
     if (skipped) warnings.push(skipped + ' rows without transaction/forecast keys were skipped (for example, totals).');
@@ -203,7 +210,9 @@ var ForecastEngine = (function () {
   }
   function autoImport(request, today) {
     var fs = table(request.forecastGrid, ['Version', 'Week', 'Total Demand'], [], 'Forecast');
-    var compact = fs.records.filter(function (r) { return /^\d{3}$/.test(String(r.Version).trim()); });
+    var compact = fs.records.filter(function (r) {
+      return /^\d{3}$/.test(String(r.Version).trim()) || (Number.isInteger(r.Version) && r.Version >= 0 && r.Version < 1000);
+    });
     var decades = [];
     if (compact.length) {
       for (var d = 2000; d <= 2090; d += 10) {
@@ -412,13 +421,16 @@ var ForecastEngine = (function () {
     });
     var waterfallWeeks = Array.from(new Set(ctx.targets.concat(actualWeeks))).sort(function (a, b) { return a - b; });
     assert(waterfallWeeks.length <= 650, 'Waterfall spans more than 650 weeks. Filter the input range.');
-    var waterfall = {headers: ['Version / delivery'].concat(waterfallWeeks.map(label)), rows: []};
-    waterfall.rows.push({label: 'Actual — complete only', kind: 'actual', values: waterfallWeeks.map(function (w) { return ctx.actualAt(w); })});
+    var confirmed = ctx.from !== null;
+    var waterfall = {headers: ['Version / delivery'].concat(waterfallWeeks.map(label)), rows: [], confirmed: confirmed};
+    // Before coverage is confirmed, show imported shipments (for display only; the model still ignores them).
+    waterfall.rows.push({label: confirmed ? 'Actual — complete only' : 'Shipments — not yet confirmed', kind: 'actual',
+      values: waterfallWeeks.map(function (w) { return confirmed ? ctx.actualAt(w) : (ctx.actual.has(w) ? ctx.actual.get(w) : null); })});
     ctx.origins.forEach(function (o) { waterfall.rows.push({label: label(o), kind: 'forecast', values: waterfallWeeks.map(function (t) { var v = ctx.forecasts.get(o + ':' + t); return v === undefined ? null : v; })}); });
     var backtest = scored.map(function (r) { return {origin: label(r.origin), week: label(r.target), horizon: r.h, customer: r.f, actual: r.y,
       prediction: r.prediction, alpha: r.alpha, model: r.model, reason: r.reason}; });
     var totals = totalCases(history, 21);
-    return {version: VERSION, options: ctx.options, material: ctx.material, customer: ctx.customer, unit: ctx.unit, origin: label(last),
+    return {version: VERSION, coverageConfirmed: confirmed, options: ctx.options, material: ctx.material, customer: ctx.customer, unit: ctx.unit, origin: label(last),
       importNotes: ctx.notes, forecastRows: data.forecast.length, shipmentRows: data.shipments.length, versions: ctx.origins.length,
       verifiedWeeks: actualRows.filter(function (r) { return r.verified !== null; }).length, predictions: predictions, waterfall: waterfall, actuals: actualRows,
       backtest: backtest, overall: metrics(scored), byHorizon: byHorizon,
