@@ -422,11 +422,26 @@ function upsert(arr, rec) {
   const i = arr.findIndex(x => x.id === rec.id);
   if (i >= 0) Object.assign(arr[i], rec); else arr.push(rec);
 }
+// Server replies are snapshots from when the save was sent. Text the user is still typing
+// (note content, a task's title/details in the panel) stays as it is on screen.
+const NOTE_LOCAL = ['title', 'body', 'type', 'pinned', 'made'];
 function merge(r) {
   if (!r || typeof r !== 'object') return;
-  (r.tasks || []).forEach(t => upsert(S.tasks, t));
+  const a = document.activeElement, editingTask = S.taskId && a && $('panel').contains(a) && isTextField(a) ? S.taskId : null;
+  (r.tasks || []).forEach(t => {
+    if (t.id === editingTask || saveTimers.has(t.id + ':title') || saveTimers.has(t.id + ':desc')) {
+      const cur = byId.get(t.id);
+      if (cur) { t = Object.assign({}, t, { title: cur.title, desc: cur.desc }); }
+    }
+    upsert(S.tasks, t);
+  });
   if (r.removed && r.removed.length) { const gone = new Set(r.removed); S.tasks = S.tasks.filter(t => !gone.has(t.id)); }
-  ['projects', 'milestones', 'notes', 'updates'].forEach(k => (r[k] || []).forEach(x => upsert(S[k], x)));
+  ['projects', 'milestones', 'updates'].forEach(k => (r[k] || []).forEach(x => upsert(S[k], x)));
+  (r.notes || []).forEach(n => {
+    const cur = S.notes.find(x => x.id === n.id);
+    if (!cur) { S.notes.push(n); return; }
+    Object.keys(n).forEach(k => { if (!NOTE_LOCAL.includes(k)) cur[k] = n[k]; });
+  });
   if (r.gone) Object.keys(r.gone).forEach(k => { if (S[k]) { const g = new Set(r.gone[k]); S[k] = S[k].filter(x => !g.has(x.id)); } });
   if (r.lists) S.lists = r.lists;
   if (r.settings) S.settings = r.settings;
@@ -1039,6 +1054,7 @@ function renderNow() { rafPending = false; render(); }
 const isTextField = el => el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && /^(text|search|)$/.test(el.type)));
 const focusKey = el => (el && el.dataset ? (el.dataset.key ? `[data-key="${CSS.escape(el.dataset.key)}"]` : el.dataset.f ? `[data-f="${CSS.escape(el.dataset.f)}"]` : null) : null);
 
+let mainStale = false;
 function render() {
   if (composing) { renderBlocked = true; return; }
   const a = document.activeElement, sel = focusKey(a);
@@ -1047,8 +1063,10 @@ function render() {
   const main = $('main'), top = main.scrollTop;
   $('drawer').innerHTML = `<div class="drawer-inner">${drawerHTML()}</div>`;
   renderTop();
-  main.innerHTML = viewHTML();
-  main.scrollTop = top;
+  // Never rebuild the note editor under the cursor; catch up when it loses focus.
+  const typingNote = a && a.dataset && a.dataset.note && main.contains(a);
+  if (typingNote) mainStale = true;
+  else { main.innerHTML = viewHTML(); main.scrollTop = top; mainStale = false; }
   const typingInPanel = a && $('panel').contains(a) && isTextField(a);
   if (!typingInPanel) renderPanel();
   if (sel && !(typingInPanel)) {
@@ -2143,7 +2161,11 @@ document.addEventListener('focusout', e => {
     if (el.dataset.f === 'title' && t && !el.value.trim()) el.value = t.title;
     flushSaves();
   }
-  if (el.dataset && el.dataset.note) flushNote(el.dataset.note);
+  if (el.dataset && el.dataset.note) {
+    flushNote(el.dataset.note);
+    // Focus moving to the other note field keeps editing; otherwise refresh what was held back.
+    setTimeout(() => { const n = document.activeElement; if (mainStale && !(n && n.dataset && n.dataset.note)) schedule(); }, 0);
+  }
 });
 
 function quickAddEnter(el) {

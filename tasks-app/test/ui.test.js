@@ -19,6 +19,57 @@ const { chromium } = require('playwright');
   const wait = ms => page.waitForTimeout(ms);
   const state = (fn, arg) => page.evaluate(fn, arg);
 
+  await step('Typing in a note survives slow server replies (like real Apps Script)', async () => {
+    // Make saves answer after 900 ms with a snapshot taken when the save was sent, as the real server does.
+    await page.evaluate(() => {
+      const real = google.script.run;
+      const runner = (ok, fail) => new Proxy({}, { get: (_, name) => {
+        if (name === 'withSuccessHandler') return fn => runner(fn, fail);
+        if (name === 'withFailureHandler') return fn => runner(ok, fn);
+        return (...args) => {
+          let snap = null;
+          if (name === 'saveNote') { const n = S.notes.find(x => x.id === args[0].id); snap = { notes: [Object.assign(JSON.parse(JSON.stringify(n || {})), args[0])] }; }
+          if (name === 'saveTask') { const t = S.tasks.find(x => x.id === args[0].id); snap = { tasks: [Object.assign(JSON.parse(JSON.stringify(t || {})), args[0])] }; }
+          if (!snap) return real.withSuccessHandler(ok).withFailureHandler(fail)[name](...args);
+          setTimeout(() => ok && ok(JSON.parse(JSON.stringify(snap))), 900);
+        };
+      } });
+      window.google.script.run = runner();
+    });
+    await page.click('.srow[data-id="demop1"]');
+    await page.click('[data-act="tab"][data-v="notes"]');
+    await page.click('[data-act="new-note"][data-v="reference"]');
+    await page.type('.ntitle', 'Vendor contacts', { delay: 30 });
+    await page.click('.nbody');
+    const lines = ['Ana handles the ERP export', 'Ravi owns the QA log', 'Tom needs numbers by Monday 10:00'];
+    for (const l of lines) { await page.keyboard.type(l + '\n', { delay: 25 }); await wait(1100); }
+    await wait(2000);
+    const val = await page.inputValue('.nbody');
+    lines.forEach(l => assert.ok(val.includes(l), 'textarea lost: ' + l));
+    assert.strictEqual(await page.inputValue('.ntitle'), 'Vendor contacts');
+    const st = await state(() => { const n = S.notes.find(x => x.title === 'Vendor contacts'); return n && n.body; });
+    lines.forEach(l => assert.ok(st && st.includes(l), 'state lost: ' + l));
+    // Leaving the editor shows the latest text everywhere.
+    await page.click('[data-act="tab"][data-v="overview"]');
+    await page.click('[data-act="tab"][data-v="notes"]');
+    await page.click('.nitem:has-text("Vendor contacts")');
+    assert.ok((await page.inputValue('.nbody')).includes(lines[2]));
+    // Task details typed in the panel survive too.
+    await page.click('[data-act="tab"][data-v="tasks"]');
+    await page.click('.task[data-id="demox09"] .tt');
+    await page.click('#panel .pn-desc');
+    for (const w of ['Book the room. ', 'Bring laptops. ', 'Share the link.']) { await page.keyboard.type(w, { delay: 25 }); await wait(1000); }
+    await wait(1500);
+    assert.strictEqual(await page.inputValue('#panel .pn-desc'), 'Book the room. Bring laptops. Share the link.');
+    await page.keyboard.press('Escape');
+    await wait(1200);
+    assert.strictEqual(await state(() => S.tasks.find(t => t.id === 'demox09').desc), 'Book the room. Bring laptops. Share the link.');
+    await page.reload();
+    await page.waitForSelector('.nav[data-v="home"]');
+    await page.click('.nav[data-v="home"]');
+    await page.waitForSelector('.prow');
+  });
+
   await step('Home lists open projects riskiest first, with attention items', async () => {
     assert.strictEqual(await page.locator('.prow').count(), 4);
     assert.ok(await page.locator('.att').count() >= 4);
