@@ -12,8 +12,14 @@ Projects add a goal, milestones, progress, notes, status updates, and blocking w
 | `index.html` | Page shell | Replace your existing `index` |
 | `styles.html` | Styles | New **HTML** file named `styles` |
 | `app.html` | App logic | New **HTML** file named `app` |
+| `optional/quill.html` | Offline copy of the note editor ([Quill](https://quilljs.com) 2.0.3, BSD licence) | **Only if notes show "The note editor couldn't load":** new **HTML** file named `quill` |
 
 `test/` and `tools/` are for development only. Don't paste them into Apps Script.
+
+The note editor normally loads from `cdn.jsdelivr.net` in the background, so the app never waits for it, and the
+browser checks the file against a pinned checksum before running it. If your company network blocks that site,
+notes open read-only with a warning. Adding `optional/quill.html` (the exact same file) as an HTML file named `quill`
+makes the app use that copy instead, with no outside download.
 
 ## Install (try it on a copy first)
 
@@ -29,7 +35,8 @@ Projects add a goal, milestones, progress, notes, status updates, and blocking w
 - The **Tasks** sheet gets ten new columns after column Q (R–AA): Milestone, Plan Date, Size, Blocked By,
   Block Reason, Blocked Since, Waiting On, Waiting Since, Block Log, Updated. Existing columns and rows are not touched.
   If you keep your own columns in R–AA, the app stops and tells you to move them first.
-- Four new sheets appear: **Projects**, **Milestones**, **Notes**, **Updates**.
+- Four new sheets appear: **Projects**, **Milestones**, **Notes**, **Updates**. (If you installed an earlier
+  version of this update, the Notes sheet gets three more columns, **Body2–Body4**, used by long notes.)
 - Every list whose name starts with `Project - ` (or `Project:`) becomes a project with the prefix removed:
   "Project - QRQC" becomes the project "QRQC". Its tasks move with it. The start date is set from its oldest task.
   Add a goal and target date afterwards with **Edit** on the project page.
@@ -43,9 +50,31 @@ a "Done when" goal, a target date, a status (Active, Blocked, Planned, Paused, D
 Turn a list into a project from its **⋮** menu.
 
 **Inside a project:** three tabs.
-- **Overview:** goal, milestones with progress, burn-up chart and forecast, signals, next action, status updates, pinned notes and decisions.
+- **Overview:** goal, progress, target and forecast, next action, milestones, status updates, and (when there's something to show) attention items and pinned notes.
 - **Tasks:** grouped by milestone, each group with its own quick-add. A milestone is marked reached automatically when its last task is done.
-- **Notes:** meeting, decision and reference notes. A line starting with `[ ]` becomes an action item, and **Make task** turns it into a task.
+- **Notes:** meeting, decision and reference notes with formatting (see **Notes** below).
+
+**Notes.** The editor works like a simple Word or Google Docs:
+- **Toolbar:** bold, italic, underline, strikethrough, highlight; headings H1–H3; bullets, numbered lists and checkboxes;
+  indent and outdent; quote, divider line, link, clear formatting.
+- **Tab / Shift+Tab** indent or outdent a list item wherever the cursor is. Bullets change style per level (• ◦ ▪),
+  numbers go 1 → a → i. Enter on an empty nested item steps out one level.
+- **Type to format:** `- ` or `* ` starts bullets, `1. ` numbers, `[ ] ` a checkbox, `# ` / `## ` / `### ` a heading,
+  `> ` a quote, and `---` then Enter draws a divider.
+- **Checkboxes and tasks:** hover a checkbox and click **Make task**, or put the cursor on any line(s) and click **Task** in the
+  toolbar (Ctrl+Shift+Enter). The task goes into the project's current milestone and the line gets a small TASK tag.
+  Ticking the checkbox completes the task, and completing the task anywhere ticks the checkbox, even in notes that aren't open.
+  The task's details panel links back to its note.
+- **Links:** select text and press Ctrl+K (or the link button). Click a link to see where it goes, edit or remove it.
+- **Paste** from Word, Gmail or web pages keeps bold, italics, lists and links, and drops fonts, colours and sizes.
+- **Size:** drag the bottom-right corner of the editor to make it narrower/wider and taller; double-click the corner to reset.
+  Drag the line between the note list and the editor to resize the list, hide the list with the first toolbar button,
+  or press **Ctrl+.** for focus mode (just the note; Esc to leave). Sizes are remembered on this computer.
+- **Older notes** (plain text from the first version) open formatted: `[ ]` lines become checkboxes, `- ` lines bullets,
+  and existing task links are kept. They're saved in the new format the first time you change them.
+- **How long can a note be?** Roughly 30 pages if it's all bullet points, up to about 55 pages of plain paragraphs. A note is stored in up to four cells of the Notes sheet
+  (Body, Body2–Body4); formatting takes some of that space. The editor warns at 80%, and a note over the limit
+  isn't saved (nothing is cut off) until you shorten it or split it into two.
 
 **Blocking.** Choosing **Blocked…** on a task (or a project's status menu) asks:
 1. *Why is it blocked?* This is required.
@@ -88,6 +117,9 @@ those tasks change or you run *Sync to Calendar*.
 `/` search · `c` create · `n` quick-add · `j`/`k` move · `Enter` open · `x` complete · `s` star · `b` block ·
 `Del` trash · `Alt+↑/↓` reorder · `1–6` Home, My Day, Upcoming, Starred, Review, Trash · `Esc` close
 
+In notes: `Ctrl+B / I / U` · `Ctrl+Z / Y` undo, redo · `Ctrl+K` link · `Ctrl+Shift+7 / 8 / 9` numbers, bullets, checkbox ·
+`Ctrl+Alt+1 / 2 / 3` headings (`Ctrl+Alt+0` normal text) · `Tab / Shift+Tab` indent · `Ctrl+Shift+Enter` line → task · `Ctrl+.` focus mode
+
 ## What changed from the old version
 
 - The board of list cards is replaced by **Home** (attention list and project table) plus one page per list or project.
@@ -105,6 +137,8 @@ those tasks change or you run *Sync to Calendar*.
 - [ ] Post a status update, and run through **Weekly review** once.
 - [ ] *Sync to Calendar*: milestones appear, and date-only project tasks disappear from the calendar.
 - [ ] *Email me today's digest*: the email includes the project section.
+- [ ] Open a project's **Notes**: the toolbar shows (if you see "The note editor couldn't load", add `optional/quill.html`).
+  Type a few bullets, press Tab on one, add a checkbox, turn it into a task, then tick it and check the task is completed.
 
 ## Development
 
@@ -117,5 +151,5 @@ node tools/build-preview.js && node test/ui.test.js
 ```
 
 `server.test.js` runs the `.gs` files in Node against fake Apps Script services. `build-preview.js` inlines
-the HTML files into `dist/preview.html`, which opens in a browser with sample data. `ui.test.js` drives
-that page in Chromium (it needs Playwright).
+the HTML files into `dist/preview.html` (editor from the CDN, like Apps Script) and `dist/preview-local.html`
+(offline editor copy). Both open in a browser with sample data. `ui.test.js` drives them in Chromium (it needs Playwright).

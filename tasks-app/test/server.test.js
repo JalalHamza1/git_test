@@ -18,6 +18,7 @@ function makeSheet(name) {
       getDisplayValues: () => rg.getValues().map(row => row.map(v => (v instanceof Date ? v.toISOString() : String(v)))),
       setValues: vals => { assert.strictEqual(vals.length, nr, 'row count'); vals.forEach((row, i) => { assert.strictEqual(row.length, nc, 'col count'); row.forEach((v, j) => set(r + i, c + j, v)); }); return rg; },
       setNumberFormat: () => rg, setFontWeight: () => rg, setBackground: () => rg, setFontColor: () => rg,
+      setValue: v => { set(r, c, v); return rg; },
     };
     return rg;
   };
@@ -370,6 +371,40 @@ test('sendDigest includes projects needing attention', () => {
 test('emptyTrash purges deleted tasks', () => {
   const r = call('emptyTrash');
   assert.ok(r.removed.length > 0);
+});
+
+console.log('Long formatted notes');
+test('a long note is split across Body columns and read back exactly', () => {
+  const N = nid('n');
+  const body = JSON.stringify({ ops: Array.from({ length: 2600 }, (_, i) => ({ insert: `Line ${i}: ` + 'x'.repeat(30) + '  \n' })) });
+  assert.ok(body.length > 100000, 'test body is long');
+  call('saveNote', { id: N, create: true, projectId: P, type: 'meeting', title: 'Long', body });
+  const got = call('getAll').notes.find(n => n.id === N);
+  assert.strictEqual(got.body, body);
+  assert.ok(!('body2' in got), 'chunk columns are hidden from the app');
+  const row = sheets.Notes.data.find(r => r[0] === N);
+  assert.strictEqual(sheets.Notes.data[0].slice(9, 12).join('|'), 'Body2|Body3|Body4');
+  assert.ok(row[4].length === 45000 && row[5 + 4].length === 45000, 'first two cells are full');
+});
+test('a note over the limit is refused, not cut short', () => {
+  const N = nid('n');
+  call('saveNote', { id: N, create: true, projectId: P, type: 'reference', title: 'Big', body: '{"ops":[]}' });
+  assert.throws(() => call('saveNote', { id: N, body: 'y'.repeat(180001) }), /too long/);
+  assert.strictEqual(call('getAll').notes.find(n => n.id === N).body, '{"ops":[]}');
+});
+test('a Notes sheet from the previous version gets the new header columns', () => {
+  const env2 = makeEnv();
+  seedV2(env2);
+  const old = env2.ss.insertSheet('Notes');
+  old.data.push(['ID', 'Project ID', 'Type', 'Title', 'Body', 'Pinned', 'Created', 'Updated', 'Made']);
+  old.data.push(['nold0001', 'pold0001', 'meeting', 'Old note', 'Plain text\n[ ] Ask IT', '', '', '', '{"1":"tGen0001"}']);
+  const d = env2.call('getAll');
+  assert.deepStrictEqual(old.data[0].slice(9, 12), ['Body2', 'Body3', 'Body4']);
+  const n = d.notes.find(x => x.id === 'nold0001');
+  assert.strictEqual(n.body, 'Plain text\n[ ] Ask IT');
+  assert.deepStrictEqual(n.made, { 1: 'tGen0001' });
+  env2.call('getAll');
+  assert.strictEqual(env2.props.doc.hdr_note, '12');
 });
 
 console.log(`\n${passed} server tests passed`);

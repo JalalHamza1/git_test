@@ -382,6 +382,24 @@ function include(name) {
   return HtmlService.createHtmlOutputFromFile(name).getContent();
 }
 
+// The note editor (Quill). If you added the optional "quill" HTML file (for networks that block
+// cdn.jsdelivr.net), that copy is used. Otherwise it loads from the CDN in the background, so the app
+// never waits on it; the integrity hash makes the browser refuse anything but the exact Quill 2.0.3 file.
+function quillScript() {
+  try { return HtmlService.createHtmlOutputFromFile('quill').getContent(); }
+  catch (e) { return QUILL_LOADER; }
+}
+const QUILL_LOADER = '<script>(function () {' +
+  "window.QUILL_STATE = 'loading';" +
+  "var s = document.createElement('script');" +
+  "s.src = 'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js';" +
+  "s.integrity = 'sha384-utBUCeG4SYaCm4m7GQZYr8Hy8Fpy3V4KGjBZaf4WTKOcwhCYpt/0PfeEe3HNlwx8';" +
+  "s.crossOrigin = 'anonymous';" +
+  "s.onload = function () { window.QUILL_STATE = 'ready'; if (window.onQuill) window.onQuill(); };" +
+  "s.onerror = function () { window.QUILL_STATE = 'failed'; if (window.onQuill) window.onQuill(); };" +
+  'document.head.appendChild(s);' +
+  '})();</script>';
+
 function showSidebar() { SpreadsheetApp.getUi().showSidebar(page_().setTitle('Tasks')); }
 function showDialog() { SpreadsheetApp.getUi().showModalDialog(page_().setWidth(1280).setHeight(800), 'Tasks'); }
 function doGet() { return page_().setTitle('Tasks'); }

@@ -11,6 +11,9 @@ const PROJECT_STATUSES = ['active', 'blocked', 'planned', 'paused', 'done'];
 const NOTE_TYPES = ['meeting', 'decision', 'reference'];
 const HEALTHS = ['green', 'amber', 'red'];
 const BLOCK_LOG_MAX = 20;
+// A Sheets cell holds 50,000 characters. Formatted note text spills into Body 2–4, so a note can be up to 180,000.
+const CELL_CHUNK = 45000;
+const NOTE_MAX = CELL_CHUNK * 4;
 
 const TABLES = {
   project: {
@@ -26,8 +29,8 @@ const TABLES = {
   },
   note: {
     sheet: 'Notes',
-    fields: ['id', 'projectId', 'type', 'title', 'body', 'pinned', 'created', 'updated', 'made'],
-    json: { made: {} }, lists: [], nums: [], bools: ['pinned'],
+    fields: ['id', 'projectId', 'type', 'title', 'body', 'pinned', 'created', 'updated', 'made', 'body2', 'body3', 'body4'],
+    json: { made: {} }, lists: [], nums: [], bools: ['pinned'], chunks: { body: ['body2', 'body3', 'body4'] },
   },
   update: {
     sheet: 'Updates',
@@ -53,6 +56,17 @@ function table_(kind) {
       .setFontWeight('bold').setBackground('#0d1117').setFontColor('#58a6ff');
     sh.setFrozenRows(1);
     sh.getRange(2, 1, Math.max(1, sh.getMaxRows() - 1), n).setNumberFormat('@');
+  } else if (props_().getProperty('hdr_' + kind) !== String(n)) {
+    // Sheets made by an older version get headers for columns added since (e.g. Body 2–4 on Notes).
+    if (sh.getMaxColumns() < n) sh.insertColumnsAfter(sh.getMaxColumns(), n - sh.getMaxColumns());
+    const head = sh.getRange(1, 1, 1, n).getValues()[0], want = def.fields.map(humanize_);
+    const clash = head.findIndex((h, i) => h !== '' && h !== want[i]);
+    if (clash >= 0) {
+      throw new Error(`Column ${colLetter_(clash + 1)} of the "${def.sheet}" sheet holds "${head[clash]}" but Task Manager needs "${want[clash]}" there. ` +
+        `Move your own columns past column ${colLetter_(n)}, then reopen Task Manager.`);
+    }
+    head.forEach((h, i) => { if (h === '') sh.getRange(1, i + 1).setValue(want[i]).setFontWeight('bold').setBackground('#0d1117').setFontColor('#58a6ff'); });
+    props_().setProperty('hdr_' + kind, String(n));
   }
   const last = sh.getLastRow();
   const vals = last < 2 ? [] : sh.getRange(2, 1, last - 1, n).getDisplayValues();
@@ -61,10 +75,16 @@ function table_(kind) {
   return (_cache[key] = { def: def, sh: sh, rows: rows });
 }
 
+function chunkFields_(def) {
+  const out = new Set();
+  Object.keys(def.chunks || {}).forEach(f => { out.add(f); def.chunks[f].forEach(c => out.add(c)); });
+  return out;
+}
+
 function fromRow_(def, v) {
-  const o = {};
+  const o = {}, keepSpaces = chunkFields_(def);
   def.fields.forEach((f, i) => {
-    const raw = String(v[i] == null ? '' : v[i]).trim();
+    const raw = keepSpaces.has(f) ? String(v[i] == null ? '' : v[i]) : String(v[i] == null ? '' : v[i]).trim();
     if (f in def.json) {
       const parsed = parse_(raw);
       o[f] = parsed && typeof parsed === 'object' ? parsed : JSON.parse(JSON.stringify(def.json[f]));
@@ -73,11 +93,21 @@ function fromRow_(def, v) {
     else if (def.nums.includes(f)) o[f] = raw === '' || isNaN(Number(raw)) ? '' : Number(raw);
     else o[f] = raw;
   });
+  Object.keys(def.chunks || {}).forEach(f => {
+    o[f] = [o[f]].concat(def.chunks[f].map(c => o[c])).join('');
+    def.chunks[f].forEach(c => { delete o[c]; });
+  });
   return o;
 }
 
 function toRow_(def, o) {
+  const parts = {};
+  Object.keys(def.chunks || {}).forEach(f => {
+    const s = String(o[f] == null ? '' : o[f]);
+    [f].concat(def.chunks[f]).forEach((c, i) => { parts[c] = s.slice(i * CELL_CHUNK, (i + 1) * CELL_CHUNK); });
+  });
   return def.fields.map(f => {
+    if (f in parts) return parts[f];
     const v = o[f];
     if (f in def.json) return JSON.stringify(v || def.json[f]);
     if (def.lists.includes(f)) return (v || []).join(',');
@@ -357,7 +387,12 @@ function saveNote(input) {
     }
     if ('type' in p && NOTE_TYPES.includes(p.type)) n.type = p.type;
     if ('title' in p) n.title = cleanTitle_(p.title).slice(0, 200);
-    if ('body' in p) n.body = String(p.body == null ? '' : p.body).slice(0, 45000);
+    if ('body' in p) {
+      const body = String(p.body == null ? '' : p.body);
+      // Formatted notes are stored as JSON, so cutting them short would break them: refuse instead.
+      if (body.length > NOTE_MAX) throw new Error('This note is too long to save. Split it into two notes.');
+      n.body = body;
+    }
     if ('pinned' in p) n.pinned = !!p.pinned;
     if ('made' in p && p.made && typeof p.made === 'object') {
       const made = {};

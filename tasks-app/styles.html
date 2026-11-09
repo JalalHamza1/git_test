@@ -1,4 +1,15 @@
 <style>
+  /* Quill 2.0.3 core styles (BSD-3-Clause, https://quilljs.com). Theme overrides are under "Notes editor" below. */
+  /*!
+ * Quill Editor v2.0.3
+ * https://quilljs.com
+ * Copyright (c) 2017-2024, Slab
+ * Copyright (c) 2014, Jason Chen
+ * Copyright (c) 2013, salesforce.com
+ */
+.ql-container{box-sizing:border-box;font-family:Helvetica,Arial,sans-serif;font-size:13px;height:100%;margin:0;position:relative}.ql-container.ql-disabled .ql-tooltip{visibility:hidden}.ql-container:not(.ql-disabled) li[data-list=checked] > .ql-ui,.ql-container:not(.ql-disabled) li[data-list=unchecked] > .ql-ui{cursor:pointer}.ql-clipboard{left:-100000px;height:1px;overflow-y:hidden;position:absolute;top:50%}.ql-clipboard p{margin:0;padding:0}.ql-editor{box-sizing:border-box;counter-reset:list-0 list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9;line-height:1.42;height:100%;outline:none;overflow-y:auto;padding:12px 15px;tab-size:4;-moz-tab-size:4;text-align:left;white-space:pre-wrap;word-wrap:break-word}.ql-editor > *{cursor:text}.ql-editor p,.ql-editor ol,.ql-editor pre,.ql-editor blockquote,.ql-editor h1,.ql-editor h2,.ql-editor h3,.ql-editor h4,.ql-editor h5,.ql-editor h6{margin:0;padding:0}@supports (counter-set:none){.ql-editor p,.ql-editor h1,.ql-editor h2,.ql-editor h3,.ql-editor h4,.ql-editor h5,.ql-editor h6{counter-set:list-0 list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9}}@supports not (counter-set:none){.ql-editor p,.ql-editor h1,.ql-editor h2,.ql-editor h3,.ql-editor h4,.ql-editor h5,.ql-editor h6{counter-reset:list-0 list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9}}.ql-editor table{border-collapse:collapse}.ql-editor td{border:1px solid #000;padding:2px 5px}.ql-editor ol{padding-left:1.5em}.ql-editor li{list-style-type:none;padding-left:1.5em;position:relative}.ql-editor li > .ql-ui:before{display:inline-block;margin-left:-1.5em;margin-right:.3em;text-align:right;white-space:nowrap;width:1.2em}.ql-editor li[data-list=checked] > .ql-ui,.ql-editor li[data-list=unchecked] > .ql-ui{color:#777}.ql-editor li[data-list=bullet] > .ql-ui:before{content:'\2022'}.ql-editor li[data-list=checked] > .ql-ui:before{content:'\2611'}.ql-editor li[data-list=unchecked] > .ql-ui:before{content:'\2610'}@supports (counter-set:none){.ql-editor li[data-list]{counter-set:list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9}}@supports not (counter-set:none){.ql-editor li[data-list]{counter-reset:list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9}}.ql-editor li[data-list=ordered]{counter-increment:list-0}.ql-editor li[data-list=ordered] > .ql-ui:before{content:counter(list-0, decimal) '. '}.ql-editor li[data-list=ordered].ql-indent-1{counter-increment:list-1}.ql-editor li[data-list=ordered].ql-indent-1 > .ql-ui:before{content:counter(list-1, lower-alpha) '. '}@supports (counter-set:none){.ql-editor li[data-list].ql-indent-1{counter-set:list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9}}@supports not (counter-set:none){.ql-editor li[data-list].ql-indent-1{counter-reset:list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9}}.ql-editor li[data-list=ordered].ql-indent-2{counter-increment:list-2}.ql-editor li[data-list=ordered].ql-indent-2 > .ql-ui:before{content:counter(list-2, lower-roman) '. '}@supports (counter-set:none){.ql-editor li[data-list].ql-indent-2{counter-set:list-3 list-4 list-5 list-6 list-7 list-8 list-9}}@supports not (counter-set:none){.ql-editor li[data-list].ql-indent-2{counter-reset:list-3 list-4 list-5 list-6 list-7 list-8 list-9}}.ql-editor li[data-list=ordered].ql-indent-3{counter-increment:list-3}.ql-editor li[data-list=ordered].ql-indent-3 > .ql-ui:before{content:counter(list-3, decimal) '. '}@supports (counter-set:none){.ql-editor li[data-list].ql-indent-3{counter-set:list-4 list-5 list-6 list-7 list-8 list-9}}@supports not (counter-set:none){.ql-editor li[data-list].ql-indent-3{counter-reset:list-4 list-5 list-6 list-7 list-8 list-9}}.ql-editor li[data-list=ordered].ql-indent-4{counter-increment:list-4}.ql-editor li[data-list=ordered].ql-indent-4 > .ql-ui:before{content:counter(list-4, lower-alpha) '. '}@supports (counter-set:none){.ql-editor li[data-list].ql-indent-4{counter-set:list-5 list-6 list-7 list-8 list-9}}@supports not (counter-set:none){.ql-editor li[data-list].ql-indent-4{counter-reset:list-5 list-6 list-7 list-8 list-9}}.ql-editor li[data-list=ordered].ql-indent-5{counter-increment:list-5}.ql-editor li[data-list=ordered].ql-indent-5 > .ql-ui:before{content:counter(list-5, lower-roman) '. '}@supports (counter-set:none){.ql-editor li[data-list].ql-indent-5{counter-set:list-6 list-7 list-8 list-9}}@supports not (counter-set:none){.ql-editor li[data-list].ql-indent-5{counter-reset:list-6 list-7 list-8 list-9}}.ql-editor li[data-list=ordered].ql-indent-6{counter-increment:list-6}.ql-editor li[data-list=ordered].ql-indent-6 > .ql-ui:before{content:counter(list-6, decimal) '. '}@supports (counter-set:none){.ql-editor li[data-list].ql-indent-6{counter-set:list-7 list-8 list-9}}@supports not (counter-set:none){.ql-editor li[data-list].ql-indent-6{counter-reset:list-7 list-8 list-9}}.ql-editor li[data-list=ordered].ql-indent-7{counter-increment:list-7}.ql-editor li[data-list=ordered].ql-indent-7 > .ql-ui:before{content:counter(list-7, lower-alpha) '. '}@supports (counter-set:none){.ql-editor li[data-list].ql-indent-7{counter-set:list-8 list-9}}@supports not (counter-set:none){.ql-editor li[data-list].ql-indent-7{counter-reset:list-8 list-9}}.ql-editor li[data-list=ordered].ql-indent-8{counter-increment:list-8}.ql-editor li[data-list=ordered].ql-indent-8 > .ql-ui:before{content:counter(list-8, lower-roman) '. '}@supports (counter-set:none){.ql-editor li[data-list].ql-indent-8{counter-set:list-9}}@supports not (counter-set:none){.ql-editor li[data-list].ql-indent-8{counter-reset:list-9}}.ql-editor li[data-list=ordered].ql-indent-9{counter-increment:list-9}.ql-editor li[data-list=ordered].ql-indent-9 > .ql-ui:before{content:counter(list-9, decimal) '. '}.ql-editor .ql-indent-1:not(.ql-direction-rtl){padding-left:3em}.ql-editor li.ql-indent-1:not(.ql-direction-rtl){padding-left:4.5em}.ql-editor .ql-indent-1.ql-direction-rtl.ql-align-right{padding-right:3em}.ql-editor li.ql-indent-1.ql-direction-rtl.ql-align-right{padding-right:4.5em}.ql-editor .ql-indent-2:not(.ql-direction-rtl){padding-left:6em}.ql-editor li.ql-indent-2:not(.ql-direction-rtl){padding-left:7.5em}.ql-editor .ql-indent-2.ql-direction-rtl.ql-align-right{padding-right:6em}.ql-editor li.ql-indent-2.ql-direction-rtl.ql-align-right{padding-right:7.5em}.ql-editor .ql-indent-3:not(.ql-direction-rtl){padding-left:9em}.ql-editor li.ql-indent-3:not(.ql-direction-rtl){padding-left:10.5em}.ql-editor .ql-indent-3.ql-direction-rtl.ql-align-right{padding-right:9em}.ql-editor li.ql-indent-3.ql-direction-rtl.ql-align-right{padding-right:10.5em}.ql-editor .ql-indent-4:not(.ql-direction-rtl){padding-left:12em}.ql-editor li.ql-indent-4:not(.ql-direction-rtl){padding-left:13.5em}.ql-editor .ql-indent-4.ql-direction-rtl.ql-align-right{padding-right:12em}.ql-editor li.ql-indent-4.ql-direction-rtl.ql-align-right{padding-right:13.5em}.ql-editor .ql-indent-5:not(.ql-direction-rtl){padding-left:15em}.ql-editor li.ql-indent-5:not(.ql-direction-rtl){padding-left:16.5em}.ql-editor .ql-indent-5.ql-direction-rtl.ql-align-right{padding-right:15em}.ql-editor li.ql-indent-5.ql-direction-rtl.ql-align-right{padding-right:16.5em}.ql-editor .ql-indent-6:not(.ql-direction-rtl){padding-left:18em}.ql-editor li.ql-indent-6:not(.ql-direction-rtl){padding-left:19.5em}.ql-editor .ql-indent-6.ql-direction-rtl.ql-align-right{padding-right:18em}.ql-editor li.ql-indent-6.ql-direction-rtl.ql-align-right{padding-right:19.5em}.ql-editor .ql-indent-7:not(.ql-direction-rtl){padding-left:21em}.ql-editor li.ql-indent-7:not(.ql-direction-rtl){padding-left:22.5em}.ql-editor .ql-indent-7.ql-direction-rtl.ql-align-right{padding-right:21em}.ql-editor li.ql-indent-7.ql-direction-rtl.ql-align-right{padding-right:22.5em}.ql-editor .ql-indent-8:not(.ql-direction-rtl){padding-left:24em}.ql-editor li.ql-indent-8:not(.ql-direction-rtl){padding-left:25.5em}.ql-editor .ql-indent-8.ql-direction-rtl.ql-align-right{padding-right:24em}.ql-editor li.ql-indent-8.ql-direction-rtl.ql-align-right{padding-right:25.5em}.ql-editor .ql-indent-9:not(.ql-direction-rtl){padding-left:27em}.ql-editor li.ql-indent-9:not(.ql-direction-rtl){padding-left:28.5em}.ql-editor .ql-indent-9.ql-direction-rtl.ql-align-right{padding-right:27em}.ql-editor li.ql-indent-9.ql-direction-rtl.ql-align-right{padding-right:28.5em}.ql-editor li.ql-direction-rtl{padding-right:1.5em}.ql-editor li.ql-direction-rtl > .ql-ui:before{margin-left:.3em;margin-right:-1.5em;text-align:left}.ql-editor table{table-layout:fixed;width:100%}.ql-editor table td{outline:none}.ql-editor .ql-code-block-container{font-family:monospace}.ql-editor .ql-video{display:block;max-width:100%}.ql-editor .ql-video.ql-align-center{margin:0 auto}.ql-editor .ql-video.ql-align-right{margin:0 0 0 auto}.ql-editor .ql-bg-black{background-color:#000}.ql-editor .ql-bg-red{background-color:#e60000}.ql-editor .ql-bg-orange{background-color:#f90}.ql-editor .ql-bg-yellow{background-color:#ff0}.ql-editor .ql-bg-green{background-color:#008a00}.ql-editor .ql-bg-blue{background-color:#06c}.ql-editor .ql-bg-purple{background-color:#93f}.ql-editor .ql-color-white{color:#fff}.ql-editor .ql-color-red{color:#e60000}.ql-editor .ql-color-orange{color:#f90}.ql-editor .ql-color-yellow{color:#ff0}.ql-editor .ql-color-green{color:#008a00}.ql-editor .ql-color-blue{color:#06c}.ql-editor .ql-color-purple{color:#93f}.ql-editor .ql-font-serif{font-family:Georgia,Times New Roman,serif}.ql-editor .ql-font-monospace{font-family:Monaco,Courier New,monospace}.ql-editor .ql-size-small{font-size:.75em}.ql-editor .ql-size-large{font-size:1.5em}.ql-editor .ql-size-huge{font-size:2.5em}.ql-editor .ql-direction-rtl{direction:rtl;text-align:inherit}.ql-editor .ql-align-center{text-align:center}.ql-editor .ql-align-justify{text-align:justify}.ql-editor .ql-align-right{text-align:right}.ql-editor .ql-ui{position:absolute}.ql-editor.ql-blank::before{color:rgba(0,0,0,0.6);content:attr(data-placeholder);font-style:italic;left:15px;pointer-events:none;position:absolute;right:15px}
+</style>
+<style>
   /* ===== Tokens ======================================================== */
   :root {
     --bg: #0b0f14; --bg-2: #0e1319; --card: #151b23; --card-hi: #1b232d; --raised: #1a212b;
@@ -306,8 +317,17 @@
   .bitem > svg { width: 18px; height: 18px; color: var(--amber); }
   .bactions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-  /* Notes */
-  .notes { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 16px; align-items: start; }
+  /* Notes: list | splitter | editor */
+  .notes-wrap { display: grid; grid-template-columns: var(--nl, 280px) 14px minmax(0, 1fr); align-items: start; padding: 8px 32px 48px; }
+  .notes-wrap.list-hidden { grid-template-columns: minmax(0, 1fr); }
+  .notes-wrap.list-hidden > .nlist-card, .notes-wrap.list-hidden > .nsplit { display: none; }
+  .nlist-card { position: sticky; top: 8px; max-height: calc(100vh - 150px); overflow-y: auto; }
+  .nsplit { align-self: stretch; position: relative; cursor: col-resize; touch-action: none; min-height: 120px; }
+  .nsplit::after { content: ''; position: absolute; left: 6px; top: 8px; bottom: 8px; width: 2px; border-radius: 1px; background: transparent; transition: background .15s; }
+  .nsplit:hover::after, .nsplit.drag::after { background: var(--accent); }
+  .nmain { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+  .nhead { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .nhead .grow { flex: 1; }
   .nlist { padding: 4px 8px 8px; }
   .nitem { display: flex; gap: 10px; width: 100%; border: 0; background: none; text-align: left; padding: 9px 10px; border-radius: 10px; color: var(--text); }
   .nitem:hover { background: var(--card-hi); }
@@ -315,22 +335,87 @@
   .nitem svg { width: 16px; height: 16px; color: var(--text-3); margin-top: 2px; }
   .nitem .nt { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .nitem small { color: var(--text-3); font-size: 12px; }
+  .nitem .snip { display: block; color: var(--text-3); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ntype { font: 500 10.5px/1 var(--mono); text-transform: uppercase; letter-spacing: .5px; padding: 4px 7px; border-radius: 6px; background: var(--card-hi); color: var(--text-2); }
   .ntype.decision { color: var(--amber); background: var(--amber-soft); }
   .ntype.meeting { color: var(--accent); background: var(--accent-soft); }
   .filters { display: flex; gap: 6px; flex-wrap: wrap; padding: 2px 16px 6px; }
   .fbtn { border: 1px solid var(--line-2); background: none; border-radius: 14px; padding: 3px 10px; font-size: 12px; color: var(--text-2); }
   .fbtn[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
-  .ntitle, .nbody, .field input, .field select, .field textarea, .composer textarea, .dlg .input, .dlg textarea, .dlg select {
+  .field input, .field select, .field textarea, .composer textarea, .dlg .input, .dlg textarea, .dlg select {
     width: 100%; background: var(--bg); border: 1px solid var(--line-2); border-radius: 10px; padding: 8px 10px; color: var(--text); outline: 0; min-width: 0; }
-  .ntitle:focus, .nbody:focus, .field :is(input, select, textarea):focus, .composer textarea:focus, .dlg :is(.input, textarea, select):focus { border-color: var(--accent); }
+  .field :is(input, select, textarea):focus, .composer textarea:focus, .dlg :is(.input, textarea, select):focus { border-color: var(--accent); }
   select option { background: var(--raised); color: var(--text); }
-  .ntitle { font-size: 17px; font-weight: 600; }
-  .nbody { min-height: 260px; font: 13.5px/1.6 var(--mono); resize: vertical; }
-  .ai-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13px; }
-  .ai-row span { flex: 1; min-width: 0; }
-  .ai-row .made { color: var(--green); font-size: 12px; white-space: nowrap; display: inline-flex; gap: 4px; align-items: center; }
-  .ai-row .made svg { width: 14px; height: 14px; }
+  .ntitle { width: 100%; min-width: 0; border: 1px solid transparent; border-radius: 10px; background: none; color: var(--text); outline: 0; padding: 4px 6px; margin-left: -6px; font-size: 22px; font-weight: 600; letter-spacing: -.3px; }
+  .ntitle:hover { border-color: var(--line); }
+  .ntitle:focus { border-color: var(--line-2); background: var(--bg-2); }
+  .ntitle::placeholder { color: var(--text-3); }
+  .nsel { background: var(--bg); border: 1px solid var(--line-2); border-radius: 8px; height: 30px; color: var(--text); padding: 0 6px; }
+
+  /* Notes editor (Quill, restyled for the dark theme) */
+  .ne { position: relative; width: 100%; max-width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+  .ne.resizing { user-select: none; }
+  .ne:focus-within { border-color: var(--line-2); }
+  .ne .ql-editor:focus-visible { outline: none; }
+  .ne-bar { position: sticky; top: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 6px 8px; background: var(--card); border-bottom: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0; }
+  .ne-bar button { height: 32px; min-width: 32px; padding: 0 7px; border: 0; border-radius: 8px; background: none; color: var(--text-2); display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-weight: 600; font-size: 12.5px; }
+  .ne-bar button svg { width: 18px; height: 18px; }
+  .ne-bar button:hover { background: var(--card-hi); color: var(--text); }
+  .ne-bar button.ql-active, .ne-bar button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+  .ne-bar .ne-h { font: 700 12px/1 var(--mono); }
+  .ne-bar [data-ne="task"] { color: var(--accent); padding: 0 10px; }
+  .ne-sep { width: 1px; height: 20px; background: var(--line-2); margin: 0 4px; }
+  .ne-grow { flex: 1; }
+  .ne-body { position: relative; }
+  .ne .ql-container { font-family: inherit; font-size: 15px; height: auto; }
+  .ne .ql-editor { min-height: var(--ne-h, 420px); height: auto; overflow: visible; padding: 18px 24px 28px; line-height: 1.62; color: var(--text); }
+  .ne .ql-editor.ql-blank::before { color: var(--text-3); font-style: normal; left: 24px; right: 24px; }
+  .ne .ql-editor h1, .ne-ro h1 { font-size: 24px; font-weight: 700; letter-spacing: -.4px; line-height: 1.3; margin: .7em 0 .25em; }
+  .ne .ql-editor h2, .ne-ro h2 { font-size: 19px; font-weight: 650; letter-spacing: -.2px; line-height: 1.35; margin: .7em 0 .2em; }
+  .ne .ql-editor h3, .ne-ro h3 { font-size: 15px; font-weight: 650; line-height: 1.4; margin: .8em 0 .15em; color: var(--text-2); text-transform: uppercase; letter-spacing: .5px; }
+  .ne .ql-editor > :first-child, .ne-ro > :first-child { margin-top: 0; }
+  .ne .ql-editor blockquote, .ne-ro blockquote { border-left: 3px solid var(--line-2); padding-left: 14px; margin: 4px 0; color: var(--text-2); }
+  .ne .ql-editor hr, .ne-ro hr { border: 0; border-top: 1px solid var(--line-2); margin: 14px 0; }
+  .ne .ql-editor a, .ne-ro a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  .ne .ql-editor li > .ql-ui:before { color: var(--text-3); }
+  .ne .ql-editor li[data-list=bullet]:is(.ql-indent-1, .ql-indent-4, .ql-indent-7) > .ql-ui:before { content: '\25E6'; }
+  .ne .ql-editor li[data-list=bullet]:is(.ql-indent-2, .ql-indent-5, .ql-indent-8) > .ql-ui:before { content: '\25AA'; }
+  .ne .ql-editor li[data-list=checked] > .ql-ui:before, .ne .ql-editor li[data-list=unchecked] > .ql-ui:before {
+    content: ''; box-sizing: border-box; width: 15px; height: 15px; margin-right: calc(1.5em - 15px); vertical-align: -2px; border: 1.5px solid var(--text-3); border-radius: 4px; }
+  .ne .ql-editor li[data-list=unchecked] > .ql-ui:hover:before { border-color: var(--accent); }
+  .ne .ql-editor li[data-list=checked] > .ql-ui:before { border-color: var(--accent); background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%230b1220' d='M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E") center / 12px no-repeat; }
+  .ne .ql-editor li[data-list=checked] { color: var(--text-3); text-decoration: line-through; }
+  .ne .ql-editor li[data-task]::after { content: 'task'; display: inline-block; margin-left: 8px; padding: 0 6px; border-radius: 6px; vertical-align: 1px; font: 600 10px/16px var(--mono); letter-spacing: .4px; text-transform: uppercase; text-decoration: none; color: var(--accent); background: var(--accent-soft); }
+  .ne-hover { position: absolute; right: 10px; z-index: 2; height: 24px; padding: 0 9px; margin-top: 1px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--raised); color: var(--accent); font-size: 12px; font-weight: 600; box-shadow: var(--shadow); }
+  .ne-hover svg { width: 14px; height: 14px; }
+  .ne-hover:hover { background: var(--card-hi); }
+  .ne-foot { display: flex; align-items: center; gap: 12px; min-height: 34px; padding: 6px 8px 6px 16px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-3); }
+  .ne-info .warn { color: var(--amber); } .ne-info .bad { color: var(--red); }
+  .ne-hint { margin-left: auto; text-align: right; }
+  .ne-grip { flex: none; width: 18px; height: 18px; margin-left: 4px; cursor: nwse-resize; touch-action: none; opacity: .6;
+    background: linear-gradient(135deg, transparent 0 52%, var(--text-3) 52% 58%, transparent 58% 68%, var(--text-3) 68% 74%, transparent 74% 84%, var(--text-3) 84% 90%, transparent 90%); }
+  .ne-grip:hover { opacity: 1; }
+  .ne-pop { position: absolute; z-index: 6; display: flex; align-items: center; gap: 6px; padding: 6px; max-width: calc(100% - 16px); background: var(--raised); border: 1px solid var(--line-2); border-radius: 12px; box-shadow: var(--shadow-lg); }
+  .ne-pop input { width: 260px; max-width: 50vw; height: 30px; padding: 0 8px; background: var(--bg); border: 1px solid var(--line-2); border-radius: 8px; color: var(--text); outline: 0; }
+  .ne-pop input:focus { border-color: var(--accent); }
+  .ne-pop a { color: var(--accent); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 6px; }
+  .ne-warn { display: flex; gap: 10px; align-items: flex-start; margin: 14px 14px 0; padding: 10px 12px; border-radius: 10px; background: var(--amber-soft); color: var(--amber); font-size: 13px; }
+  .ne-warn svg { width: 18px; height: 18px; }
+  .ne-loading { margin: 14px 14px 0; font-size: 12.5px; color: var(--text-3); }
+  .ne-ro { padding: 18px 24px 28px; min-height: var(--ne-h, 200px); font-size: 15px; line-height: 1.62; }
+  .ne-ro p { margin: 0; }
+  .ne-ro .ro-li { position: relative; }
+  .ne-ro .ro-m { display: inline-block; width: 1.2em; margin-left: -1.5em; margin-right: .3em; text-align: right; color: var(--text-3); }
+  .ne-ro .ro-li.done { color: var(--text-3); text-decoration: line-through; }
+  .ne-ro mark { background: rgba(245, 196, 81, .35); color: inherit; }
+
+  /* Focus mode: just the note */
+  body.note-focus .app { grid-template-columns: 0 minmax(0, 1fr); }
+  body.note-focus .drawer { visibility: hidden; }
+  body.note-focus .topbar, body.note-focus .phead { display: none; }
+  body.note-focus .notes-wrap { grid-template-columns: minmax(0, 1fr); padding-top: 16px; }
+  body.note-focus .notes-wrap > .nlist-card, body.note-focus .notes-wrap > .nsplit { display: none; }
+  body.note-focus .nmain { width: 100%; max-width: var(--focus-w, 1100px); margin: 0 auto; }
 
   /* ===== Detail panel ================================================== */
   .panel { position: fixed; z-index: 50; top: 12px; right: 12px; bottom: 12px; width: var(--panel-w); max-width: calc(100vw - 24px); display: flex; flex-direction: column; background: var(--raised); border: 1px solid var(--line-2); border-radius: 20px; box-shadow: var(--shadow-lg); transform: translateX(calc(100% + 32px)); visibility: hidden; transition: transform .3s var(--ease), visibility 0s linear .3s; }
@@ -478,7 +563,11 @@
     .prow:hover { background: var(--card-hi); }
     .prow .c-prog, .prow .c-ms, .prow .c-next { grid-column: 1 / -1; }
     .prow .c-target { display: none; }
-    .notes, .rv-b { grid-template-columns: minmax(0, 1fr); }
+    .rv-b { grid-template-columns: minmax(0, 1fr); }
+    .notes-wrap { grid-template-columns: minmax(0, 1fr); padding: 6px 16px 96px; gap: 12px; }
+    .nsplit, .ne-grip, .ne-hint { display: none; }
+    .nlist-card { position: static; max-height: none; }
+    .ne .ql-editor { padding: 14px 14px 22px; }
   }
   @media (max-width: 640px) {
     :root { --radius: 14px; }
