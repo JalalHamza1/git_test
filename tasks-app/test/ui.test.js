@@ -14,7 +14,8 @@ const { chromium } = require('playwright');
   const LOCAL = 'file://' + path.join(__dirname, '..', 'dist', 'preview-local.html');
   const CDN_PAGE = 'file://' + path.join(__dirname, '..', 'dist', 'preview.html');
   const optional = require('fs').readFileSync(path.join(__dirname, '..', 'optional', 'quill.html'), 'utf8');
-  const QUILL_JS = optional.slice(optional.indexOf('<script>\n') + 9, optional.lastIndexOf('\n</script>'));
+  const b64 = optional.slice(optional.indexOf('id="quill-src">') + 15, optional.indexOf('</script>')).replace(/\s+/g, '');
+  const QUILL_JS = Buffer.from(b64, 'base64').toString('utf8');
   // The offline copy must be exactly the file the CDN loader's integrity hash allows.
   const pinned = /integrity = '(sha384-[^']+)'/.exec(require('fs').readFileSync(path.join(__dirname, '..', 'Code.gs'), 'utf8'))[1];
   assert.strictEqual('sha384-' + require('crypto').createHash('sha384').update(QUILL_JS, 'utf8').digest('base64'), pinned, 'optional/quill.html matches the pinned hash');
