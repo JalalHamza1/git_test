@@ -2003,12 +2003,13 @@ const ppBox = (label, value, cls) => h('div', { class: 'pp-box' + (cls ? ' ' + c
   h('div', { class: 'pp-v' }, value === '' || value === null || value === undefined ? h('span', { class: 'pp-empty' }, '……') : value));
 const ppText = t => (t ? h('div', { class: 'pp-txt' }, t) : h('span', { class: 'pp-empty' }, '……'));
 
+const SHORTAGE_QTY = 'Počet vozíků/palet';
 function shortageRow(row) {
-  return h('tr',null,h('td',null,fmtDT(row.when)),h('td',null,row.partVersion),h('td',null,row.qty + ' ks'));
+  return h('tr',null,h('td',null,fmtDT(row.when)),h('td',null,row.partVersion),h('td',null,row.qty));
 }
 function shortageTable(rows) {
   return h('table',{class:'pp-t','aria-label':'Opakované nedodávky zákazníkovi'},
-    h('thead',null,h('tr',null,['Čas','Verze','Počet'].map(label => h('th',{scope:'col'},label)))),
+    h('thead',null,h('tr',null,['Čas','Verze',SHORTAGE_QTY].map(label => h('th',{scope:'col'},label)))),
     h('tbody',null,rows.map(shortageRow)));
 }
 
@@ -2095,11 +2096,11 @@ function shortageBox(q, big) {
   if (editing && canAdd) {
     const F = makeForm({when:new Date().toISOString()}), token = newToken();
     const add = h('div',{class:'shortage-editor editing no-print'},F.input('when','Čas',{req:true,type:'datetime-local'}),
-      F.input('partVersion','Verze',{req:true,len:100}),F.input('qty','Počet',{req:true,type:'number',min:1,max:10000000}),
+      F.input('partVersion','Verze',{req:true,len:100}),F.input('qty',SHORTAGE_QTY,{req:true,type:'number',min:1,max:10000000}),
       formButtons('Uložit nedodávku',button=>{
         const values=F.read();
         if (!values) return;
-        if (Number(values.qty) < 1) { F.mark('qty','Počet musí být kladné celé číslo.'); return; }
+        if (Number(values.qty) < 1) { F.mark('qty',SHORTAGE_QTY + ' musí být kladné celé číslo.'); return; }
         submit(button,'apiAppendShortage',[q.id,{...values,token,version:q.revision}],3,{done:'Nedodávka uložena.'});
       }));
     container.append(add);
@@ -2213,7 +2214,7 @@ function paperBody(q, big, ed, context) {
       h('tr', null, h('th', null, 'Okamžitá opatření:'), h('th', null, 'Kdo'), h('th', null, 'Čas')),
       rowsMax(ia).map(a => h('tr', null, h('td', null, a.text), h('td', null, a.owner), h('td', null, a.done ? (big ? fmtDT(a.done) : timeOf(a.done)) : 'probíhá')))),
     more(ia)),
-    E.restoredAt ? boxE('Čas restartu procesu/stanice:', E.restoredAt) : h('div', { class: 'pp-box' }, h('b', null, 'Čas restartu procesu/stanice: '), q.restoredAt ? fmtDT(q.restoredAt) : '…… : ……'),
+    E.restoredAt ? boxE('Čas restartu procesu/stanice:', E.restoredAt) : h('div', { class: 'pp-box' }, h('b', null, 'Čas restartu procesu/stanice: '), q.restoredAt ? fmtDT(q.restoredAt) : 'N/A'),
     shortageBox(q,big));
 
   // ④ ROZHODNUTÍ OJT
@@ -2823,7 +2824,9 @@ let hrIndex = null, hrIndexRequest = null;
 const normalizeHr = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
 const hrIdentity = () => JSON.stringify([S.me.email,S.me.role,S.configVersion]);
 function currentHrIndex() {
-  return hrIndex && hrIndex.identity === hrIdentity() && Date.now()-hrIndex.at < 240000 ? hrIndex : null;
+  // SPEED: the directory is kept 30 min (was 4) – searching never waits for a reload while a form is being filled in.
+  // The server checks every chosen person against the live HR sheet when saving.
+  return hrIndex && hrIndex.identity === hrIdentity() && Date.now()-hrIndex.at < 1800000 ? hrIndex : null;
 }
 function warmHrIndex(fresh = false) {
   if (!canReport() || accountBlocked) return Promise.resolve(null);
@@ -3233,7 +3236,7 @@ function opatreniForm(v, ia, onPaper) {
       sort),
     ia: rows.el,
     restoredAt: F.input('restoredAt', 'Čas restartu procesu/stanice', { type: 'datetime-local', now: true,
-      hint: 'Kdy proces znovu běží. Nechte prázdné, když proces nebyl zastaven.' })
+      help: 'V případě nedodávek není povinné vyplnit (ani když proces nebyl zastaven).' })
   };
   const el = h('div', null,
     h('div', { class: 'grid' }, h('div', { class: 'sub-h wide' }, 'Ochranná opatření'), parts.risk),

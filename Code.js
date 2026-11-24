@@ -22,6 +22,10 @@
  *     before the lock is released, slow photo uploads happen outside the lock.
  *   - Notifications do not hold up the person who saves: they are parked in Script Properties and the page has them
  *     written with a second, background call (apiMail). If the page is closed first, the next refresh does it (sweepMail_).
+ *   - The app's lock is never held while the other file (notifications, HR) is read or written: a save only marks the
+ *     QRAP; the page's background call snapshots the recipients under the lock (local, short) and then writes the
+ *     notification sheet under its own lease (syncAlerts_). People chosen in a form are checked against HR before the
+ *     lock (prewarmHr_). The HR directory and the OSČ list are cached 6 h; the journal Operace is pruned after 3 days.
  *   - Photos taken on the kiosk are uploaded in the background while the form is still being filled in
  *     (PhotoHandoff.gs, apiStagePhoto), so "Odeslat" sends only text. Small previews are cached (dataUrl_).
  *
@@ -231,7 +235,7 @@ const FP_FIELDS = {
 };
 
 /** Change this text whenever you deploy a new version: open pages then offer "Obnovit stránku". */
-const APP_BUILD = '2026-11-24-background-send';
+const APP_BUILD = '2026-11-24-faster-saves';
 
 const PERF = {
   FULL_READ_CELLS: 15000, // a tab up to this size is read in one call; a bigger one by ID column + matching rows
@@ -259,9 +263,7 @@ let WROTE_ = false;  // something was written → SpreadsheetApp.flush() before 
 let BUMP_ = false;   // QRAP data changed → new data version, open pages reload
 let DEFER_MAIL_ = false; // Web calls request immediate background reconciliation after saving.
 let MAIL_KEYS_ = [];     // QRAP reconciliation keys returned to the page as mailKeys.
-// SPEED: a new QRAP sent from the page skips the alert snapshot inside the save lock. The page's background call
-// (apiMail → syncAlerts_) takes it seconds later; the 5-minute worker and the refresh sweep catch it if the page closed.
-let DEFER_CAPTURE_ = false;
+let ME_AT_ = 0;           // when me_() last read the tab Lidé (lock_ re-reads it only if that was not just now)
 
 /** A problem the user can fix (wrong input, wrong state). Its message is shown to the user as it is. */
 class UserError extends Error {}
@@ -494,6 +496,7 @@ function create_(f) {
   const ia = rowsIn_(s3in.ia).filter(r => r.remove !== true).map(r => iaFields_(r, q.when));
   need_(ia.length, 'Přidejte alespoň jedno okamžité opatření a vyberte osobu z HR.');
   const started = Date.now();
+  prewarmHr_([f.productionSupervisor, f.productionSupervisor ? readNotif_().spuSupervisor : '']);
   const phone = phonePhotos_(f.photoToken, f.photoKeep, f.photoDrop);
   const files = [];
   let res, locked = 0;
@@ -501,7 +504,6 @@ function create_(f) {
     q.photoWrong = savePhotoPair_(f.photoWrong, f.photoWrongThumb, files) || phone.WRONG;
     q.photoRight = savePhotoPair_(f.photoRight, f.photoRightThumb, files) || phone.RIGHT;
     locked = Date.now();
-    DEFER_CAPTURE_ = DEFER_MAIL_; // web call: the page reconciles alerts right after (see DEFER_CAPTURE_)
     res = lock_(() => {
       let op = operation_(key);
       if (op) { need_(op.hash === hash, 'Formulář byl odeslán s jinými údaji.'); return resumeCreate_(key, op); }
@@ -518,8 +520,6 @@ function create_(f) {
     trashUnreferenced_(files);
     if (phone.mine) phoneReopen_(f.photoToken);
     throw e;
-  } finally {
-    DEFER_CAPTURE_ = false;
   }
   // Timing in Apps Script → Executions, to see where a slow "Odeslat" spends its time.
   console.log('apiCreate ' + res.id + ': photos ' + (locked - started) + ' ms, save ' + (Date.now() - locked) + ' ms');
@@ -581,6 +581,7 @@ function operation_(key) {
 }
 // durable = false only for a final "done" mark inside lock_(), which flushes before the lock is released anyway.
 function saveOperation_(key, value, durable = true) {
+  value.savedAt = nowIso_(); // for pruneOperations_
   const json = JSON.stringify(value);
   need_(json.length <= 45000, 'Operace je příliš velká. Kontaktujte správce; data nebyla zahozena.');
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -610,7 +611,7 @@ function finishOperation_(key, op, q, text, isNew) {
   operationHistory_(op);
   op.state = 'done';
   if (key.startsWith('create:')) { op.q = {id:q.id}; delete op.ia; delete op.logs; }
-  saveOperation_(key, op);
+  saveOperation_(key, op, false); // the last mark – lock_() flushes before the lock is released
 }
 /** Uncertain failures retain files for recovery; only positively unused files are removed. */
 function trashUnreferenced_(files) {
@@ -698,10 +699,10 @@ function commitTransition_(tx, q, message, before) {
       SpreadsheetApp.flush();
     } else need_(q.revision === op.patch.revision && q.updatedBy === op.patch.updatedBy &&
       q.status === op.patch.status, 'Záznam se během obnovy změnil. Kontaktujte správce.');
-    op.state = 'applied'; saveOperation_(tx.key,op);
+    op.state = 'applied'; saveOperation_(tx.key,op,false); // SPEED: recovery recognises the applied patch by its revision
   }
   operationHistory_(op);
-  op.state = 'done'; saveOperation_(tx.key,op);
+  op.state = 'done'; saveOperation_(tx.key,op,false); // lock_() flushes before the lock is released
   BUMP_ = true; alertTouch_(q);
 }
 function save_(id, part, f) {
@@ -710,6 +711,10 @@ function save_(id, part, f) {
   checkFormSize_(f);
   need_(PARTS.indexOf(part) >= 0, 'Neznámá část formuláře.');
   me_();
+  prewarmHr_([f.finder, f.pilots, f.notifiedOther, f.productionSupervisor, Array.isArray(f.ia) ? f.ia.map(r => r && r.owner) : [],
+    f.productionSupervisor ? readNotif_().spuSupervisor : '']);
+  // ⑤ with "update the standard" = ANO: the action goes to the first available pilot – check them before the lock too
+  if (part === 'pricina' && f.std === 'ANO') { try { prewarmHr_([find_(id).pilots, me_().email]); } catch (e) { /* checked inside */ } }
   let conflict = null;
   lock_(() => {
     const me = me_();
@@ -856,6 +861,7 @@ function saveAction_(id, a) {
   if (a.no != null && a.no !== '') need_(num_(a.no, 'Číslo akce') > 0, 'Neplatné číslo akce.');
   need_(a.remove == null || typeof a.remove === 'boolean', 'Neplatná volba odebrání akce.');
   me_();
+  prewarmHr_([a.owner]);
   let conflict = null;
   lock_(() => {
     const actor = me_();
@@ -1030,7 +1036,7 @@ function assess_(id, f) {
     }
     operationHistory_(op);
     op.state = 'done';
-    saveOperation_(key, op);
+    saveOperation_(key, op, false); // lock_() flushes before the lock is released
     BUMP_ = true; // an assessment adds history without modifying a signed QRAP
   });
   return pack_(id);
@@ -1164,8 +1170,8 @@ function appendShortage_(id, input) {
   const receipt = operationKey_('shortage', f.token);
   const instant = iso_(f.when);
   const when = instant ? instant.slice(0,16) + ':00.000Z' : '';
-  const qty = num_(f.qty,'Počet'), partVersion = txt_(f.partVersion,100);
-  need_(when && partVersion && qty > 0, 'Vyplňte čas, verzi a kladný počet kusů.');
+  const qty = num_(f.qty,'Počet vozíků/palet'), partVersion = txt_(f.partVersion,100);
+  need_(when && partVersion && qty > 0, 'Vyplňte čas, verzi a kladný počet vozíků/palet.');
   rate_('shortage', 90, 600);
   lock_(() => {
     const q = find_(id);
@@ -1192,7 +1198,7 @@ function history_(id) {
   me_();
   id = idOf_(id);
   const history = rowsBy_(TAB.log, id).slice().reverse().map(r => ({at:r.at, by:r.by, text:r.text}));
-  const entries = shortagesFor_(id).map(r => ({at:r.created, by:r.by, text:'Přidána nedodávka: ' + r.partVersion + ', ' + r.qty + ' ks.'}));
+  const entries = shortagesFor_(id).map(r => ({at:r.created, by:r.by, text:'Přidána nedodávka: ' + r.partVersion + ', počet vozíků/palet: ' + r.qty + '.'}));
   return history.concat(entries).sort((a,b) => b.at.localeCompare(a.at));
 }
 
@@ -1504,6 +1510,7 @@ function me_(fresh) {
   if (!email) throw new AccountAccessError('Přihlaste se firemním účtem Google a otevřete aplikaci znovu.');
   if (!EMAIL_RE.test(email) || !sameDomain_(email)) throw new AccountAccessError('Použijte účet ve firemní doméně aplikace.');
   const people = readPeople_(); // cached once per execution; rights never come from the shared settings cache
+  ME_AT_ = Date.now();
   const matches = people.filter(x => x.email === email);
   if (matches.length > 1 || matches.some(x => !x.active)) throw new AccountAccessError('Přístup účtu je pozastaven. Obraťte se na správce aplikace.');
   const p = matches[0];
@@ -2029,11 +2036,15 @@ function lock_(fn) {
   let result;
   let flushErr = null;
   try {
-    requireWriter_(true); // roles may have changed while this operation waited for the lock
+    // roles may have changed while this operation waited for the lock – re-read unless they were read just now
+    requireWriter_(!ME_ || Date.now() - ME_AT_ > 3000);
     result = fn();
     flushLog_();
     // The business record remains the recovery source if a local journal write fails.
-    try { if (!DEFER_CAPTURE_) Object.keys(ALERT_DIRTY_).forEach(id => captureAlerts_(find_(id))); }
+    // SPEED: a save from the page leaves the alert snapshot to the page's background call (apiMail → syncAlerts_),
+    // which runs right after it; the 5-minute check and the refresh sweep catch it if the page was closed.
+    // Runs without a page (menu, triggers) still snapshot here.
+    try { if (!DEFER_MAIL_) Object.keys(ALERT_DIRTY_).forEach(id => captureAlerts_(find_(id))); }
     catch (e) { ALERT_WARNING_ = 'QRAP je uložený. Upozornění čekají na další kontrolu.'; console.warn('Alert capture: ' + e.message); }
     ok = true;
   } finally {
@@ -2490,10 +2501,13 @@ function syncStdAction_(q) {
   if (q.std === 'ANO') {
     const text = 'Aktualizovat standard: ' + q.stdRef;
     if (!std) {
-      const eligible = orgPeople_(true).people;
-      const first = pilotsOf_(q.pilots).find(p=>eligible.some(x=>x.e===p.email));
+      // SPEED: each candidate is checked on its own (verifiedHrPerson_) – before, the whole HR directory was read
+      // again from the other file inside the save lock. Same rule as orgPeople_: in HR, with OSČ, not switched off.
+      const off = disabledRecipients_();
+      const eligible = email => { const p = verifiedHrPerson_(email); return !!(p && p.o !== '' && !off.has(email)); };
+      const first = pilotsOf_(q.pilots).find(p => eligible(p.email));
       const pilot = first ? first.email : me_().email;
-      need_(eligible.some(p=>p.e===pilot), 'Pro aktualizaci standardu nejdřív vyberte dostupného pilota z HR.');
+      need_(eligible(pilot), 'Pro aktualizaci standardu nejdřív vyberte dostupného pilota z HR.');
       const p = cfg_().people.filter(x => x.email === pilot)[0];
       const due = Utilities.formatDate(new Date(Date.now() + 14 * 864e5), tz_(), 'yyyy-MM-dd');
       insert_(TAB.actions, { qrapId: q.id, no: nextNo_(acts), part: '⑥', kind: 'STD', text: text,
@@ -2709,6 +2723,10 @@ function emailList_(v) {
 
 /** Assignment recipients need OSČ and notifications enabled; the form filler uses all HR identities. */
 let ORG_FRESH_ = false, HR_INDEX_ = null, HR_SHEET_ = null, HR_BY_EMAIL_ = null;
+// SPEED: the HR directory and the OSČ list are kept 6 h in the cache (was 5 min – about every form session and every
+// 5-minute check read them again from the other file). ORG_AT_ / OSC_AT_ = when the copy in use was read from HR.
+const HR_CACHE_S = 21600, HR_TRUST_MS = 600000;
+let ORG_AT_ = 0, OSC_AT_ = 0;
 const HR_VERIFIED_ = new Map();
 
 function disabledRecipients_() {
@@ -2775,7 +2793,7 @@ function orgChart_(fresh) {
   if (HR_INDEX_ && !fresh) return HR_INDEX_;
   const ref = sheetRef_(setting_('NOTIFIKACE_TABULKA'));
   const hit = !fresh && cacheGetBig_(NOTIF.ORG_KEY);
-  if (hit && ref && hit.id === ref.id) return HR_INDEX_ = hit.list;
+  if (hit && ref && hit.id === ref.id) { ORG_AT_ = Number(hit.at) || 0; return HR_INDEX_ = hit.list; }
   const source = hrSheet_(), {sh,width,indices} = source;
   const count = Math.max(0, sh.getLastRow() - 1), seen = new Set(), list = [];
   // Bound both the row count and number of cells in each directory read.
@@ -2791,7 +2809,8 @@ function orgChart_(fresh) {
   HR_INDEX_ = list;
   HR_BY_EMAIL_ = null;
   ORG_FRESH_ = true;
-  cachePutBig_(NOTIF.ORG_KEY, {id:ref.id, list}, 300);
+  ORG_AT_ = Date.now();
+  cachePutBig_(NOTIF.ORG_KEY, {id:ref.id, list, at:ORG_AT_}, HR_CACHE_S);
   return list;
 }
 
@@ -2805,7 +2824,8 @@ function verifiedHrPerson_(value) {
     return HR_BY_EMAIL_.get(email);
   }
   let person = indexed();
-  if (!ORG_FRESH_) {
+  // the live row is checked unless the directory was read from HR in the last 10 minutes (saves 1–2 s per save)
+  if (!ORG_FRESH_ && !(person && Date.now() - ORG_AT_ < HR_TRUST_MS)) {
     const source = hrSheet_();
     person = person && person.row <= source.sh.getLastRow()
       ? personFromHrRow_(readHrRows_(source,person.row,1)[0],person.row,source.indices) : null;
@@ -2813,6 +2833,23 @@ function verifiedHrPerson_(value) {
   }
   HR_VERIFIED_.set(email, person || null);
   return person || null;
+}
+
+/**
+ * SPEED: checks the people chosen in a form against HR BEFORE the save takes the lock – the check may have to open the
+ * HR file (1–2 s). Inside the lock the same checks are then answered from memory (HR_VERIFIED_), so nobody else's save
+ * waits for HR. Nothing is decided here: every rule is still checked inside the lock exactly as before.
+ */
+function prewarmHr_(values) {
+  const emails = new Set();
+  const walk = v => {
+    if (Array.isArray(v)) { v.forEach(walk); return; }
+    if (v == null || typeof v === 'object') return;
+    String(v).slice(0, 4000).split(/[\s,;<>]+/).forEach(x => { x = x.trim().toLowerCase(); if (EMAIL_RE.test(x)) emails.add(x); });
+  };
+  walk(values);
+  if (!emails.size || emails.size > 30) return; // not a normal form – the checks inside the lock run as before
+  emails.forEach(email => { try { verifiedHrPerson_(email); } catch (e) { /* reported by the check inside the lock */ } });
 }
 
 function requirePushRecipients_(emails) {
@@ -2930,7 +2967,8 @@ function notifAdmin_(c) {
   if (plain_(c.settings.EMAILY) !== 'ANO') out.status = 'Upozornění jsou vypnutá (Nastavení → Posílat upozornění = NE). ';
   try {
     const t = notifTarget_();
-    const osc = oscMap_(t);
+    let osc = oscMap_(t);
+    if (all.some(e => !hasOsc_(osc, e)) && Date.now() - OSC_AT_ > 600000) osc = oscMap_(t, true); // just added in HR?
     out.noOsc = all.filter(e => !hasOsc_(osc, e));
     out.ok = true;
     out.status += 'Zapisuje se do: ' + t.name + '.';
@@ -2986,9 +3024,9 @@ function notifTarget_() {
  * e-mail → osč from the tab HR_AllApps_OrgChart (columns "E-mail" and "osč", any order). Only those two columns are read,
  * and the list is cached 5 min in chunks (an org chart of thousands of people is far over one 100 KB cache entry).
  */
-function oscMap_(t) { // AUDIT-H2
-  const hit = cacheGetBig_(NOTIF.OSC_KEY);
-  if (hit && hit.id === t.ss.getId()) return hit.map;
+function oscMap_(t, fresh) { // AUDIT-H2
+  const hit = !fresh && cacheGetBig_(NOTIF.OSC_KEY);
+  if (hit && hit.id === t.ss.getId()) { OSC_AT_ = Number(hit.at) || 0; return hit.map; }
   const sh = t.ss.getSheets().filter(x => String(x.getName()).trim().toLowerCase() === NOTIF.OSC_TAB.toLowerCase())[0];
   need_(sh, 'V tabulce pro upozornění chybí list „' + NOTIF.OSC_TAB + '“ (e-mail → osč).');
   const rows = sh.getLastRow() - 1, cols = sh.getLastColumn();
@@ -3003,7 +3041,8 @@ function oscMap_(t) { // AUDIT-H2
       if (e && v !== '' && v !== null && map[e] === undefined) map[e] = v;
     }
   }
-  cachePutBig_(NOTIF.OSC_KEY, { id: t.ss.getId(), map: map }, 300);
+  OSC_AT_ = Date.now();
+  cachePutBig_(NOTIF.OSC_KEY, { id: t.ss.getId(), map: map, at: OSC_AT_ }, HR_CACHE_S);
   return map;
 }
 /** AUDIT-M5: an e-mail for the log: "ja***@valeo.com". */
@@ -3182,13 +3221,22 @@ function alertTargets_() {
 function alertUrlId_(url) { const m=/[?&]id=(Q-[\w-]+)(?:&|$)/.exec(String(url||''));return m ? m[1] : ''; }
 function alertCellEq_(a,b) { return a instanceof Date || b instanceof Date ? new Date(a).getTime()===new Date(b).getTime() : String(a==null?'':a)===String(b==null?'':b); }
 
-/** Reconcile under ONE lock through remote reads/writes: an uncertain append is found by UUID on retry.
+/**
+ * Reconcile in two steps, so that a save never waits for the remote notification sheet:
+ *   1. under the script lock – local sheets only, short: the recipients of the committed QRAPs are snapshotted in
+ *      Alerty_stav (captureAlerts_). Saves use the same lock, so the snapshot never races a save.
+ *   2. under its own lease (alertLease_), WITHOUT the script lock: rows are written to / removed from the notification
+ *      sheet. An uncertain append is found by UUID on retry; every update and delete re-checks the live row first.
  * State is never dequeued before writing. Closed QRAPs are checked again at delivery, preventing resurrection.
+ * SPEED: before, step 2 (opening the other file, reading its tabs and the HR OSČ list) ran under the script lock too –
+ * after every save, on every 5-minute check – and every save in the meantime had to wait for it.
  */
 function syncAlerts_(ids, quiet) {
+  const errors=[];let written=0, removed=0;
+  let testSettings=null, states=[];
+  const qmap={}, pending=new Set();
   const lock=LockService.getScriptLock();
   if (!lock.tryLock(quiet ? 1 : 20000)) return {ok:false, retry:true};
-  const errors=[];let written=0, removed=0;
   try {
     if (!ids) {
       const cache = CacheService.getScriptCache();
@@ -3198,24 +3246,26 @@ function syncAlerts_(ids, quiet) {
       cache.put('alerts:recent-sweep', '1', quiet ? 300 : 600);
     }
     MEMO_={}; ALERT_STORE_=null;
-    const testSettings = readNotif_();
+    testSettings = readNotif_();
     const selected = ids
       ? Array.from(new Set(ids)).map(id => rowsBy_(TAB.qraps,id)[0]).filter(Boolean)
       : table_(TAB.qraps).all;
     // Protect unfinished recovery operations: the worker does not treat a half-restored QRAP as a completed save.
-    const pending=new Set();
     const opSheet=SpreadsheetApp.getActiveSpreadsheet().getSheetByName(OPS_TAB);
-    if (opSheet) table_(OPS_TAB).all.forEach(r => {
-      if (r.key.startsWith('upload:')) return;
-      const op = JSON.parse(r.json);
-      if (op.state === 'done') return;
-      if (op.q) pending.add(op.q.id);
-      if (op.action) pending.add(op.action.qrapId);
-      // Transitions always reconcile from the live QRAP, including closure after a lost reply.
-      if (r.key.startsWith('restore:')) pending.add(r.key.slice(8));
-    });
+    if (opSheet && opSheet.getLastRow() > 1) {
+      const ops = table_(OPS_TAB).all;
+      ops.forEach(r => {
+        if (r.key.startsWith('upload:')) return;
+        const op = JSON.parse(r.json);
+        if (op.state === 'done') return;
+        if (op.q) pending.add(op.q.id);
+        if (op.action) pending.add(op.action.qrapId);
+        // Transitions always reconcile from the live QRAP, including closure after a lost reply.
+        if (r.key.startsWith('restore:')) pending.add(r.key.slice(8));
+      });
+      if (!ids) pruneOperations_(ops); // the full check keeps the journal small
+    }
     const groupedActions = !ids ? groupBy_(table_(TAB.actions).all) : null;
-    const qmap = {};
     selected.forEach(q => {
       if (pending.has(q.id)) return;
       qmap[q.id] = q;
@@ -3241,82 +3291,147 @@ function syncAlerts_(ids, quiet) {
         }
       }
     }
-
-    if (!Object.keys(qmap).length) return {ok:true,written:0,removed:0};
-    const t=alertTargets_(), app=String(setting_('NOTIFIKACE_APLIKACE')||'eQRAP');
-    let osc={};try{osc=oscMap_(t);}catch(e){errors.push(e.message);}
-    const disabled=new Set(cfg_().people.filter(p=>p.email&&!wantsMail_(p)).map(p=>p.email));
-    const enabled=plain_(setting_('EMAILY'))==='ANO';
-    const states=Object.values(alertStore_().entries).map(r=>r.value).filter(s=>s.qid && qmap[s.qid]);
-    const tabs=[t.normal,t.safety], dels=tabs.map(()=>new Set());
-    const prefix=alertPrefix_(), baseUrl=link_('').split('?')[0];
-    const owned = (tab,row) => {
-      const uuid = String(row[tab.head.indexOf('uuid')] || '');
-      if (uuid) return uuid.startsWith(prefix);
-      return !!baseUrl && String(row[tab.head.indexOf('Aplikace')]) === app &&
-        String(row[tab.head.indexOf('URL')] || '').split('?')[0] === baseUrl;
-    };
-    const byUuid=Object.create(null), legacy=Object.create(null);
-    tabs.forEach((tab,ti)=>tab.rows.forEach((row,ri)=>{
-      const m={ti:ti,ri:ri,row:row},uid=String(row[tab.head.indexOf('uuid')]||'');
-      if(uid){(byUuid[uid]||(byUuid[uid]=[])).push(m);}
-      else if(owned(tab,row)) {const key=alertUrlId_(row[tab.head.indexOf('URL')])+'|'+String(row[tab.head.indexOf('OSC')]);(legacy[key]||(legacy[key]=[])).push(m);}
-    }));
-    states.forEach(s=>{
-      const matches=(byUuid[s.id]||[]).concat(hasOsc_(osc,s.email)?legacy[s.qid+'|'+String(osc[s.email])]||[]:[]);
-      if(!s.active || qmap[s.qid].closedAt || qmap[s.qid].cancelReason || disabled.has(s.email)) {matches.forEach(m=>dels[m.ti].add(m.ri));return;}
-      if(testSettings.testMode === 'PAUSED') return;
-      if(testSettings.testMode === 'ONE') {
-        const snapshot = alertGet_('q:' + s.qid);
-        if (!snapshot || snapshot.testMode !== 'ONE' || s.email !== testSettings.testRecipient) return;
-      }
-      if(!hasOsc_(osc,s.email)){errors.push('Chybí OSČ: '+mask_(s.email)+' ('+s.qid+')');return;}
-      // Global switch stops new notifications, but still allows closure cleanup and PUSH expiry of existing rows.
-      if(!enabled && !matches.length) return;
-      const ti=s.safety?1:0,tab=tabs[ti],keep=matches.find(m=>m.ti===ti);
-      const value={OSC:osc[s.email],Aplikace:app,'Text Alertu':s.text,'Termín':s.due?new Date(s.due):'',URL:s.url,Kontext:s.ctx,
-        Status:enabled && Date.now()<s.pushUntil?'PUSH':'aktivni','Typ Akce':NOTIF.TYPE,'Důvod odeslání':s.why,uuid:s.id,PUSH_do:new Date(s.pushUntil)};
-      const cell=v=>typeof v==='string'&&v ? "'"+v : v;
-      try {
-        const obsolete = matches.filter(m=>m!==keep);
-        const changed = keep ? Object.keys(value).filter(k=>!alertCellEq_(keep.row[tab.head.indexOf(k)],value[k])) : [];
-        if (keep && !changed.length && !obsolete.length) return;
-        if(keep){
-          const live = tab.sh.getRange(keep.ri+2,1,1,tab.head.length).getValues()[0];
-          need_(owned(tab,live) && ['uuid','OSC','URL','Aplikace'].every(k => {
-            const i=tab.head.indexOf(k); return alertCellEq_(keep.row[i],live[i]);
-          }), 'Řádek upozornění se změnil. Kontrola bude zopakována.');
-          changed.forEach(k=>tab.sh.getRange(keep.ri+2,tab.head.indexOf(k)+1).setValue(cell(value[k])));
-        } else {const row=tab.head.map(k=>Object.prototype.hasOwnProperty.call(value,k)?cell(value[k]):'');tab.sh.appendRow(row);}
-        if (obsolete.length) SpreadsheetApp.flush(); // confirm the surviving row before deletion
-        obsolete.forEach(m=>dels[m.ti].add(m.ri));
-        if (!keep || changed.length) written++;
-      }catch(e){errors.push(s.qid+': '+e.message);}
-    });
-    // Also delete legacy rows after closure, including people no longer present in current settings/HR.
-    tabs.forEach((tab,ti)=>tab.rows.forEach((row,ri)=>{
-      if(!owned(tab,row))return;
-      const id=alertUrlId_(row[tab.head.indexOf('URL')]),q=qmap[id];
-      if(q && (q.closedAt||q.cancelReason)) dels[ti].add(ri);
-    }));
-    tabs.forEach((tab,ti) => Array.from(dels[ti]).sort((a,b) => b-a).forEach(ri => {
-      try {
-        const live = tab.sh.getRange(ri+2,1,1,tab.head.length).getValues()[0];
-        need_(owned(tab,live) && ['uuid','OSC','URL','Aplikace'].every(k => {
-          const col = tab.head.indexOf(k); return alertCellEq_(live[col],tab.rows[ri][col]);
-        }), 'Řádek upozornění se mezitím změnil. Kontrola bude zopakována.');
-        tab.sh.deleteRow(ri+2); removed++;
-      } catch(e) { errors.push('Odstranění: ' + e.message); }
-    }));
-    SpreadsheetApp.flush();
-    // Successful reconciliation supersedes old property queues. Never delete them on an incomplete run.
-    if(!ids && !errors.length && !pending.size){const props=PropertiesService.getScriptProperties();Object.keys(props.getProperties()).filter(k=>k.indexOf(MAIL.PREFIX)===0).forEach(k=>props.deleteProperty(k));}
+    if (Object.keys(qmap).length) states=Object.values(alertStore_().entries).map(r=>r.value).filter(s=>s.qid && qmap[s.qid]);
+    SpreadsheetApp.flush(); // the snapshot is committed before the lock is released
   }catch(e){errors.push(e.message||String(e));}
   finally{lock.releaseLock();}
+  if (!errors.length && !Object.keys(qmap).length) return {ok:true,written:0,removed:0};
+
+  // Step 2 – the notification sheet, outside the script lock.
+  const lease = errors.length ? '' : alertLease_(quiet ? 1 : 20000);
+  if (!errors.length && !lease) return {ok:false, retry:true}; // another check is writing right now – the next one does it
+  if (lease) {
+    try {
+      const t=alertTargets_(), app=String(setting_('NOTIFIKACE_APLIKACE')||'eQRAP');
+      let osc={};
+      try {
+        osc=oscMap_(t);
+        // somebody new in HR: the cached OSČ list (kept 6 h) is read again – at most every 10 minutes
+        if (states.some(s=>s.active && !hasOsc_(osc,s.email)) && Date.now()-OSC_AT_ > 600000) osc=oscMap_(t,true);
+      } catch(e){errors.push(e.message);}
+      const disabled=new Set(cfg_().people.filter(p=>p.email&&!wantsMail_(p)).map(p=>p.email));
+      const enabled=plain_(setting_('EMAILY'))==='ANO';
+      const tabs=[t.normal,t.safety], dels=tabs.map(()=>new Set());
+      const prefix=alertPrefix_(), baseUrl=link_('').split('?')[0];
+      const owned = (tab,row) => {
+        const uuid = String(row[tab.head.indexOf('uuid')] || '');
+        if (uuid) return uuid.startsWith(prefix);
+        return !!baseUrl && String(row[tab.head.indexOf('Aplikace')]) === app &&
+          String(row[tab.head.indexOf('URL')] || '').split('?')[0] === baseUrl;
+      };
+      const byUuid=Object.create(null), legacy=Object.create(null);
+      tabs.forEach((tab,ti)=>tab.rows.forEach((row,ri)=>{
+        const m={ti:ti,ri:ri,row:row},uid=String(row[tab.head.indexOf('uuid')]||'');
+        if(uid){(byUuid[uid]||(byUuid[uid]=[])).push(m);}
+        else if(owned(tab,row)) {const key=alertUrlId_(row[tab.head.indexOf('URL')])+'|'+String(row[tab.head.indexOf('OSC')]);(legacy[key]||(legacy[key]=[])).push(m);}
+      }));
+      states.forEach(s=>{
+        const matches=(byUuid[s.id]||[]).concat(hasOsc_(osc,s.email)?legacy[s.qid+'|'+String(osc[s.email])]||[]:[]);
+        if(!s.active || qmap[s.qid].closedAt || qmap[s.qid].cancelReason || disabled.has(s.email)) {matches.forEach(m=>dels[m.ti].add(m.ri));return;}
+        if(testSettings.testMode === 'PAUSED') return;
+        if(testSettings.testMode === 'ONE') {
+          const snapshot = alertGet_('q:' + s.qid);
+          if (!snapshot || snapshot.testMode !== 'ONE' || s.email !== testSettings.testRecipient) return;
+        }
+        if(!hasOsc_(osc,s.email)){errors.push('Chybí OSČ: '+mask_(s.email)+' ('+s.qid+')');return;}
+        // Global switch stops new notifications, but still allows closure cleanup and PUSH expiry of existing rows.
+        if(!enabled && !matches.length) return;
+        const ti=s.safety?1:0,tab=tabs[ti],keep=matches.find(m=>m.ti===ti);
+        const value={OSC:osc[s.email],Aplikace:app,'Text Alertu':s.text,'Termín':s.due?new Date(s.due):'',URL:s.url,Kontext:s.ctx,
+          Status:enabled && Date.now()<s.pushUntil?'PUSH':'aktivni','Typ Akce':NOTIF.TYPE,'Důvod odeslání':s.why,uuid:s.id,PUSH_do:new Date(s.pushUntil)};
+        const cell=v=>typeof v==='string'&&v ? "'"+v : v;
+        try {
+          const obsolete = matches.filter(m=>m!==keep);
+          const changed = keep ? Object.keys(value).filter(k=>!alertCellEq_(keep.row[tab.head.indexOf(k)],value[k])) : [];
+          if (keep && !changed.length && !obsolete.length) return;
+          if(keep){
+            const live = tab.sh.getRange(keep.ri+2,1,1,tab.head.length).getValues()[0];
+            need_(owned(tab,live) && ['uuid','OSC','URL','Aplikace'].every(k => {
+              const i=tab.head.indexOf(k); return alertCellEq_(keep.row[i],live[i]);
+            }), 'Řádek upozornění se změnil. Kontrola bude zopakována.');
+            changed.forEach(k=>tab.sh.getRange(keep.ri+2,tab.head.indexOf(k)+1).setValue(cell(value[k])));
+          } else {const row=tab.head.map(k=>Object.prototype.hasOwnProperty.call(value,k)?cell(value[k]):'');tab.sh.appendRow(row);}
+          if (obsolete.length) SpreadsheetApp.flush(); // confirm the surviving row before deletion
+          obsolete.forEach(m=>dels[m.ti].add(m.ri));
+          if (!keep || changed.length) written++;
+        }catch(e){errors.push(s.qid+': '+e.message);}
+      });
+      // Also delete legacy rows after closure, including people no longer present in current settings/HR.
+      tabs.forEach((tab,ti)=>tab.rows.forEach((row,ri)=>{
+        if(!owned(tab,row))return;
+        const id=alertUrlId_(row[tab.head.indexOf('URL')]),q=qmap[id];
+        if(q && (q.closedAt||q.cancelReason)) dels[ti].add(ri);
+      }));
+      tabs.forEach((tab,ti) => Array.from(dels[ti]).sort((a,b) => b-a).forEach(ri => {
+        try {
+          const live = tab.sh.getRange(ri+2,1,1,tab.head.length).getValues()[0];
+          need_(owned(tab,live) && ['uuid','OSC','URL','Aplikace'].every(k => {
+            const col = tab.head.indexOf(k); return alertCellEq_(live[col],tab.rows[ri][col]);
+          }), 'Řádek upozornění se mezitím změnil. Kontrola bude zopakována.');
+          tab.sh.deleteRow(ri+2); removed++;
+        } catch(e) { errors.push('Odstranění: ' + e.message); }
+      }));
+      SpreadsheetApp.flush();
+      // Successful reconciliation supersedes old property queues. Never delete them on an incomplete run.
+      if(!ids && !errors.length && !pending.size){const props=PropertiesService.getScriptProperties();Object.keys(props.getProperties()).filter(k=>k.indexOf(MAIL.PREFIX)===0).forEach(k=>props.deleteProperty(k));}
+    }catch(e){errors.push(e.message||String(e));}
+    finally{alertLeaseEnd_(lease);}
+  }
   const status={at:nowIso_(),ok:!errors.length,error:errors.slice(0,8).join(' · ')};
   try{PropertiesService.getScriptProperties().setProperty('ALERTS_LAST_RUN',JSON.stringify(status));}catch(e){console.warn(e.message);}
   if(errors.length)console.warn('Upozornění čekají na opakování: '+status.error);
   return {ok:!errors.length,retry:!!errors.length,written:written,removed:removed};
+}
+
+/**
+ * The mutex of step 2 of syncAlerts_: a lease in the cache, separate from the script lock that saves use. The script
+ * lock is held only for the check-and-set (milliseconds). A crashed run frees the lease after 5 minutes. If the cache
+ * ever loses it and two runs overlap, nothing breaks: rows are matched by UUID and the next run removes a duplicate.
+ */
+const ALERT_LEASE = 'alerts:lease';
+function alertLease_(waitMs) {
+  const cache = CacheService.getScriptCache(), id = Utilities.getUuid(), end = Date.now() + waitMs;
+  for (;;) {
+    const lock = LockService.getScriptLock();
+    if (lock.tryLock(Math.max(1, Math.min(3000, end - Date.now())))) {
+      try { if (!cache.get(ALERT_LEASE)) { cache.put(ALERT_LEASE, id, 300); return id; } }
+      finally { lock.releaseLock(); }
+    }
+    if (Date.now() + 700 >= end) return '';
+    Utilities.sleep(700);
+  }
+}
+function alertLeaseEnd_(id) {
+  try { const cache = CacheService.getScriptCache(); if (cache.get(ALERT_LEASE) === id) cache.remove(ALERT_LEASE); }
+  catch (e) { console.warn('alert lease: ' + e.message); }
+}
+
+/**
+ * The recovery journal (Operace) is read by every notification check, so it must not grow forever. A finished
+ * operation is kept 3 days (a retry comes within seconds, a draft lives 24 h), a phone-upload binding 2 days (it is
+ * accepted for 24 h); unfinished operations are always kept. Called by the full check, under the script lock.
+ */
+function pruneOperations_(rows) {
+  const now = Date.now(), keep = [];
+  let changed = false;
+  rows.forEach(r => {
+    let op;
+    try { op = JSON.parse(r.json); } catch (e) { keep.push({key:r.key, json:r.json}); return; }
+    const upload = String(r.key).indexOf('upload:') === 0;
+    const at = Date.parse(upload ? op.at : op.savedAt);
+    if (upload ? now - at > 2 * 864e5 : op.state === 'done' && now - at > 3 * 864e5) { changed = true; return; }
+    if (!upload && op.state === 'done' && !op.savedAt) { // finished before this version: its 3 days start now
+      op.savedAt = new Date(now).toISOString();
+      changed = true;
+    }
+    keep.push({key:r.key, json:JSON.stringify(op)});
+  });
+  if (!changed) return;
+  const t = head_(memo_(OPS_TAB)), sh = t.sheet(), width = t.last + 1, n = sh.getLastRow() - 1;
+  if (n > 0) sh.getRange(2, 1, n, width).clearContent();
+  if (keep.length) sh.getRange(2, 1, keep.length, width).setValues(keep.map(o => rowOf_(t, o)));
+  delete MEMO_[OPS_TAB];
+  WROTE_ = true;
 }
 
 /** Install once as deployer from the spreadsheet menu (not through google.script.run). */
