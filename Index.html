@@ -515,6 +515,7 @@ details.more-stats > summary { padding: var(--s3) 0; }
 .shortage-box > button {margin-top:4px;}
 .shortage-box .pp-t {width:100%;}
 .shortage-box .pp-t th:first-child {width:44%;}
+.sending-note .spin { width: 16px; height: 16px; flex: none; }
 /* a long list scrolls inside its box instead of stretching section ③ of the paper */
 .shortage-scroll.open {max-height:260px;overflow-y:auto;overscroll-behavior:contain;}
 .shortage-scroll.open thead th {position:sticky;top:0;background:#fff;}
@@ -1063,7 +1064,7 @@ async function save(btn, fn, args, o) {
     return null;
   }
   if (WAIT.list.some(item => item.lock)) return null;
-  const w = waitStart(btn, o);
+  const w = waitStart(btn, Object.assign({ cardAt: 5000 }, o)); // the card only for a long save – before that the button and top bar show it
   let res;
   try {
     res = await api(fn, ...args);
@@ -1332,6 +1333,32 @@ const DRAFT = {
   clear() { try { localStorage.removeItem(DRAFT.key()); } catch (e) { /* not available */ } }
 };
 
+/**
+ * A new QRAP being sent in the background (see newPage → "Odeslat"). SENDING lives in this page; the copy under
+ * SENDING_KEY survives a closed tab: at the next start it becomes the draft again, so nothing typed is ever lost.
+ */
+let SENDING = null;
+const SENDING_KEY = () => 'eqrap:sending:' + (S.me.email || '');
+function sendingPut(d) {
+  try { localStorage.setItem(SENDING_KEY(), JSON.stringify(Object.assign({ v: 1, at: Date.now() }, d))); } catch (e) { /* storage off */ }
+}
+function sendingTake() {
+  try { const s = localStorage.getItem(SENDING_KEY()); localStorage.removeItem(SENDING_KEY()); return s ? JSON.parse(s) : null; }
+  catch (e) { return null; }
+}
+/** The send failed or was interrupted: the form becomes the draft again (a newer draft is never overwritten). */
+function sendingBack() {
+  const d = sendingTake();
+  if (d && !DRAFT.get()) { try { localStorage.setItem(DRAFT.key(), JSON.stringify(Object.assign(d, { at: Date.now() }))); } catch (e) { /* storage off */ } }
+}
+/** The board shows the result: the "sending" line goes, the new QRAP (or the draft note) appears. */
+function sendingDone() {
+  if (S.view !== 'board') return;
+  const typing = document.activeElement && document.activeElement.matches && document.activeElement.matches('input, select, textarea');
+  if (!DIRTY && !S.edit && !typing && !WAIT.list.length) render();
+  else { document.getElementById('sending-note')?.remove(); if (redrawBoard) redrawBoard(); }
+}
+
 /** Throws a draft away (with its uploaded photos, which go to the Drive trash). */
 function dropDraft(d) {
   DRAFT.clear();
@@ -1476,6 +1503,7 @@ function render() {
   if (accountBlocked) return;
   redrawBoard = null;
   const pages = { board: boardPage, new: newPage, detail: detailPage, help: helpPage, dash: dashPage, admin: adminPage };
+  if (S.view === 'new' && SENDING) { S.view = 'board'; setTimeout(() => toast('Předchozí QRAP se ještě odesílá – za chvilku můžete založit další.', true), 0); }
   if ((S.view === 'new' && !canReport()) || (S.view === 'dash' && !isManager()) || (S.view === 'admin' && !isAdmin())) S.view = 'board';
   const width = { new: 'w-form', admin: 'w-mid', help: 'w-mid', detail: 'w-paper', board: 'w-paper', dash: 'w-paper' }[S.view] || '';
   fill(document.getElementById('app'), header(), h('main', { class: width || null }, (pages[S.view] || boardPage)()));
@@ -1701,6 +1729,8 @@ function boardPage() {
       canReport() ? h('button', { class: 'btn primary hero-btn', onclick: () => go('new') }, draft ? 'Pokračovat v rozepsaném QRAP' : '+ Nahlásit problém') : null),
     flash ? h('div', { class: 'flash' }, icon('check'), h('span', null, flash.text), h('div', { class: 'grow' }),
       flash.id ? h('button', { class: 'btn small', onclick: () => go('detail', flash.id) }, 'Otevřít ' + flash.id) : null) : null,
+    SENDING ? h('div', { class: 'draft-note sending-note', id: 'sending-note', role: 'status' }, h('span', { class: 'spin', 'aria-hidden': 'true' }),
+      h('span', null, 'Odesílám nový QRAP na pozadí – můžete pokračovat v práci. Jakmile bude uložený, objeví se v seznamu.')) : null,
     draftBox,
     stats,
     myActions(),
@@ -1804,40 +1834,43 @@ function newPage() {
     try {
       if (!pf.read() || !s3.read() || !(await whenOk())) return; // the fields are checked before anything is sent
       if (navigator.onLine === false) { toast('Jste offline – QRAP se neodeslal. Nic se neztratilo, odešlete ho po připojení.', true); return; }
-      const w = waitStart(send, { phases: PHASES.create, cardAt: 0, short: 'Odesílám…',
-        steps: ['Kontrola údajů', 'Fotky', 'Zápis QRAP do tabulky', 'Upozornění'] }); // NOTIF
-      w.step(0, 'ok');
+      if (SENDING) { toast('Předchozí QRAP se ještě odesílá – za chvilku to zkuste znovu.', true); return; }
+      // BACKGROUND SEND: the fields are checked, so the person goes back to the board at once and the QRAP is sent
+      // meanwhile. A copy of the form waits in this browser (SENDING_KEY) until the server confirms it; if the send fails
+      // or the page is closed, it becomes the draft again. The one-time token means a resend never makes a second QRAP.
+      sendingPut({ token, step: steps.length - 1, p: pf.F.peek(), s3: s3.peek(), photos: pf.photos.state() });
+      DRAFT.clear();
+      sent = true;
+      DIRTY = false;
+      SENDING = { token, at: Date.now() };
+      S.filter = 'open';
+      go('board', null, true);
+      toast('QRAP se odesílá na pozadí – můžete pokračovat v práci.');
       try {
-        const n = pf.photos.count();
-        w.step(1, 'run', pf.photos.pending() ? 'Dokončuji nahrání fotek…' : 'Fotky');
         await pf.photos.settle(); // photos taken here went up in the background – usually they are already there
         await pf.photos.sync();
-        w.step(1, 'ok', n ? 'Fotky (' + n + ')' : 'Bez fotek');
+        pf.photos.pause(); // the server ends the photo hand-off with this save
         const data = pf.read();
         const d3 = s3.read();
-        if (!data || !d3) { w.end(); return; }
+        if (!data || !d3) throw new Error('Formulář se nepodařilo přečíst.');
         data.s3 = d3;
         data.token = token;
-        w.step(2, 'run');
-        pf.photos.pause(); // the server ends the photo hand-off with this save
         const res = await api('apiCreate', data);
-        w.step(2, 'ok');
-        w.step(3, 'ok', 'Upozornění – zapisují se na pozadí'); // NOTIF
-        sent = true;
-        DIRTY = false;
-        DRAFT.clear();
+        sendingTake();
+        SENDING = null;
         store(res);
         pf.photos.seed(res.qrap); // the previews are already here – the QRAP page shows them without downloading
         const photoNote = pf.photos.afterCreate(res);
-        w.end();
-        S.flash = { id: res.qrap.id, text: 'QRAP ' + res.qrap.id + ' odeslán.' + photoNote + (res.dup
-          ? ' Byl založen už při prvním odeslání – pokud jste potom ve formuláři něco měnili, zkontrolujte to na stránce QRAP.' : '') }; // NOTIF
-        S.filter = 'open';
-        go('board', null, true);
+        sendingDone();
+        toast('QRAP ' + res.qrap.id + ' odeslán ✓' + photoNote + (res.dup
+          ? ' Byl založen už při prvním odeslání – pokud jste potom ve formuláři něco měnili, zkontrolujte to na stránce QRAP.' : ''),
+          !!photoNote, { label: 'Otevřít', run: () => go('detail', res.qrap.id) });
       } catch (e) {
-        w.end();
-        pf.photos.resume();
-        toast(errText(e) + ' Vyplněné údaje zůstaly – zkuste Odeslat znovu (dvakrát se QRAP nezaloží).', true);
+        SENDING = null;
+        sendingBack();
+        sendingDone();
+        toast('QRAP se NEODESLAL: ' + errText(e) + ' Nic se neztratilo – na tabuli klikněte „Pokračovat v rozepsaném QRAP“ a odešlete ho znovu (dvakrát se nezaloží).', true,
+          { label: 'Pokračovat', run: () => go('new') });
       }
     } finally { submitting = false; }
   } }, 'Odeslat ✓');
@@ -4539,6 +4572,7 @@ function start() {
   }
   Object.assign(S, {me:BOOT.me, cfg:BOOT.cfg, lists:BOOT.lists, people:BOOT.people, meta:BOOT.meta, configVersion:BOOT.configVersion || ''});
   loadLists(BOOT);
+  sendingBack(); // a background send cut off by a closed tab: the form is the draft again (a resend never duplicates)
   ['qraps','actions','effects','assess','people','cfg','lists','meta'].forEach(key => delete BOOT[key]);
   fillPeopleList();
   const p = BOOT.params || {};
@@ -4578,7 +4612,7 @@ function start() {
   // closing the tab or reloading: the draft is written; unsaved work or a save in progress makes the browser ask
   window.addEventListener('beforeunload', e => {
     if (onLeave) onLeave();
-    if (WAIT.list.some(w => w.lock) || (DIRTY && !safeDraft())) { e.preventDefault(); e.returnValue = ''; }
+    if (WAIT.list.some(w => w.lock) || SENDING || (DIRTY && !safeDraft())) { e.preventDefault(); e.returnValue = ''; }
   });
   // the screen crossed 1180 px (tablet turned, window resized): the board switches between strips and cards –
   // never while somebody is typing or saving
