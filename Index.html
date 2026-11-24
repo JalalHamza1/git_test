@@ -515,12 +515,17 @@ details.more-stats > summary { padding: var(--s3) 0; }
 .shortage-box > button {margin-top:4px;}
 .shortage-box .pp-t {width:100%;}
 .shortage-box .pp-t th:first-child {width:44%;}
+/* a long list scrolls inside its box instead of stretching section ③ of the paper */
+.shortage-scroll.open {max-height:260px;overflow-y:auto;overscroll-behavior:contain;}
+.shortage-scroll.open thead th {position:sticky;top:0;background:#fff;}
+.shortage-box > button:disabled {opacity:.6;cursor:progress;}
 .shortage-editor {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:5px;}
 .shortage-editor > :first-child,.shortage-editor .form-btns {grid-column:1/-1;}
 .shortage-print {display:none;}
 @media print {
   .shortage-print {display:block;}
-  .shortage-box.print-complete > table {display:none;}
+  .shortage-scroll.open {max-height:none;overflow:visible;}
+  .shortage-box.print-complete > .shortage-scroll {display:none;}
   .shortage-appendix {break-before:page;}
   .shortage-print thead {display:table-header-group;}
   .shortage-print tr {break-inside:avoid;}
@@ -964,7 +969,7 @@ function fill(el, ...kids) {
 }
 
 /** Calls that are safe to repeat: retried once after a network hiccup (apiCreate carries a one-time token). */
-const RETRY = new Set(['apiBoardPage', 'apiAppendShortage', 'apiRefresh', 'apiGet', 'apiPhoto', 'apiHistory', 'apiAdminData', 'apiCreate', 'apiPhotoPoll', 'apiMail', 'apiFindPeople']);
+const RETRY = new Set(['apiBoardPage', 'apiAppendShortage', 'apiShortages', 'apiRefresh', 'apiGet', 'apiPhoto', 'apiHistory', 'apiAdminData', 'apiCreate', 'apiPhotoPoll', 'apiMail', 'apiFindPeople']);
 const isNetErr = e => /NetworkError|Failed to fetch|network|HTTP 0/i.test(String((e && e.message) || e || ''));
 /** "Aplikace je právě zaneprázdněná" = the server's lock was not free and nothing was written: always safe to repeat. */
 const isBusyErr = e => /zaneprázdněn/i.test(String((e && e.message) || e || ''));
@@ -1996,6 +2001,27 @@ window.addEventListener('beforeprint', () => {
 });
 window.addEventListener('afterprint',clearShortagePrint);
 
+/**
+ * Every shortage of one QRAP. The board sends only the latest two, so the rest is fetched with a small call of its own
+ * (apiShortages) – it does not reload or redraw the QRAP, so an open form, a draft or a background refresh can never
+ * block it. The list is kept in the page's copy of the QRAP (print and the next redraw use it).
+ */
+const shortageLoads = new Map();
+function loadAllShortages(id) {
+  const cur = byId(id);
+  if (cur && (cur.shortages || []).length >= (cur.shortageCount || 0)) return Promise.resolve(cur.shortages || []);
+  if (shortageLoads.has(id)) return shortageLoads.get(id);
+  const p = apiWithin(60000, 'apiShortages', id).then(res => {
+    if (!res || !Array.isArray(res.shortages)) throw new Error('Neúplná odpověď serveru.');
+    const now = byId(id);
+    if (now) { now.shortages = res.shortages; now.shortageCount = res.shortageCount; }
+    return res.shortages;
+  }).finally(() => shortageLoads.delete(id));
+  shortageLoads.set(id, p);
+  return p;
+}
+let shortageOpen = null; // the QRAP whose full shortage list is shown – survives a redraw of the page
+
 function shortageBox(q, big) {
   const rows = q.shortages || [], total = q.shortageCount || 0;
   const canAdd = big && canReport() && isOpen(q);
@@ -2004,21 +2030,32 @@ function shortageBox(q, big) {
   const container = h('section',{class:'pp-box shortage-box',onclick:big ? event=>event.stopPropagation() : null},
     h('span',{class:'pp-l'},'Opakované nedodávky zákazníkovi'));
   if (rows.length) {
-    const table = shortageTable(rows.slice(0,2));
-    container.append(table);
+    const open = big && total > 2 && shortageOpen === q.id && rows.length >= total;
+    const table = shortageTable(open ? rows : rows.slice(0,2));
+    const scroll = h('div',{class:'shortage-scroll' + (open ? ' open' : '')},table);
+    container.append(scroll);
     if (total > 2 && big) {
-      const more = h('button',{class:'link no-print',type:'button','aria-expanded':'false',onclick:async () => {
-        if (rows.length < total) {
-          await refreshOne(q.id);
-          if (S.view !== 'detail' || S.id !== q.id) return;
-          const next = byId(q.id);
-          if (!next || (next.shortages || []).length < next.shortageCount) { toast('Další nedodávky se nepodařilo načíst. Zkuste to znovu.',true); return; }
-          if (!more.isConnected) { document.querySelector('#sec3 .shortage-box [aria-expanded]')?.click(); return; }
-        }
-        const all = more.getAttribute('aria-expanded') !== 'true';
-        table.tBodies[0].replaceChildren(...(all ? byId(q.id).shortages : rows.slice(0,2)).map(shortageRow));
-        more.setAttribute('aria-expanded',String(all)); more.textContent = all ? 'Zobrazit méně' : 'Zobrazit vše (' + total + ')';
-      }},'Zobrazit vše (' + total + ')');
+      const label = () => 'Zobrazit vše (' + total + ')';
+      const show = (list, on) => {
+        table.tBodies[0].replaceChildren(...list.map(shortageRow));
+        scroll.classList.toggle('open', on);
+        more.setAttribute('aria-expanded', String(on));
+        more.textContent = on ? 'Zobrazit méně' : label();
+        shortageOpen = on ? q.id : null;
+      };
+      const more = h('button',{class:'link no-print',type:'button','aria-expanded':String(open),onclick:async () => {
+        if (more.getAttribute('aria-expanded') === 'true') { show(rows.slice(0,2), false); return; }
+        more.disabled = true;
+        more.textContent = 'Načítám nedodávky…';
+        try {
+          const all = await loadAllShortages(q.id);
+          if (more.isConnected) show(all, true);
+          else shortageOpen = q.id; // the page was redrawn meanwhile: the new box opens with the full list
+        } catch (e) {
+          more.textContent = label();
+          toast('Nedodávky se nepodařilo načíst: ' + errText(e), true);
+        } finally { more.disabled = false; }
+      }}, open ? 'Zobrazit méně' : label());
       container.append(more);
     } else if (total > 2) container.append(h('div',{class:'pp-more'},'Celkem: ' + total));
   }
@@ -2280,10 +2317,9 @@ function detailPage() {
         q.decision === 'ESKALACE' ? h('span', { class: 'tag' }, 'ESKALACE') : null),
       h('button', { class: 'btn no-print', onclick: async () => {
         if ((q.shortages || []).length < q.shortageCount) {
-          await refreshOne(q.id);
+          try { await loadAllShortages(q.id); }
+          catch (e) { toast('Pro tisk se nepodařilo načíst všechny nedodávky: ' + errText(e), true); return; }
           if (S.view !== 'detail' || S.id !== q.id || accountBlocked) return;
-          const current = byId(q.id);
-          if (!current || (current.shortages || []).length < current.shortageCount) { toast('Pro tisk načtěte všechny nedodávky.',true); return; }
         }
         window.print();
       } }, icon('print'), 'Tisk / PDF')),

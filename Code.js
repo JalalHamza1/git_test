@@ -231,7 +231,7 @@ const FP_FIELDS = {
 };
 
 /** Change this text whenever you deploy a new version: open pages then offer "Obnovit stránku". */
-const APP_BUILD = '2026-11-24-test';
+const APP_BUILD = '2026-11-24-speed-shortages';
 
 const PERF = {
   FULL_READ_CELLS: 15000, // a tab up to this size is read in one call; a bigger one by ID column + matching rows
@@ -259,6 +259,9 @@ let WROTE_ = false;  // something was written → SpreadsheetApp.flush() before 
 let BUMP_ = false;   // QRAP data changed → new data version, open pages reload
 let DEFER_MAIL_ = false; // Web calls request immediate background reconciliation after saving.
 let MAIL_KEYS_ = [];     // QRAP reconciliation keys returned to the page as mailKeys.
+// SPEED: a new QRAP sent from the page skips the alert snapshot inside the save lock. The page's background call
+// (apiMail → syncAlerts_) takes it seconds later; the 5-minute worker and the refresh sweep catch it if the page closed.
+let DEFER_CAPTURE_ = false;
 
 /** A problem the user can fix (wrong input, wrong state). Its message is shown to the user as it is. */
 class UserError extends Error {}
@@ -322,6 +325,7 @@ function apiRecoverAlerts() {
 function apiGet(id, known) { return run_('apiGet', () => get_(id, known)); }
 function apiBoardPage(filters) { return run_('apiBoardPage', () => allBoardPage_(filters)); }
 function apiAppendShortage(id, f) { return run_('apiAppendShortage', () => appendShortage_(id, f)); }
+function apiShortages(id) { return run_('apiShortages', () => shortageList_(id)); }
 function apiCreate(f) { return run_('apiCreate', () => create_(f)); }
 function apiSave(id, part, f) { return run_('apiSave', () => save_(id, part, f)); }
 function apiSaveAction(id, a) { return run_('apiSaveAction', () => saveAction_(id, a)); }
@@ -489,12 +493,15 @@ function create_(f) {
   Object.assign(q, opatreniFrom_(s3in, q.when));
   const ia = rowsIn_(s3in.ia).filter(r => r.remove !== true).map(r => iaFields_(r, q.when));
   need_(ia.length, 'Přidejte alespoň jedno okamžité opatření a vyberte osobu z HR.');
+  const started = Date.now();
   const phone = phonePhotos_(f.photoToken, f.photoKeep, f.photoDrop);
   const files = [];
-  let res;
+  let res, locked = 0;
   try {
     q.photoWrong = savePhotoPair_(f.photoWrong, f.photoWrongThumb, files) || phone.WRONG;
     q.photoRight = savePhotoPair_(f.photoRight, f.photoRightThumb, files) || phone.RIGHT;
+    locked = Date.now();
+    DEFER_CAPTURE_ = DEFER_MAIL_; // web call: the page reconciles alerts right after (see DEFER_CAPTURE_)
     res = lock_(() => {
       let op = operation_(key);
       if (op) { need_(op.hash === hash, 'Formulář byl odeslán s jinými údaji.'); return resumeCreate_(key, op); }
@@ -511,7 +518,11 @@ function create_(f) {
     trashUnreferenced_(files);
     if (phone.mine) phoneReopen_(f.photoToken);
     throw e;
+  } finally {
+    DEFER_CAPTURE_ = false;
   }
+  // Timing in Apps Script → Executions, to see where a slow "Odeslat" spends its time.
+  console.log('apiCreate ' + res.id + ': photos ' + (locked - started) + ' ms, save ' + (Date.now() - locked) + ' ms');
   const saved = find_(res.id);
   const attached = photoIds_(saved.photoWrong).concat(photoIds_(saved.photoRight));
   trashUnreferenced_(files.filter(id => attached.indexOf(id) < 0));
@@ -568,7 +579,8 @@ function operation_(key) {
   const row = rowsBy_(OPS_TAB, key)[0];
   return row ? JSON.parse(row.json) : null;
 }
-function saveOperation_(key, value) {
+// durable = false only for a final "done" mark inside lock_(), which flushes before the lock is released anyway.
+function saveOperation_(key, value, durable = true) {
   const json = JSON.stringify(value);
   need_(json.length <= 45000, 'Operace je příliš velká. Kontaktujte správce; data nebyla zahozena.');
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -577,7 +589,7 @@ function saveOperation_(key, value) {
   const row = rowsBy_(OPS_TAB, key)[0];
   if (row) { row.json = json; update_(OPS_TAB, row); }
   else insert_(OPS_TAB, {key: key, json: json});
-  SpreadsheetApp.flush(); // reservation must be durable before business rows are written
+  if (durable) SpreadsheetApp.flush(); // reservation must be durable before business rows are written
 }
 function operationKey_(kind, token) {
   need_(typeof token === 'string' && /^[\w-]{8,64}$/.test(token), 'Neplatný identifikátor formuláře. Obnovte stránku.');
@@ -645,7 +657,7 @@ function resumeCreate_(key, op) {
   LOG_ = [];
   operationHistory_({logs:[{at:q.created, by:q.createdBy, qrapId:q.id, text:title}]});
   op.state = 'done'; op.q = {id:q.id}; delete op.ia; delete op.logs;
-  saveOperation_(key,op);
+  saveOperation_(key,op,false); // SPEED: lock_() flushes right after – no second flush needed
   notifyNew_(q); // Reconciliation uses the committed QRAP and durable alert state.
   return {id: q.id, dup: false};
 }
@@ -1098,7 +1110,16 @@ function shortagesFor_(id) {
   return sh && sh.getLastRow() ? rowsBy_(TAB.shortages,id) : [];
 }
 function newestShortage_(a,b) {
-  return b.when.localeCompare(a.when) || b.created.localeCompare(a.created) || b._row - a._row;
+  const s = v => String(v == null ? '' : v); // an empty or hand-typed cell must never break the sort
+  return s(b.when).localeCompare(s(a.when)) || s(b.created).localeCompare(s(a.created)) || (b._row || 0) - (a._row || 0);
+}
+/** "Zobrazit vše": every shortage of one QRAP, newest first – only this list, not the whole QRAP. */
+function shortageList_(id) {
+  me_();
+  id = idOf_(id);
+  rate_('shortage-list', 60, 60);
+  find_(id); // an unknown number → "nebyl nalezen"
+  return Object.assign({id:id}, shortageView_(shortagesFor_(id)));
 }
 function shortageView_(rows) {
   return {shortageCount:rows.length, shortages:rows.slice().sort(newestShortage_).map(r => only_(r,['when','partVersion','qty']))};
@@ -1935,9 +1956,10 @@ function actionsOf_(id) { return rowsBy_(TAB.actions, id).slice().sort((a, b) =>
 function effectsOf_(id) { return rowsBy_(TAB.effects, id); }
 function nextNo_(acts) { return acts.reduce((m, x) => Math.max(m, x.no || 0), 0) + 1; }
 
-/** A new QRAP: remember that it has no rows in the other tabs yet, so nothing is read for it. */
+/** A new QRAP: remember that it has no rows in the other tabs yet, so nothing is read for it.
+ *  SPEED: Historie and Nedodávky too – before, every new QRAP read the whole history tab just to find none. */
 function seedNew_(id) {
-  [TAB.actions, TAB.effects, TAB.assess].forEach(name => { const t = memo_(name); if (!t.all) t.by[id] = []; });
+  [TAB.actions, TAB.effects, TAB.assess, TAB.log, TAB.shortages].forEach(name => { const t = memo_(name); if (!t.all) t.by[id] = []; });
 }
 
 /** All IDs (for the next number): the whole small tab, or only the ID column of a big one. */
@@ -2011,7 +2033,7 @@ function lock_(fn) {
     result = fn();
     flushLog_();
     // The business record remains the recovery source if a local journal write fails.
-    try { Object.keys(ALERT_DIRTY_).forEach(id => captureAlerts_(find_(id))); }
+    try { if (!DEFER_CAPTURE_) Object.keys(ALERT_DIRTY_).forEach(id => captureAlerts_(find_(id))); }
     catch (e) { ALERT_WARNING_ = 'QRAP je uložený. Upozornění čekají na další kontrolu.'; console.warn('Alert capture: ' + e.message); }
     ok = true;
   } finally {
