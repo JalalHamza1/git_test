@@ -2197,7 +2197,7 @@ function paperBody(q, big, ed, context) {
     roles.map(r => cb(got.includes(r), r)), got.filter(x => !roles.includes(x) && !isOther(x)).map(x => cb(true, x)),
     cb(got.some(isOther), got.some(isOther) ? (pilotNames({pilots:q.notifiedOther}) || 'jiné') : '……………'),
     got.includes(PRODUCTION_ROLE) && q.productionSupervisor ? h('div',{class:'sub'},'Supervizoři výroby: ' + q.productionSupervisor) : null,
-    got.includes(PRODUCTION_ROLE) && q.apuManager ? h('div',{class:'sub'},'Supervizor SPU: ' + q.apuManager) : null));
+    got.includes(PRODUCTION_ROLE) && q.apuManager ? h('div',{class:'sub'},'APU Manager: ' + q.apuManager) : null));
 
   // ③ OKAMŽITÁ OPATŘENÍ <24h
   const ia = sectionActions('③');
@@ -3161,7 +3161,7 @@ function popisForm(v, isNew, photoState, onPhoto) {
   const whatOther = showIf(F.input('whatOther', 'CO – jiné (napište)', { req: true, ph: 'napište jiné', len: 200 }), isOther(v.what));
   const productionBox = showIf(F.people('productionSupervisor', 'Supervizoři výroby', {
     req:true, max:10, ph:'Jméno nebo e-mail supervizora…',
-    help:'Vyberte jednoho nebo více lidí z HR. PUSH dostanou vybraní supervizoři a supervizor SPU nastavený správcem.'
+    help:'Vyberte jednoho nebo více lidí z HR. PUSH dostanou vybraní supervizoři a APU Manager nastavený správcem.'
   }), split(v.notified).includes(PRODUCTION_ROLE));
   const otherBox = showIf(F.people('notifiedOther', 'Jiné – kdo', { req: true, max: 10, ph: 'Jméno nebo e-mail z HR…' }), split(v.notified).some(isOther));
   const photos = isNew ? photoPicker(photoState, onPhoto) : null;
@@ -4220,7 +4220,7 @@ function adminPage() {
       {value:'ONE',label:'Test – pouze jednomu příjemci'}
     ],{req:true,onchange:value=>showIf(tester,value==='ONE')});
 
-    const spu = form.people('spuSupervisor','Supervizor SPU',{
+    const spu = form.people('spuSupervisor','APU Manager',{
       max:1, ph:'Jméno nebo e-mail z HR…',
       help:'Tato osoba dostane PUSH pokaždé, když je v QRAP vybrána možnost Supervizor výroby.'
     });
@@ -4244,7 +4244,7 @@ function adminPage() {
       h('div', { class: 'grid' }, create),
       h('div', { class: 'sub-h', style: 'margin-top:16px' }, 'Kdo by měl být upozorněn? – příjemci podle role'),
       h('div', { class: 'cols3' }, roleFields),
-      h('h3',{class:'sub-h'},'Supervizor SPU'),
+      h('h3',{class:'sub-h'},'APU Manager'),
       n.spuNeedsSelection ? h('p',{class:'note warn'},'V předchozím nastavení bylo více různých příjemců APU. Vyberte jednoho supervizora SPU a uložte notifikace.') : null,
       h('div',{class:'grid'},spu),
       h('div', { class: 'form-btns' }, b));
@@ -4345,7 +4345,7 @@ function helpPage() {
     ['clock', 'Kdy a kde', 'Kdy jste problém našli (tlačítko „Teď“) a ve které zóně.'],
     ['user', 'Kolik a kdo', 'Uveďte počet vadných nebo nedokončených dílů, případně verzi. Označte, zda se problém opakuje, a vyberte své jméno z HR.'],
     ['camera', 'Popis', 'Popište skutečný stav. Můžete doplnit požadovaný stav a přiložit fotografie.'],
-    ['bell', 'Upozornění', 'Vyberte, kdo má dostat PUSH. U možnosti Supervizor výroby vyberte jednoho nebo více lidí z HR. PUSH dostane také supervizor SPU nastavený správcem.'],
+    ['bell', 'Upozornění', 'Vyberte, kdo má dostat PUSH. U možnosti Supervizor výroby vyberte jednoho nebo více lidí z HR. PUSH dostane také APU Manager nastavený správcem.'],
     ['shield', 'Opatření', 'Odpovězte na otázku o riziku a třídění. Zapište alespoň jedno opatření a vyberte odpovědnou osobu z HR. Čas doplňte po dokončení.'],
     ['done', 'Kontrola a odeslání', 'Zkontrolujte údaje a stiskněte „Odeslat ✓“. Obrazovka se vrátí na tabuli.']
   ];

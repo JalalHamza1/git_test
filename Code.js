@@ -90,7 +90,7 @@ const COLS = {
     ['photoWrong', '① Foto skutečného stavu'], ['photoRight', '① Foto požadovaného stavu'], ['photoException', '① Výjimka – proč nejsou fotky'],
     // ② KDO BYL UPOZORNĚN?
     ['notified', '② Upozorněni'], ['notifiedOther', '② Jiné – kdo'],
-    ['productionSupervisor', '② Vybraní supervizoři výroby'], ['apuManager', '② Supervizor SPU'], ['notifyPeople', '② Informovat e-mailem'],
+    ['productionSupervisor', '② Vybraní supervizoři výroby'], ['apuManager', '② APU Manager'], ['notifyPeople', '② Informovat e-mailem'],
     ['alertTestMode','Režim upozornění při vytvoření'], ['alertTestRecipient','Testovací příjemce při vytvoření'],
     // ③ OKAMŽITÁ OPATŘENÍ <24h (the actions themselves are rows in the tab Akce, part ③).
     //   Proces obnoven = "Čas restartu" on the paper form. Kontrola probíhá / Proces zastaven are kept for old QRAPs.
@@ -155,7 +155,8 @@ const FOLDER_PROP = 'FOTKY_SLOZKA_ID';
 const LOGISTICS_ROLE = 'Supervizor logistiky';
 const PRODUCTION_ROLE = 'Supervizor výroby';
 const ROUTE_PREFIX = 'Výroba → APU: '; // older notification settings
-const SPU_RECIPIENT = 'Supervizor SPU';
+const SPU_RECIPIENT = 'APU Manager';
+const SPU_RECIPIENT_OLD = 'Supervizor SPU'; // the row name before the rename – still read until Správa saves again
 function alertRole_(value) { return plain_(value) === 'SUPERVIZOR' ? LOGISTICS_ROLE : value; }
 function alertRoles_(value) { return [...new Set(list_(multi_(value)).map(alertRole_))].join(', '); }
 
@@ -235,7 +236,7 @@ const FP_FIELDS = {
 };
 
 /** Change this text whenever you deploy a new version: open pages then offer "Obnovit stránku". */
-const APP_BUILD = '2026-11-26-release-test-alerts';
+const APP_BUILD = '2026-11-26-apu-manager';
 
 const PERF = {
   FULL_READ_CELLS: 15000, // a tab up to this size is read in one call; a bigger one by ID column + matching rows
@@ -289,7 +290,7 @@ function doGet(e) {
   return page.evaluate()
     .setTitle(boot.cfg ? String(boot.cfg.NAZEV) : 'eQRAP')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT); // no framing by other sites
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL); // no framing by other sites
 }
 
 function startData_(params) {
@@ -1756,7 +1757,8 @@ function memo_(name) {
 // Accept original sheet headers when reading existing QRAPs or restoring an archive.
 const QRAP_HEADER_ALIASES = {
   '② Vybraný supervizor výroby': '② Vybraní supervizoři výroby',
-  '② Manažer APU': '② Supervizor SPU',
+  '② Manažer APU': '② APU Manager',
+  '② Supervizor SPU': '② APU Manager', // the column keeps its data after the rename
   '① Popis – ŠPATNÝ díl': '① Skutečný stav',
   '① Popis – DOBRÝ díl': '① Požadovaný stav',
   '① Foto ŠPATNĚ': '① Foto skutečného stavu',
@@ -2694,7 +2696,7 @@ function readNotif_() {
     if (k === 'Testovací režim') out.testMode = ['NORMAL','PAUSED','ONE'].includes(String(r[1])) ? String(r[1]) : 'PAUSED';
     else if (k === 'Testovací příjemce') out.testRecipient = v.length === 1 ? v[0] : '';
     else if (k === NOTIF.CREATE) out.create = v;
-    else if (k === SPU_RECIPIENT) {
+    else if (k === SPU_RECIPIENT || k === SPU_RECIPIENT_OLD) {
       explicit = true;
       v.forEach(email => spuValues.add(email));
     } else if (k.startsWith(ROUTE_PREFIX)) {
@@ -2945,7 +2947,7 @@ function saveNotif_(o) {
     sh.getRange(1,1,rows.length,2).setValues(rows);
     WROTE_ = true;
     log_('SPRÁVA', 'Notifikace: po vytvoření ' + lists.create.length + ', role ' +
-      Object.keys(lists.roles).map(r => r + ' ' + lists.roles[r].length).join(', ') + ', supervizor SPU ' + (spuSupervisor || 'nevybrán'));
+      Object.keys(lists.roles).map(r => r + ' ' + lists.roles[r].length).join(', ') + ', APU Manager ' + (spuSupervisor || 'nevybrán'));
     CacheService.getScriptCache().remove('alerts:recent-sweep');
     clearCache_();
   });
@@ -3145,7 +3147,7 @@ function captureAlerts_(q, actions) {
   if (selectedRoles.includes(PRODUCTION_ROLE)) {
     const at = oldMeta ? Date.parse(q.updated) : created;
     add(emailList_(q.productionSupervisor), 'production', PRODUCTION_ROLE, at, deadline_(q));
-    add([q.apuManager], 'apu', 'Supervizor SPU', at, deadline_(q));
+    add([q.apuManager], 'apu', 'APU Manager', at, deadline_(q));
   }
   if (roles.some(isOther_)) add(alertPeople_(q.notifiedOther).map(p=>p.email), 'other', 'Jiné', oldMeta ? new Date(q.updated).getTime() : created, deadline_(q));
   add(alertPeople_(q.pilots).map(p=>p.email), 'pilot', 'pilot QRAP', oldMeta ? new Date(q.updated).getTime() : new Date(q.decisionAt).getTime(), '');
