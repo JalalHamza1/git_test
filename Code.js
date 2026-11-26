@@ -236,7 +236,7 @@ const FP_FIELDS = {
 };
 
 /** Change this text whenever you deploy a new version: open pages then offer "Obnovit stránku". */
-const APP_BUILD = '2026-11-26-mail-wrap';
+const APP_BUILD = '2026-11-26-apu-refresh';
 
 const PERF = {
   FULL_READ_CELLS: 15000, // a tab up to this size is read in one call; a bigger one by ID column + matching rows
@@ -3490,6 +3490,48 @@ function releaseTestAlerts_(ids) {
   return syncAlerts_(ids);
 }
 
+/**
+ * Menu: every QRAP keeps the APU Manager who was set when it was reported. After the APU Manager changes in
+ * Správa → Notifikace, this moves the OPEN QRAPs with "Supervizor výroby" to the current one: the new APU Manager
+ * gets the PUSH now, the previous one's notification row is removed. Closed QRAPs keep their history as it was.
+ */
+function refreshApuManager() {
+  menuOnly_();
+  const ui = SpreadsheetApp.getUi();
+  const spu = readNotif_().spuSupervisor;
+  need_(spu, 'Nejdřív ve Správa → Notifikace vyberte APU Managera a uložte.');
+  MEMO_ = {};
+  const ids = table_(TAB.qraps).all.filter(q => !q.closedAt && !q.cancelReason &&
+    list_(q.notified).includes(PRODUCTION_ROLE) && String(q.apuManager || '').toLowerCase() !== spu).map(q => q.id);
+  if (!ids.length) { ui.alert('Všechny otevřené QRAP už mají aktuálního APU Managera (' + spu + ').'); return; }
+  if (ui.alert('Použít aktuálního APU Managera?', 'APU Manager ' + spu + ' bude nastaven u: ' + ids.join(', ') +
+    '.\nDostane upozornění (PUSH na 5 hodin), předchozímu APU Managerovi se upozornění u těchto QRAP odstraní.',
+    ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
+  const res = refreshApuManager_(ids, spu);
+  ui.alert('Hotovo: ' + ids.join(', ') + '.\n' + (res.ok ? 'Upozornění zapsána (' + res.written + '), odstraněna (' + res.removed + ').'
+    : 'Upozornění se zapíší při další kontrole (do 5 minut).'));
+}
+function refreshApuManager_(ids, spu) {
+  lock_(() => {
+    requirePushRecipients_([spu]);
+    ids.forEach(id => {
+      const q = find_(id);
+      if (q.closedAt || q.cancelReason || !list_(q.notified).includes(PRODUCTION_ROLE)) return;
+      const old = q.apuManager;
+      if (String(old || '').toLowerCase() === spu) return;
+      ensureQrapColumns_();
+      q.apuManager = spu;
+      update_(TAB.qraps, q);
+      // the new APU Manager's alert starts now (PUSH for 5 h), as for a released QRAP
+      const meta = alertGet_('q:' + id);
+      if (meta) alertPut_('q:' + id, Object.assign({}, meta, {releasedAt: Date.now()}));
+      log_(id, 'APU Manager změněn: ' + (old || '–') + ' → ' + spu);
+    });
+    BUMP_ = true;
+  });
+  return syncAlerts_(ids);
+}
+
 /** Install once as deployer from the spreadsheet menu (not through google.script.run). */
 function installNotificationWorker() {
   menuOnly_();
@@ -3570,6 +3612,7 @@ function onOpen() {
     .addItem('Zapnout / obnovit automatiku upozornění (5 minut)', 'installNotificationWorker')
     .addItem('Obnovit QRAP z archivu', 'restoreArchivedQrap')
     .addItem('Uvolnit upozornění QRAP z testu', 'releaseTestAlerts')
+    .addItem('Použít aktuálního APU Managera v otevřených QRAP', 'refreshApuManager')
     .addSeparator()
     .addItem('Vložit ukázková data', 'exampleData')
     .addToUi();
