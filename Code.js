@@ -146,7 +146,7 @@ const SETTINGS = [
   ['NOTIFIKACE_APLIKACE', 'eQRAP', 'Co se zapíše do sloupce „Aplikace“ v tabulce upozornění.'], // NOTIF
   ['LHUTA_OPATRENI_HODIN', 24, 'Do kolika hodin od KDY mají být hotová ③ okamžitá opatření.'],
   ['ZOBRAZIT_UZAVRENE_DNI', 60, 'Kolik dní zpět se na přehledu ukazují uzavřené problémy.'],
-  ['ODKAZ_APLIKACE', '', 'Adresa aplikace do e-mailů. Prázdné = zjistí se automaticky. Po novém nasazení sem dejte nový odkaz.']
+  ['ODKAZ_APLIKACE', '', 'Adresa webové aplikace končící /exec (Nasadit → Spravovat nasazení → Webová aplikace → URL). POVINNÉ pro odkazy v upozorněních a QR kód pro telefon – bez ní vedou na testovací adresu /dev, kterou ostatní neotevřou. Při „Nová verze“ se adresa nemění, při „Nová implementace“ ano.']
 ];
 const PUBLIC_SETTINGS = ['NAZEV', 'LOGO_URL', 'LHUTA_OPATRENI_HODIN', 'ZOBRAZIT_UZAVRENE_DNI']; // all the page needs
 const FOLDER_PROP = 'FOTKY_SLOZKA_ID';
@@ -236,7 +236,7 @@ const FP_FIELDS = {
 };
 
 /** Change this text whenever you deploy a new version: open pages then offer "Obnovit stránku". */
-const APP_BUILD = '2026-11-26-safety-tint';
+const APP_BUILD = '2026-11-26-app-link';
 
 const PERF = {
   FULL_READ_CELLS: 15000, // a tab up to this size is read in one call; a bigger one by ID column + matching rows
@@ -1390,6 +1390,7 @@ function saveSettings_(obj, originals) {
     });
     WROTE_ = true;
     BUMP_ = true; // "uzavřené na tabuli (dní)" changes what the list contains
+    if (changed.includes('ODKAZ_APLIKACE')) CacheService.getScriptCache().remove('alerts:recent-sweep'); // the next check rewrites the alert links
     log_('SPRÁVA', 'Nastavení: ' + (changed.map(k => k + ' = ' + (k === 'LOGO_URL' ? '(logo, ' + String(clean[k]).length + ' znaků)' : short_(clean[k])))
       .join(', ') || 'beze změny')); // AUDIT-M2: no 5 KB logo in every history line
   });
@@ -2967,6 +2968,9 @@ function notifAdmin_(c) {
   out.workerWarning=props.getProperty('ALERTS_TRIGGER')?'':'Automatika není zapnutá. V menu tabulky eQRAP spusťte „Zapnout / obnovit automatiku upozornění (5 minut)“. ';
   try{out.syncError=JSON.parse(props.getProperty('ALERTS_LAST_RUN')||'{}').error||'';}catch(e){out.syncError='Stav kontroly není dostupný.';}
   if (plain_(c.settings.EMAILY) !== 'ANO') out.status = 'Upozornění jsou vypnutá (Nastavení → Posílat upozornění = NE). ';
+  // without it the links in the alerts (and the phone QR code) lead to the editor-only /dev address
+  out.linkWarning = deploymentUrl_(String(c.settings.ODKAZ_APLIKACE || '')) ? '' :
+    'Chybí Nastavení → Odkaz aplikace (adresa končící /exec). Odkazy v upozorněních a QR kód pro telefon teď vedou na testovací adresu /dev a ostatním se neotevřou („Sorry, unable to open the file“).';
   try {
     const t = notifTarget_();
     let osc = oscMap_(t);
@@ -3623,6 +3627,7 @@ function onEdit(e) {
   // A real edit event carries Range objects; a call from a browser (google.script.run) can only send plain JSON.
   if (!e || !e.range || typeof e.range.getSheet !== 'function') return;
   if ([TAB.people, TAB.lists, TAB.settings, NOTIF.TAB].indexOf(e.range.getSheet().getName()) >= 0) clearCache_(); // AUDIT-H6
+  if (e.range.getSheet().getName() === TAB.settings) CacheService.getScriptCache().remove('alerts:recent-sweep'); // e.g. a new app link
   bumpVersion_();
 }
 

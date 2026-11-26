@@ -4246,6 +4246,7 @@ function adminPage() {
     return h('div', { class: 'card' }, h('h2', null, 'Notifikace'),
       h('p', { class: 'sub' }, 'PUSH dostanou příjemci po vytvoření QRAP, označené role, lidé vybraní v poli Jiné, piloti a vlastníci akcí ⑥. PUSH platí 5 hodin, potom aktivni. Po uzavření nebo zrušení QRAP se jeho upozornění odstraní.'),
       h('p', { class: 'note' + (n.ok ? '' : ' warn') }, n.status),
+      n.linkWarning ? h('p',{class:'note warn'},n.linkWarning) : null,
       n.workerWarning ? h('p',{class:'note warn'},n.workerWarning) : h('p',{class:'sub'},'Automatická kontrola upozornění je zapnutá (5 minut).'),
       n.syncError ? h('p',{class:'note warn'},'Poslední kontrola: '+n.syncError) : null,
       n.noOsc && n.noOsc.length ? h('p', { class: 'note warn' }, 'Nemají OSC v tabulce upozornění – nedostanou nic: ' + n.noOsc.join(', ')) : null,
