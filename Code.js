@@ -236,7 +236,7 @@ const FP_FIELDS = {
 };
 
 /** Change this text whenever you deploy a new version: open pages then offer "Obnovit stránku". */
-const APP_BUILD = '2026-11-26-app-link';
+const APP_BUILD = '2026-11-26-step-clocks';
 
 const PERF = {
   FULL_READ_CELLS: 15000, // a tab up to this size is read in one call; a bigger one by ID column + matching rows
@@ -1406,7 +1406,7 @@ function publicSettings_(settings) {
 
 /** Active people as the page needs them: name and e-mail (roles stay on the server). */
 function activePeople_(c) {
-  return c.people.filter(p => p.active && p.email).map(p => ({ name: p.name, email: p.email }));
+  return c.people.filter(p => p.active && p.email).map(p => Object.assign({ name: p.name, email: p.email }, p.role === 'SUPERVIZOR' ? { sup: 1 } : {}));
 }
 
 function clearDecision_(q) {
@@ -3115,6 +3115,66 @@ function alertId_(id, email) { return alertPrefix_() + id + ':' + digest_(email)
 function alertTouch_(q) { ALERT_DIRTY_[q.id] = true; }
 function alertPeople_(cell) { return pilotsOf_(cell).filter(p => EMAIL_RE.test(p.email)); }
 
+// ---- STEP CLOCKS: who is on turn and reminders. 24 working hours after a step began, the one on turn gets a PUSH
+// again; after 48 h the managers (role MANAŽER in Lidé); from 72 h on both, every 24 h, until the step is done.
+// Saturday and Sunday do not count. Steps with a clock: D = ④ decision (role SUPERVIZOR in Lidé), P = the pilots
+// (5 Proč with a root cause and at least one final action), C = the closure signature (role SUPERVIZOR).
+const STEP_MS = 24 * 3600000;
+const STEP_TEXT = {
+  D: {remind: 'připomínka: čeká na vaše rozhodnutí ④', late: 'zpožděno: chybí rozhodnutí ④ (Supervizor logistiky)'},
+  P: {remind: 'připomínka: vyplňte 5 Proč a konečné akce ⑤ ⑥', late: 'zpožděno: pilot nevyplnil 5 Proč a konečné akce'},
+  C: {remind: 'připomínka: podepište uzavření QRAP', late: 'zpožděno: uzavření QRAP není podepsané'}
+};
+
+/** Working time between two instants: Saturday and Sunday (the script's time zone) do not count. */
+function workMs_(from, to) {
+  let ms = 0, t = from;
+  for (let i = 0; t < to && i < 4000; i++) {
+    const d = new Date(t), next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime(), end = Math.min(next, to);
+    if (d.getDay() !== 0 && d.getDay() !== 6) ms += end - t;
+    t = end;
+  }
+  return ms;
+}
+/** The instant when `ms` of working time have passed since `from` (a start on a weekend counts from Monday 0:00). */
+function addWorkMs_(from, ms) {
+  let t = from, left = ms;
+  for (let i = 0; i < 4000; i++) {
+    const d = new Date(t), next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
+    if (d.getDay() !== 0 && d.getDay() !== 6) { if (t + left <= next) return t + left; left -= next - t; }
+    t = next;
+  }
+  return t;
+}
+/** The step a QRAP waits for: key D / P / C (with a clock) or '' (③ has its own deadline, the actions their dates,
+ *  the 5 shifts take their time). C = everything for the closure is fulfilled, only the signature is missing. */
+function stepOf_(q, acts, effs) {
+  const status = statusOf_(q, acts, effs);
+  let key = '';
+  if (status === 'ROZHODNUTÍ') key = 'D';
+  else if (status === 'ANALÝZA') key = 'P';
+  else if (status === 'SCHVÁLENÍ') key = 'C';
+  else if (status === 'OVĚŘENÍ' && checks_(Object.assign({}, q, {status}), acts, effState_(effs, effFrom_(acts))).every(Boolean)) key = 'C';
+  return {key, status};
+}
+/** When the step began, for a QRAP seen for the first time (written before step clocks existed). */
+function stepStartGuess_(key, q, effs) {
+  const t = v => Date.parse(v) || 0;
+  const guess = key === 'D' ? t(q.s3Done) : key === 'P' ? Math.max(t(q.decisionAt), t(effState_(effs).reopenAt)) : 0;
+  return guess || t(q.updated) || Date.now();
+}
+/** Who is on turn – the same as "Další krok" on the page (Index.html, whoNow). */
+function stepWho_(q, status, key, sups) {
+  if (status === 'OPATŘENÍ') return '③ Okamžitá opatření – autor hlášení / Team Leader';
+  if (key === 'D') return 'Supervizor logistiky' + (sups.length ? ' – ' + sups.map(p => p.name).join(', ') : '');
+  if (key === 'C') return 'Supervizor / Manažer logistiky – podpis uzavření';
+  if (['ANALÝZA', 'AKCE', 'OVĚŘENÍ'].includes(status)) {
+    const names = pilotsOf_(q.pilots).map(p => p.name || p.email);
+    return names.length ? 'Pilot – ' + names.join(', ') : 'Supervizor logistiky – přidělit pilota';
+  }
+  return '';
+}
+
 /** Snapshot configured creation/role recipients when the QRAP/role is first seen.
  * Subsequent settings edits do not assign old QRAPs to newly configured people.
  * State is written under the same script lock as the QRAP save, before any remote delivery.
@@ -3132,6 +3192,17 @@ function captureAlerts_(q, actions) {
   const roles = selectedRoles.filter(role => role !== PRODUCTION_ROLE), addedRoles = roles.filter(role => !Object.prototype.hasOwnProperty.call(meta.roles, role));
   roles.forEach(role => { if (!Object.prototype.hasOwnProperty.call(meta.roles, role)) meta.roles[role] = (cfg_().notif.roles[role] || []).slice(); });
   Object.keys(meta.roles).forEach(role => { if (roles.indexOf(role) < 0) delete meta.roles[role]; });
+  const acts = actions || actionsOf_(q.id), effs = closed ? [] : effectsFor_(q);
+  const step = closed ? {key:'', status:''} : stepOf_(q, acts, effs);
+  // the clock of the step is kept in the snapshot: a step seen now for the first time starts at the save that began it
+  if (!meta.step || meta.step.key !== step.key) {
+    meta.step = {key:step.key, at:!step.key ? 0 : meta.step ? Math.min(now, Date.parse(q.updated) || now) : stepStartGuess_(step.key, q, effs)};
+  }
+  const stepAt = meta.step.at;
+  // Termín of the rows = the deadline of the step the QRAP waits for (③: KDY + lhůta, actions: the nearest plan)
+  const stepDue = step.key ? new Date(addWorkMs_(stepAt, STEP_MS)).toISOString() : step.status === 'OPATŘENÍ' ? deadline_(q)
+    : step.status === 'AKCE' ? defActions_(acts).filter(a => !a.done && a.due).map(a => a.due).sort()[0] || '' : '';
+  const sups = cfg_().people.filter(p => p.active && p.email && p.role === 'SUPERVIZOR');
   const desired = {}, created = new Date(q.created).getTime() || now;
   const add = (emails, source, label, at, due) => emails.forEach(email => {
     email = String(email || '').trim().toLowerCase(); if (!EMAIL_RE.test(email)) return;
@@ -3142,45 +3213,55 @@ function captureAlerts_(q, actions) {
       Math.max(Number(meta.releasedAt) || 0, Math.min(now, at || created)); // releasedAt: see releaseTestAlerts_
     d.sources.push(source); d.labels.push(label); d.times.push(eventAt);
     if (due) d.dues.push(due);
-    else if(source==='pilot') d.dues.push(new Date(eventAt).toISOString()); // pilot task is due from assignment, as before
-
   });
-  add(meta.create, 'create', 'nový QRAP', created, deadline_(q));
+  add(meta.create, 'create', 'nový QRAP', created, stepDue);
   roles.forEach(role => add(meta.roles[role], 'role:' + (role === LOGISTICS_ROLE ? 'Supervizor' : role), 'role: ' + role,
-    oldMeta && addedRoles.indexOf(role) >= 0 ? now : created, deadline_(q)));
+    oldMeta && addedRoles.indexOf(role) >= 0 ? now : created, stepDue));
   if (selectedRoles.includes(PRODUCTION_ROLE)) {
     const at = oldMeta ? Date.parse(q.updated) : created;
-    add(emailList_(q.productionSupervisor), 'production', PRODUCTION_ROLE, at, deadline_(q));
-    add([q.apuManager], 'apu', 'APU Manager', at, deadline_(q));
+    add(emailList_(q.productionSupervisor), 'production', PRODUCTION_ROLE, at, stepDue);
+    add([q.apuManager], 'apu', 'APU Manager', at, stepDue);
   }
-  if (roles.some(isOther_)) add(alertPeople_(q.notifiedOther).map(p=>p.email), 'other', 'Jiné', oldMeta ? new Date(q.updated).getTime() : created, deadline_(q));
-  add(alertPeople_(q.pilots).map(p=>p.email), 'pilot', 'pilot QRAP', oldMeta ? new Date(q.updated).getTime() : new Date(q.decisionAt).getTime(), '');
-  (actions || actionsOf_(q.id)).filter(a=>a.part==='⑥' && !a.removed && a.ownerEmail).forEach(a =>
+  if (roles.some(isOther_)) add(alertPeople_(q.notifiedOther).map(p=>p.email), 'other', 'Jiné', oldMeta ? new Date(q.updated).getTime() : created, stepDue);
+  add(alertPeople_(q.pilots).map(p=>p.email), 'pilot', 'pilot QRAP', oldMeta ? new Date(q.updated).getTime() : new Date(q.decisionAt).getTime(), stepDue);
+  acts.filter(a=>a.part==='⑥' && !a.removed && a.ownerEmail).forEach(a =>
     add([a.ownerEmail], 'action:' + a.no, 'akce ' + a.no + (a.done ? ' (hotová)' : ''),
       oldMeta ? new Date(q.updated).getTime() : new Date(a.created).getTime(), a.done ? '' : a.due));
+  // the step clock: 24 h → the one on turn, 48 h → the managers, from 72 h every 24 h both (a new source = a new PUSH)
+  if (step.key) {
+    const n = Math.floor(workMs_(stepAt, now) / STEP_MS);
+    const pilots = step.key === 'P' ? alertPeople_(q.pilots).map(p => p.email) : [];
+    const owners = pilots.length ? pilots : sups.map(p => p.email); // no pilot yet: the supervisors (they assign one)
+    const managers = cfg_().people.filter(p => p.active && p.email && p.role === 'MANAŽER').map(p => p.email);
+    const base = 'step:' + step.key + ':' + stepAt + ':';
+    const r = n >= 3 ? n : n >= 1 ? 1 : 0;
+    if (r) add(owners, base + 'r' + r, 'připomínka – ' + r * 24 + ' h', addWorkMs_(stepAt, r * STEP_MS), stepDue);
+    if (n >= 2) add(managers, base + 'm' + n, 'zpožděno ' + n * 24 + ' h', addWorkMs_(stepAt, n * STEP_MS), stepDue);
+  }
   const keys = alertStore_().recipients.get(q.id) || [];
   if (meta.testMode && meta.testMode !== 'NORMAL') {
     Object.keys(desired).forEach(email => delete desired[email]);
     if (meta.testMode === 'ONE' && meta.testRecipient) {
-      add([meta.testRecipient],'test','TEST – testovací příjemce',created,deadline_(q));
+      add([meta.testRecipient],'test','TEST – testovací příjemce',created,stepDue || deadline_(q));
     }
   }
   Object.keys(desired).forEach(email => {
     const id = alertId_(q.id, email), prev = alertGet_(id), d = desired[email];
-    const fresh = d.sources.map((s,i)=>!prev || !prev.active || reopened || prev.sources.indexOf(s)<0 ? (reopened ? now : d.times[i]) : 0).filter(Boolean);
-    // Older records stored a 23-hour deadline without recording the window length.
-    const previousWindow = prev && prev.pushWindowMs || 23 * 3600000;
-    const previousUntil = prev && prev.active && prev.pushUntil
-      ? prev.pushUntil - previousWindow + ALERTS.PUSH_MS : 0;
-    const until = fresh.length
-      ? Math.max(previousUntil, Math.max(...fresh) + ALERTS.PUSH_MS)
-      : previousUntil;
-    const labels = d.labels.slice(), pilot = d.sources.indexOf('pilot') >= 0;
+    // PUSH for 5 h after the newest CURRENT reason (each keeps its first time, see add). A reason that is gone – a
+    // reminder whose step was just done – no longer keeps the row in PUSH.
+    const until = d.times.length ? Math.max(...d.times) + ALERTS.PUSH_MS : 0;
+    const pilot = d.sources.indexOf('pilot') >= 0;
     const action = d.sources.some(s=>s.indexOf('action:')===0);
+    const late = d.sources.some(s => /^step:\w:\d+:m/.test(s)), remind = d.sources.some(s => /^step:\w:\d+:r/.test(s));
     const text = (meta.testMode === 'ONE' ? 'TEST – ' : '') + (q.safety==='ANO' ? 'SAFETY! ' : '') + q.id + ' – ' +
-      (pilot ? 'jste pilot QRAP' : action ? 'máte přiřazenou akci' : 'upozornění') + ': ' + short_(title_(q));
+      (late ? STEP_TEXT[step.key].late : remind ? STEP_TEXT[step.key].remind : pilot ? 'jste pilot QRAP' : action ? 'máte přiřazenou akci' : 'upozornění') +
+      ': ' + short_(title_(q));
+    let newest = 0; // Důvod odeslání = the newest reason ("nový QRAP", "připomínka – 24 h", "zpožděno 48 h", "pilot QRAP" …)
+    d.times.forEach((t, i) => { if (t >= d.times[newest]) newest = i; });
+    const who = stepWho_(q, step.status, step.key, sups);
     const value = {id:id, qid:q.id, email:email, sources:d.sources, eventAt:Object.fromEntries(d.sources.map((source,i)=>[source,d.times[i]])), active:!closed, pushUntil:until, pushWindowMs:ALERTS.PUSH_MS,
-      safety:q.safety==='ANO', text:inert_(text,500), due:d.dues.sort()[0] || '', url:link_(q.id), ctx:inert_(what_(q),200), why:inert_(labels.join('; '),500)};
+      safety:q.safety==='ANO', text:inert_(text,500), due:d.dues.sort()[0] || '', url:link_(q.id),
+      ctx:inert_(who ? (late ? 'Zpožděno: ' : 'Na řadě: ') + who : what_(q),200), why:inert_(d.labels[newest] || '',500)};
     alertPut_(id, value);
   });
   keys.forEach(k => { const old = alertGet_(k); if (!desired[old.email] && old.active) alertPut_(k, Object.assign({}, old, {active:false})); });

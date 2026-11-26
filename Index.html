@@ -1436,6 +1436,22 @@ const pilotsOf = q => split(q.pilots).map(x => {
   return m ? { name: m[1] || m[2], email: m[2].toLowerCase() } : { name: personName(x), email: x.toLowerCase() };
 });
 const pilotNames = q => pilotsOf(q).map(p => p.name).join(', ');
+/** Everything for the closure fulfilled – only the signature is missing (the same rule as the filter "Čeká na uzavření"). */
+const readyToClose = q => q.status === 'SCHVÁLENÍ' || (q.status === 'OVĚŘENÍ' && Array.isArray(q.checklist) && q.checklist.length > 0 && q.checklist.every(c => c.ok));
+/**
+ * Who is on turn ("Další krok" on the board and the QRAP page; the alerts say the same, Code.gs stepWho_):
+ * ④ the people with role SUPERVIZOR in Lidé, ⑤ ⑥ and the 5 shifts the pilots, the closure signature the position.
+ */
+function whoNow(q) {
+  if (q.status === 'ROZHODNUTÍ') {
+    const names = S.people.filter(p => p.sup).map(p => p.name);
+    return 'Supervizor logistiky' + (names.length ? ': ' + names.join(', ') : '');
+  }
+  if (readyToClose(q)) return 'Supervizor / Manažer logistiky';
+  if (['ANALÝZA', 'AKCE', 'OVĚŘENÍ'].includes(q.status)) return pilotNames(q) ? 'Pilot: ' + pilotNames(q) : 'Pilot: zatím nepřidělen – Supervizor logistiky';
+  return (STATUS[q.status] || {}).who || '';
+}
+const nextNow = q => (readyToClose(q) ? 'Podpis uzavření' : (STATUS[q.status] || {}).next || '');
 function badge(q) { const st = STATUS[q.status] || { label: q.status, cls: '' }; return h('span', { class: 'badge ' + st.cls }, st.label); }
 
 /** Small line icons (24×24, drawn with the text colour). */
@@ -2318,7 +2334,7 @@ function paperList(rows, context) {
       return h('div', { class: 'strip row' + (q.safety === 'ANO' ? ' safety' : ''), tabindex: 0, role: 'link', 'aria-label': 'Otevřít ' + q.id, onclick: open,
         onkeydown: e => { if (e.key === 'Enter') open(); } },
         h('div', { class: 'strip-cap' }, h('b', null, q.id), badge(q),
-          isLate(q) ? h('b', null, 'po termínu!') : (st.who ? h('span', { class: 'sub' }, 'čeká: ' + st.who) : null),
+          isLate(q) ? h('b', null, 'po termínu!') : (whoNow(q) ? h('span', { class: 'sub' }, 'čeká: ' + whoNow(q)) : null),
           q.safety === 'ANO' ? h('span', { class: 'tag bad' }, 'SAFETY') : null, q.decision === 'ESKALACE' ? h('span', { class: 'tag' }, 'ESKALACE') : null,
           h('span', { class: 'grow' }), h('span', { class: 'sub', 'data-age': q.when || q.created }, ago(q.when || q.created)), h('span', { class: 'open-l' }, 'Otevřít →')),
         paperBody(q, false, null, context));
@@ -2339,7 +2355,7 @@ function qrapCards(rows) {
         q.nokSituation ? h('span', null, 'KOLIK: N/A') : q.qty === '' || q.qty === undefined ? null : h('span', null, 'KOLIK: ' + q.qty + ' ' + (q.unit || '')),
         q.partVersion ? h('span', null, 'Verze: ' + q.partVersion) : null,
         q.photoWrong || q.photoRight ? h('span', null, '📷 foto') : null),
-      st.next ? h('div', { class: 'qc-next' }, 'Další krok: ' + st.next, late ? h('b', { class: 'late-txt' }, ' – po termínu!') : null) : null);
+      st.next ? h('div', { class: 'qc-next' }, 'Další krok: ' + nextNow(q) + (whoNow(q) ? ' · ' + whoNow(q) : ''), late ? h('b', { class: 'late-txt' }, ' – po termínu!') : null) : null);
   }));
 }
 
@@ -2400,14 +2416,13 @@ function nextBox(q) {
   if (q.status === 'ZRUŠENO') return h('div', { class: 'next' }, h('span', { class: 'lbl' }, 'Stav'), h('b', null, 'Zrušeno'), h('span', { class: 'sub' }, q.cancelReason));
   const st = STATUS[q.status] || { next: q.status, who: '' };
   const late = isLate(q);
-  let who = st.who;
+  const who = whoNow(q);
   let extra = '';
   if (q.status === 'OPATŘENÍ') extra = 'chybí: ' + (q.s3Missing || []).join(', ') + ' · termín ' + fmtDT(deadline3(q).toISOString());
-  if (q.status === 'ANALÝZA' || q.status === 'AKCE') who = 'piloti: ' + (pilotNames(q) || 'zatím nepřiděleni – kontaktujte supervizora');
   if (q.status === 'AKCE') extra = 'otevřené akce: ' + actsOf(q.id, '⑥').filter(a => !a.done).length;
   if (q.status === 'OVĚŘENÍ') extra = 'efektivní na ' + q.eff.ok + ' z 5 směn';
   return h('div', { class: 'next' + (late ? ' bad' : '') },
-    h('span', { class: 'lbl' }, 'Další krok'), h('b', null, st.next), h('span', { class: 'sub' }, 'Dělá: ' + who),
+    h('span', { class: 'lbl' }, 'Další krok'), h('b', null, nextNow(q) || st.next), h('span', { class: 'sub' }, 'Dělá: ' + who),
     extra ? h('span', { class: late ? 'late-txt' : 'sub' }, extra + (late ? ' – po termínu!' : '')) : null);
 }
 
