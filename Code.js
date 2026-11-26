@@ -236,7 +236,7 @@ const FP_FIELDS = {
 };
 
 /** Change this text whenever you deploy a new version: open pages then offer "Obnovit stránku". */
-const APP_BUILD = '2026-11-26-step-clocks';
+const APP_BUILD = '2026-11-26-hr-names';
 
 const PERF = {
   FULL_READ_CELLS: 15000, // a tab up to this size is read in one call; a bigger one by ID column + matching rows
@@ -1406,7 +1406,8 @@ function publicSettings_(settings) {
 
 /** Active people as the page needs them: name and e-mail (roles stay on the server). */
 function activePeople_(c) {
-  return c.people.filter(p => p.active && p.email).map(p => Object.assign({ name: p.name, email: p.email }, p.role === 'SUPERVIZOR' ? { sup: 1 } : {}));
+  return c.people.filter(p => p.active && p.email).map(p => Object.assign({ name: p.name, email: p.email },
+    p.role === 'SUPERVIZOR' ? { sup: 1, name: hrName_(p.email) || p.name } : {})); // the full name from HR ("Supervizor logistiky: …")
 }
 
 function clearDecision_(q) {
@@ -2731,6 +2732,16 @@ let ORG_FRESH_ = false, HR_INDEX_ = null, HR_SHEET_ = null, HR_BY_EMAIL_ = null;
 const HR_CACHE_S = 21600, HR_TRUST_MS = 600000;
 let ORG_AT_ = 0, OSC_AT_ = 0;
 const HR_VERIFIED_ = new Map();
+let HR_NAMES_ = null;
+/** A person's full name as in the HR org chart ("Jan NOVÁK"), by e-mail – only from the cached directory, so it never
+ *  opens the HR file (it runs inside saves and checks). '' when unknown: the caller falls back to the name in Lidé. */
+function hrName_(email) {
+  if (!HR_NAMES_) {
+    const list = HR_INDEX_ || ((cacheGetBig_(NOTIF.ORG_KEY) || {}).list) || [];
+    HR_NAMES_ = new Map(list.map(p => [p.e, p.n]));
+  }
+  return HR_NAMES_.get(String(email || '').trim().toLowerCase()) || '';
+}
 
 function disabledRecipients_() {
   return new Set(cfg_().people.filter(p => p.email && !wantsMail_(p)).map(p => p.email));
@@ -3166,7 +3177,7 @@ function stepStartGuess_(key, q, effs) {
 /** Who is on turn – the same as "Další krok" on the page (Index.html, whoNow). */
 function stepWho_(q, status, key, sups) {
   if (status === 'OPATŘENÍ') return '③ Okamžitá opatření – autor hlášení / Team Leader';
-  if (key === 'D') return 'Supervizor logistiky' + (sups.length ? ' – ' + sups.map(p => p.name).join(', ') : '');
+  if (key === 'D') return 'Supervizor logistiky' + (sups.length ? ' – ' + sups.map(p => hrName_(p.email) || p.name).join(', ') : '');
   if (key === 'C') return 'Supervizor / Manažer logistiky – podpis uzavření';
   if (['ANALÝZA', 'AKCE', 'OVĚŘENÍ'].includes(status)) {
     const names = pilotsOf_(q.pilots).map(p => p.name || p.email);
