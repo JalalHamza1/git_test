@@ -235,7 +235,7 @@ const FP_FIELDS = {
 };
 
 /** Change this text whenever you deploy a new version: open pages then offer "Obnovit stránku". */
-const APP_BUILD = '2026-11-24-faster-saves';
+const APP_BUILD = '2026-11-26-release-test-alerts';
 
 const PERF = {
   FULL_READ_CELLS: 15000, // a tab up to this size is read in one call; a bigger one by ID column + matching rows
@@ -3132,7 +3132,8 @@ function captureAlerts_(q, actions) {
     const d = desired[email] || (desired[email] = {sources:[], labels:[], times:[], dues:[]});
     if (d.sources.indexOf(source) >= 0) return;
     const prior = alertGet_(alertId_(q.id,email));
-    const eventAt = reopened ? now : (prior && prior.active && prior.eventAt && prior.eventAt[source]) || Math.min(now, at || created);
+    const eventAt = reopened ? now : (prior && prior.active && prior.eventAt && prior.eventAt[source]) ||
+      Math.max(Number(meta.releasedAt) || 0, Math.min(now, at || created)); // releasedAt: see releaseTestAlerts_
     d.sources.push(source); d.labels.push(label); d.times.push(eventAt);
     if (due) d.dues.push(due);
     else if(source==='pilot') d.dues.push(new Date(eventAt).toISOString()); // pilot task is due from assignment, as before
@@ -3434,6 +3435,59 @@ function pruneOperations_(rows) {
   WROTE_ = true;
 }
 
+/**
+ * Menu: a QRAP reported while the test mode was on keeps that mode (its alerts go to nobody / only the test recipient),
+ * so switching to normal operation never suddenly notifies people about old tests. For real QRAPs reported during the
+ * test, this releases them: the recipients are taken as in normal operation (Po vytvoření, roles in ②, pilots, action
+ * owners) and get the alert now – PUSH for 5 hours – while the test recipient's row is removed.
+ */
+function releaseTestAlerts() {
+  menuOnly_();
+  const ui = SpreadsheetApp.getUi();
+  need_(readNotif_().testMode === 'NORMAL', 'Nejdřív ve Správa → Notifikace přepněte Testovací režim na „Vypnuto – běžný provoz“.');
+  const inTest = testQraps_();
+  if (!inTest.length) { ui.alert('Žádný otevřený QRAP není v testovacím režimu.'); return; }
+  const answer = ui.prompt('Uvolnit upozornění z testu',
+    'Otevřené QRAP z testovacího režimu: ' + inTest.join(', ') + '\n\nZadejte čísla oddělená čárkou, nebo nechte prázdné = všechny.',
+    ui.ButtonSet.OK_CANCEL);
+  if (answer.getSelectedButton() !== ui.Button.OK) return;
+  const typed = list_(String(answer.getResponseText()).toUpperCase().replace(/\s+/g, ','));
+  const ids = typed.length ? typed : inTest;
+  const unknown = ids.filter(id => inTest.indexOf(id) < 0);
+  need_(!unknown.length, 'Tyto QRAP nejsou otevřené v testovacím režimu: ' + unknown.join(', '));
+  const res = releaseTestAlerts_(ids);
+  ui.alert('Uvolněno: ' + ids.join(', ') + '.\n' + (res.ok ? 'Upozornění zapsána (' + res.written + ').'
+    : 'Upozornění se zapíší při další kontrole (do 5 minut).'));
+}
+/** Open QRAPs whose alerts are still in a test mode (the QRAP column or its snapshot in Alerty_stav). */
+function testQraps_() {
+  MEMO_ = {}; ALERT_STORE_ = null;
+  return table_(TAB.qraps).all.filter(q => {
+    if (q.closedAt || q.cancelReason) return false;
+    const meta = alertGet_('q:' + q.id);
+    return (meta ? meta.testMode : q.alertTestMode) && (meta ? meta.testMode : q.alertTestMode) !== 'NORMAL';
+  }).map(q => q.id);
+}
+function releaseTestAlerts_(ids) {
+  lock_(() => {
+    ids.forEach(id => {
+      const q = find_(id);
+      need_(!q.closedAt && !q.cancelReason, 'QRAP ' + id + ' je uzavřený nebo zrušený.');
+      ensureQrapColumns_();
+      q.alertTestMode = 'NORMAL'; q.alertTestRecipient = '';
+      update_(TAB.qraps, q);
+      const at = Date.now(), old = alertGet_('q:' + id);
+      const meta = old ? JSON.parse(JSON.stringify(old))
+        : {id:id, create:cfg_().notif.create.slice(), roles:{}, closed:false};
+      Object.assign(meta, {testMode:'NORMAL', testRecipient:'', releasedAt:at});
+      alertPut_('q:' + id, meta);
+      log_(id, 'Upozornění uvolněna z testovacího režimu – příjemci podle běžného provozu');
+    });
+    BUMP_ = true;
+  });
+  return syncAlerts_(ids);
+}
+
 /** Install once as deployer from the spreadsheet menu (not through google.script.run). */
 function installNotificationWorker() {
   menuOnly_();
@@ -3513,6 +3567,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Zapnout / obnovit automatiku upozornění (5 minut)', 'installNotificationWorker')
     .addItem('Obnovit QRAP z archivu', 'restoreArchivedQrap')
+    .addItem('Uvolnit upozornění QRAP z testu', 'releaseTestAlerts')
     .addSeparator()
     .addItem('Vložit ukázková data', 'exampleData')
     .addToUi();
