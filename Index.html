@@ -408,6 +408,8 @@ details.more-stats > summary { padding: var(--s3) 0; }
 .paper.compact .pp-txt { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
 .pp-empty { color: #b9c0c4; }
 .pp-more { font-size: .9em; color: var(--ink-3); }
+.pp-mails { margin-top: 4px; min-width: 0; }
+.pp-mail { display: block; overflow-wrap: anywhere; line-height: 1.3; font-size: .92em; } /* long addresses stay inside the box */
 .cb { display: inline-flex; align-items: baseline; gap: 6px; margin-right: 8px; color: var(--ink-3); font-weight: 400; max-width: calc(100% - 8px); overflow-wrap: anywhere; }
 .cb.on { color: #2b383e; }
 .cb i { width: 11px; height: 11px; border: 1.5px solid #7f8b86; border-radius: 2px; flex: none; position: relative; top: 1px; background: #fff; }
@@ -1996,6 +1998,12 @@ const CELL_TITLES = { 1: '① Popis problému', 2: '② Kdo by měl být upozorn
 /** Which block of the paper is next (highlighted). */
 const NOW_CELL = { 'OPATŘENÍ': 3, 'ROZHODNUTÍ': 4, 'ANALÝZA': 5, 'AKCE': 6, 'OVĚŘENÍ': 6, 'SCHVÁLENÍ': 6 };
 
+/** E-mail addresses in a narrow box: one per line, the line may break just before "@". Full address on hover. */
+const mailLines = cell => split(cell).map(e => {
+  const i = e.indexOf('@');
+  return h('span', { class: 'pp-mail', title: e }, i > 0 ? [e.slice(0, i), h('wbr'), e.slice(i)] : e);
+});
+
 /** A tick box as on the paper. */
 const cb = (on, label) => h('span', { class: 'cb' + (on ? ' on' : '') }, h('i'), label);
 const ppBox = (label, value, cls) => h('div', { class: 'pp-box' + (cls ? ' ' + cls : '') },
@@ -2196,8 +2204,8 @@ function paperBody(q, big, ed, context) {
   const c2 = cell(2, E.notified ? h('div', { class: 'pp-box lbl-paper', style: 'flex:1' }, E.notified) : h('div', { class: 'pp-box cb-list', style: 'flex:1' },
     roles.map(r => cb(got.includes(r), r)), got.filter(x => !roles.includes(x) && !isOther(x)).map(x => cb(true, x)),
     cb(got.some(isOther), got.some(isOther) ? (pilotNames({pilots:q.notifiedOther}) || 'jiné') : '……………'),
-    got.includes(PRODUCTION_ROLE) && q.productionSupervisor ? h('div',{class:'sub'},'Supervizoři výroby: ' + q.productionSupervisor) : null,
-    got.includes(PRODUCTION_ROLE) && q.apuManager ? h('div',{class:'sub'},'APU Manager: ' + q.apuManager) : null));
+    got.includes(PRODUCTION_ROLE) && q.productionSupervisor ? h('div',{class:'sub pp-mails'},'Supervizoři výroby:', mailLines(q.productionSupervisor)) : null,
+    got.includes(PRODUCTION_ROLE) && q.apuManager ? h('div',{class:'sub pp-mails'},'APU Manager:', mailLines(q.apuManager)) : null));
 
   // ③ OKAMŽITÁ OPATŘENÍ <24h
   const ia = sectionActions('③');
