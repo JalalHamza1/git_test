@@ -17,7 +17,7 @@
   --accent: #66B539; --accent-ink: #3f7d1f; --accent-dark: #57a02e; --accent-deep: #3a7a32; --accent-deeper: #2f6629;
   --accent-soft: #E8F7DD; --accent-tint: #e5f1dd;
   --warm: #b8501d; --warm-soft: #fce8dc;
-  --bad: #b8322a; --warn: #8a5300;
+  --bad: #b8322a; --warn: #8a5300; --bad-soft: #fbe9e7; /* SAFETY: a very light red behind the white boxes */
   --slate: #34444c; --slate-2: #57676f; --slate-ink: #e6ecee;
   --viz: #4f9a2a; --viz-track: #e3e8e4;  /* chart: one green series, validated >= 3:1 on white */
   --r: 10px;
@@ -568,6 +568,10 @@ details.more-stats > summary { padding: var(--s3) 0; }
 body:has(.float-bar) .toast { bottom: 92px; }
 /* SAFETY = ANO: the whole form gets a red frame */
 .shell-card.safety, .pp-wrap.safety, .strip.safety, .strip.safety:hover { border: 3px solid var(--bad); box-shadow: 0 0 0 3px #f8e3e1; }
+/* …and a very light red sheet, so a SAFETY QRAP stands out at a glance (the boxes on it stay white) */
+.strip.safety, .pp-wrap.safety .paper.big .pp-body { background: var(--bad-soft); }
+.pp-wrap.safety { background: #fff7f6; }
+.shell-card.safety .shell-sub { background: var(--bad-soft); }
 /* board: one paper strip per QRAP */
 .strip { margin-top: 14px; cursor: pointer; outline: none; }
 .strip-cap { display: flex; gap: 10px; align-items: baseline; padding: 0 4px 6px; font-size: 13px; flex-wrap: wrap; }
@@ -712,7 +716,7 @@ body.busy #app { pointer-events: none; }
 .qcard { display: flex; flex-direction: column; gap: 6px; text-align: left; width: 100%; padding: 14px 16px; background: var(--panel);
   border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); color: var(--ink); font: inherit; cursor: pointer; }
 .qcard:hover, .qcard:focus-visible { border-color: var(--accent); }
-.qcard.safety { border: 3px solid var(--bad); }
+.qcard.safety { border: 3px solid var(--bad); background: #fff4f3; }
 .qc-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .qc-top b { font-size: 16px; }
 .qc-top .sub { margin-left: auto; }
